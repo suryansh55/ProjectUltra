@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="55294d7f-46a0-4f84-aaad-4aa3ad7a696a" name="Changes" comment="">
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/libraries-with-intellij-classes.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/cpp/common.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/common.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/cpp/database.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/database.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/cpp/verify.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/verify.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/cpp/wrapper.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/wrapper.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/headers/common.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/common.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/headers/database.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/database.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/headers/verify.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/verify.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/backend/headers/wrapper.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/wrapper.hpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/java/billiards/viewer/CoverWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/billiards/viewer/CoverWindow.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/java/billiards/viewer/Viewer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/billiards/viewer/Viewer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/java/billiards/wrapper/Wrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/billiards/wrapper/Wrapper.java" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ExternalProjectsData">
+    <projectState path="$PROJECT_DIR$">
+      <ProjectState />
+    </projectState>
+  </component>
+  <component name="ExternalProjectsManager">
+    <system id="GRADLE">
+      <state>
+        <task path="$PROJECT_DIR$">
+          <activation />
+        </task>
+        <projects_view>
+          <tree_state>
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="BilliardsEverything 2023-07-27-Max-Kaiden-Triples" type="f1a62948:ProjectNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="BilliardsEverything 2023-07-27-Max-Kaiden-Triples" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="BilliardsEverything 2023-07-27-Max-Kaiden-Triples" type="f1a62948:ProjectNode" />
+                <item name="Tasks" type="e4a08cd1:TasksNode" />
+                <item name="application" type="c8890929:TasksNode$1" />
+              </path>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="BilliardsEverything 2023-07-27-Max-Kaiden-Triples" type="f1a62948:ProjectNode" />
+                <item name="Run Configurations" type="7b0102dc:RunConfigurationsNode" />
+              </path>
+            </expand>
+            <select />
+          </tree_state>
+        </projects_view>
+      </state>
+    </system>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProjectId" id="2TATU2Q5VV8l0bckif62jSS7mcY" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
+    &quot;last_opened_file_path&quot;: &quot;/home/pbbandit/Desktop/BilliardsEverything 2023-07-27-Max-Kaiden-Triples&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager">
+    <configuration name="billiards-scratchwork [run]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
+      <ExternalSystemSettings>
+        <option name="executionName" />
+        <option name="externalProjectPath" value="$PROJECT_DIR$" />
+        <option name="externalSystemIdString" value="GRADLE" />
+        <option name="scriptParameters" />
+        <option name="taskDescriptions">
+          <list />
+        </option>
+        <option name="taskNames">
+          <list>
+            <option value="run" />
+          </list>
+        </option>
+        <option name="vmOptions" />
+      </ExternalSystemSettings>
+      <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
+      <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
+      <DebugAllEnabled>false</DebugAllEnabled>
+      <ForceTestExec>false</ForceTestExec>
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Gradle.billiards-scratchwork [run]" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="55294d7f-46a0-4f84-aaad-4aa3ad7a696a" name="Changes" comment="" />
+      <created>1690484898716</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1690484898716</updated>
+      <workItem from="1690484900028" duration="2243000" />
+      <workItem from="1690488757118" duration="13000" />
+      <workItem from="1690488788531" duration="881000" />
+      <workItem from="1690750262482" duration="678000" />
+      <workItem from="1690754722464" duration="324000" />
+      <workItem from="1690764224191" duration="863000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+</project>

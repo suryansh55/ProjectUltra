@@ -1,0 +1,19 @@
+# Ignore the output files from the program
+*.txt
+
+# Gradle
+.gradle
+/build
+gradle-app.setting
+
+# OS X
+**/.DS_Store
+
+# C++
+meson
+
+# Eclipse
+.project
+.classpath
+.settings
+bin/

@@ -1,0 +1,91 @@
+---
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+AlignEscapedNewlinesLeft: false
+AlignOperands: true
+AlignTrailingComments: true
+
+AllowAllParametersOfDeclarationOnNextLine: false
+AllowShortBlocksOnASingleLine: false
+AllowShortCaseLabelsOnASingleLine: false
+AllowShortFunctionsOnASingleLine: Empty
+AllowShortIfStatementsOnASingleLine: false
+AllowShortLoopsOnASingleLine: false
+
+AlwaysBreakAfterReturnType: None
+
+BinPackArguments: true
+BinPackParameters: true
+
+BreakBeforeBinaryOperators: None
+BreakBeforeBraces: Attach
+BreakBeforeTernaryOperators: true
+BreakStringLiterals: false
+
+ColumnLimit: 0
+ContinuationIndentWidth: 4
+
+IndentCaseLabels: false
+IndentWidth: 4
+IndentWrappedFunctionNames: false
+
+KeepEmptyLinesAtTheStartOfBlocks: true
+
+MaxEmptyLinesToKeep: 1
+
+ReflowComments: false
+
+SpaceAfterCStyleCast: true
+SpaceBeforeAssignmentOperators: true
+SpaceBeforeParens: ControlStatements
+#SpaceBeforeRangeBasedForLoopColon: true
+SpaceInEmptyParentheses: false
+SpacesBeforeTrailingComments: 1
+SpacesInAngles: false
+SpacesInCStyleCastParentheses: false
+SpacesInContainerLiterals: false
+SpacesInParentheses: false
+SpacesInSquareBrackets: false
+
+TabWidth: 4
+
+UseTab: Never
+---
+Language: Java
+BreakAfterJavaFieldAnnotations: true
+---
+Language: Cpp
+
+AccessModifierOffset: -2
+AlwaysBreakBeforeMultilineStrings: false
+#AlwaysBreakTemplateDeclarations: Yes
+
+BreakConstructorInitializers: BeforeColon
+#BreakInheritanceList: BeforeColon
+
+#CompactNamespace: false
+ConstructorInitializerAllOnOneLineOrOnePerLine: false
+ConstructorInitializerIndentWidth: 4
+Cpp11BracedListStyle: true
+
+DerivePointerAlignment: false
+
+FixNamespaceComments: false
+
+IncludeBlocks: Preserve
+IndentPPDirectives: None
+
+NamespaceIndentation: None
+
+PointerAlignment: Left
+
+SortIncludes: true
+SortUsingDeclarations: false
+
+SpaceAfterTemplateKeyword: true
+#SpaceBeforeCpp11BracedList: false
+#SpaceBeforeCtorInitializerColon: true
+#SpaceBeforeInheritanceColon: true
+
+Standard: Cpp11
