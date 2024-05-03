@@ -2454,6 +2454,7 @@ public final class Viewer {
                 imageStack.getChildren().add(4, panLine);
                 imageStack.getChildren().get(4).setTranslateX((finX + initX - SIDE) / 2);
                 imageStack.getChildren().get(4).setTranslateY((finY + initY - SIDE) / 2);
+                boyanMenu.dragIntend = true;
             });
             topImageView.setOnMouseReleased(event3 -> {
                 imageStack.getChildren().remove(4);
