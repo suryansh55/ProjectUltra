@@ -510,9 +510,10 @@ public final class Viewer {
     final Button varyLBtn = new Button();
     // Fields for the AutoPolyVary button
     final TextField lineStartField = new TextField();
+    final TextField lineStepField = new TextField(); // 2024-05-06 Step interval for auto
     final TextField lineEndField = new TextField();
     final Button autoPolyVaryBtn = new Button();
-    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyAutoBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineEndField, TipOpenDelay, TipCloseDelay);
+    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyAutoBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, TipOpenDelay, TipCloseDelay);
 
     public Viewer(final Stage primaryStage, final String version, final ExecutorService executor,
                   final ConnectionPool pool, final String dbName) {
@@ -1385,6 +1386,8 @@ public final class Viewer {
         
         lineStartField.setPromptText("Start");
         lineStartField.setPrefWidth(60);
+        lineStepField.setPromptText("Step");
+        lineStepField.setPrefWidth(60);
         lineEndField.setPromptText("End");
         lineEndField.setPrefWidth(60);
         
@@ -1409,14 +1412,22 @@ public final class Viewer {
         		return;
         	}
         	final String lineStartText = lineStartField.getText();
+            final String lineStepText = lineStepField.getText();
         	final String lineEndText = lineEndField.getText();
         	// The indexes that the user sees (will be converted later)
         	int startIdxUser = 0;
+            int stepIdxUser = 0;
         	int endIdxUser = 0;
-        	if (lineStartText.isEmpty() && lineEndText.isEmpty()) {
+            // 2024-05-06 Fixed broken logic (The error for not all fields filled never triggered)
+        	if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
         		startIdxUser = 1;
+                stepIdxUser = 1;
         		endIdxUser = fileCodeSequences.size();
-        	} else if (!(lineStartText.isEmpty() && lineEndText.isEmpty())) {
+        	} else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
+        		// Error: the user has entered information into exactly one of the fields.
+        		showEnterLineNumberErrorAutoVary();
+        		return;
+        	} else { // All fields filled
 	        	try {
 	        		startIdxUser = Integer.parseInt(lineStartText);
 	        	} catch (final NumberFormatException e) {
@@ -1429,14 +1440,16 @@ public final class Viewer {
 	        		showInvalidNumberError(lineEndText);
 	        		return;
 	        	}
+	        	try {
+	        		stepIdxUser = Integer.parseInt(lineStepText);
+	        	} catch (final NumberFormatException e) {
+	        		showInvalidNumberError(lineStepText);
+	        		return;
+	        	}
 	        	if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= fileCodeSequences.size())) {
 	        		showInvalidLineRangeError(fileCodeSequences.size());
 	        		return;
 	        	}
-        	} else {
-        		// Error: the user has entered information into exactly one of the fields.
-        		showEnterLineNumberErrorAutoVary();
-        		return;
         	}
         	// The following block was ripped from the polyAutoBtn's action event.
         	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
@@ -2462,7 +2475,7 @@ public final class Viewer {
                 if (BoyanMenu.compare && selectRdoBtn.isSelected() && !boyanMenu.dragIntend) {
                     boyanMenu.vary3Btn.fire();
                 }
-                boyanMenu.dragIntend = false;
+                boyanMenu.dragIntend = false; // Disable matchv3 on drag Austin 2024-05-03
             });
         });
 

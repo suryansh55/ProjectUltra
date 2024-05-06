@@ -147,7 +147,7 @@ public class BoyanMenu {
     final TextField maxPrinting = new TextField();
 
 	public BoyanMenu(final Button autoVaryButton, final Button polyAutoBtn, final Button varyLBtn,
-                     final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineEndField,
+                     final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField, final TextField lineEndField,
                      final double TipOpenDelay, final double TipCloseDelay) {
 
         Utils.setupCustomTooltipBehavior((int) (TipOpenDelay * 1000), (int) (TipCloseDelay * 1000), 200);
@@ -494,7 +494,7 @@ public class BoyanMenu {
 //            new HBox(10, minMovesText, maxMovesText, movesLbl, shotsText, sideSpacingLbl);
 //        varyInfoHBox.setPadding(new Insets(0, 10, 10, 0));
 //        varyInfoHBox.setAlignment(Pos.CENTER);
-        final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineEndField);
+        final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField);
         autoPolyVaryHBox.setPadding(new Insets(0, 10, 10, 0));
         autoPolyVaryHBox.setAlignment(Pos.CENTER);
 
