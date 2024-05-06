@@ -26,7 +26,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple4;
+import javaslang.Tuple5;
 
 public class AutoPolyVaryLoad {
 	// WARNING: Global mutable state
@@ -41,9 +41,11 @@ public class AutoPolyVaryLoad {
     private final Label CSl = new Label();
     private final Label OSOl = new Label();
     private final Label OSNOl = new Label();
+    private final Label reversel = new Label();
     private final TextField CSbox = new TextField();
     private final TextField OSObox = new TextField();
     private final TextField OSNObox = new TextField();
+    private final CheckBox reverseBox = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
     private final HBox instructHBox = new HBox();
@@ -52,7 +54,7 @@ public class AutoPolyVaryLoad {
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
     
-    private Optional<Tuple4<ConvexPolygon, Integer, Integer, Integer>> result;
+    private Optional<Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean>> result;
     
     public AutoPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName) {
     	fullContent = Utils.readFromFile(fileName);
@@ -96,9 +98,14 @@ public class AutoPolyVaryLoad {
     	OSNObox.setPrefWidth(150);
     	OSNObox.setText(BoundOSNOMax.toString());
     	OSNOl.setText("OSNO max:");
+
+        reverseBox.setIndeterminate(false);
+        reverseBox.setAllowIndeterminate(false);
+        reverseBox.setSelected(false);
+        reversel.setText("Reverse order:");
     	
     	instructHBox.getChildren().add(instruct);
-    	maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, loadButton);
+    	maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, reversel, reverseBox, loadButton);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));
     	maxHBox.setAlignment(Pos.CENTER);
     	root.getChildren().addAll(instructHBox, text, maxHBox);
@@ -130,14 +137,14 @@ public class AutoPolyVaryLoad {
     			pointList.add(Vector2.create(x, y));
     		}
     		final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
-        	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax));
+        	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, reverseBox.isSelected()));
         	Utils.writeToFile(fileName, fullContent);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax));
         	stage.close();
     	});
     }
     
-    public Optional<Tuple4<ConvexPolygon, Integer, Integer, Integer>> getLoad() {
+    public Optional<Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean>> getLoad() {
     	stage.showAndWait();
     	return this.result;
     }

@@ -11,6 +11,7 @@ gradle-app.setting
 
 # C++
 meson
+.cache
 
 # Eclipse
 .project

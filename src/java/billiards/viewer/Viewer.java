@@ -1387,7 +1387,7 @@ public final class Viewer {
         lineStartField.setPromptText("Start");
         lineStartField.setPrefWidth(60);
         lineStepField.setPromptText("Step");
-        lineStepField.setPrefWidth(60);
+        lineStepField.setPrefWidth(50);
         lineEndField.setPromptText("End");
         lineEndField.setPrefWidth(60);
         
@@ -1418,13 +1418,12 @@ public final class Viewer {
         	int startIdxUser = 0;
             int stepIdxUser = 0;
         	int endIdxUser = 0;
-            // 2024-05-06 Fixed broken logic (The error for not all fields filled never triggered)
+            // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
         	if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
         		startIdxUser = 1;
                 stepIdxUser = 1;
         		endIdxUser = fileCodeSequences.size();
         	} else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
-        		// Error: the user has entered information into exactly one of the fields.
         		showEnterLineNumberErrorAutoVary();
         		return;
         	} else { // All fields filled
@@ -1441,7 +1440,7 @@ public final class Viewer {
 	        		return;
 	        	}
 	        	try {
-	        		stepIdxUser = Integer.parseInt(lineStepText);
+	        		stepIdxUser = Math.min(fileCodeSequences.size(), Integer.parseInt(lineStepText)); // Max step is all elements
 	        	} catch (final NumberFormatException e) {
 	        		showInvalidNumberError(lineStepText);
 	        		return;
@@ -1450,6 +1449,10 @@ public final class Viewer {
 	        		showInvalidLineRangeError(fileCodeSequences.size());
 	        		return;
 	        	}
+                if(stepIdxUser < 1) {
+                    showStepErrorAutoVary();
+                    return;
+                }
         	}
         	// The following block was ripped from the polyAutoBtn's action event.
         	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
@@ -1475,7 +1478,7 @@ public final class Viewer {
         	if (autoPolyVaryWindow.stage.isShowing()) {
         		autoPolyVaryWindow.stage.toFront();
         	}
-        	final Optional<Tuple4<ConvexPolygon, Integer, Integer, Integer>> polyOpt = autoPolyVaryWindow.getLoad();
+        	final Optional<Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean>> polyOpt = autoPolyVaryWindow.getLoad();
         	if (!polyOpt.isPresent()) {
 //        		final Alert alert = new Alert(AlertType.ERROR);
 //        		alert.setTitle("AutoPolyVary");
@@ -1484,13 +1487,15 @@ public final class Viewer {
 //        		alert.showAndWait();
         		return;
         	}
-        	final Tuple4<ConvexPolygon, Integer, Integer, Integer> polyVals = polyOpt.get();
+        	final Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean> polyVals = polyOpt.get();
         	autoVaryArea = Optional.of(polyVals._1);
         	final int CSmax = polyVals._2;
         	final int OSOmax = polyVals._3;
         	final int OSNOmax = polyVals._4;
+            final boolean reverse = polyVals._5;
         	// Go through all the holes in the specified range
         	final int startIdx = startIdxUser - 1;
+            final int stepIdx = stepIdxUser;
         	final int endIdx = endIdxUser - 1;
         	// Run the AutoPolyVary algorithm parallel to the application so that the screen can be rendered in real time instead
         	// of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
@@ -1508,7 +1513,7 @@ public final class Viewer {
         				maxSubdivisions,
         				maxMoves
         			));
-		        	for (int holeIndex = startIdx; holeIndex <= endIdx; ++holeIndex) {
+		        	for (int holeIndex = startIdx; holeIndex <= endIdx; holeIndex += stepIdx) {
 		        		if (isCancelled()) {
 		        			return null;
 		        		}
@@ -1517,7 +1522,11 @@ public final class Viewer {
 		        		final int totalHolesTodo = endIdx - startIdx + 1;
 		        		updateProgress(currentHoleProgress, totalHolesTodo);
 		        		// Move the screen
-		    			setOBO(holeIndex, pool, executor);
+                        if(!reverse) { // Check if reverse order is selected
+		    			    setOBO(holeIndex, pool, executor);
+                        } else {
+                            setOBO(endIdx - holeIndex, pool, executor);
+                        }
 		    			ConvexPolygon area = polyOpt.get()._1;
 		    	    	final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
 		    	    	final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
@@ -3632,6 +3641,16 @@ public final class Viewer {
         alert.setHeaderText("Enter Line Numbers");
         alert.setContentText("Please enter start and end line numbers for AutoPolyVary.");
         alert.showAndWait();
+    }
+
+    private static void showStepErrorAutoVary() {
+    	final Alert alert = new Alert(AlertType.ERROR);
+
+        alert.setTitle("Bad Step Value");
+        alert.setHeaderText("Bad Step Value");
+        alert.setContentText("AutoPolyVary step value must be >= 1");
+        alert.showAndWait();
+        
     }
 
     private static void showInvaidLineNumberError(final int max) {
