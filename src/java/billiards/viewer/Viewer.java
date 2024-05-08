@@ -51,6 +51,7 @@ import javaslang.Tuple2;
 import javaslang.Tuple3;
 import javaslang.Tuple4;
 import javaslang.Tuple5;
+import javaslang.Tuple8;
 import javaslang.collection.Array;
 import javaslang.control.Either;
 
@@ -1255,7 +1256,7 @@ public final class Viewer {
         	}
         	else {
         		final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
-        		autoVaryFunction(Tuple.of(screen, 800, 300, 150), executor);
+        		autoVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100, false), executor);
         	}
         });
 
@@ -1292,10 +1293,10 @@ public final class Viewer {
             if (boyanMenu.CScb.isSelected() || boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
                         || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
 	            final Rectangle screen = map.getViewRectangle();
-	            final Optional<Tuple4<ConvexPolygon, Integer, Integer, Integer>> polyOpt =
+	            final Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> polyOpt =
 	                new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
 	            if (polyOpt.isPresent()) {
-                    final Tuple4<ConvexPolygon, Integer, Integer, Integer> polyVals = polyOpt.get();
+                    final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals = polyOpt.get();
 	                autoVaryArea = Optional.of(polyVals._1);
 	                autoVaryFunction(polyVals, executor);
 	                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -1543,7 +1544,7 @@ public final class Viewer {
 		    				final int place = i * 2;
 		    				// Generate codes
 		    				Utils.runAndWait(() -> {
-		    					autoCodesFiltered(points.get(place), points.get(place + 1), CSmax, OSOmax, OSNOmax, executor);
+		    					autoCodesFiltered(points.get(place), points.get(place + 1), CSmax, OSOmax, OSNOmax, 0, 0, 0, false, executor);
 		    				});
 		    			}
 		        	}
@@ -5405,11 +5406,15 @@ public final class Viewer {
 		return codesFound;
 		}
 
-    private void autoVaryFunction(final Tuple4<ConvexPolygon, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
+    private void autoVaryFunction(final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals, final ExecutorService executor) {
         final ConvexPolygon area = polyVals._1;
         final int CSmax = polyVals._2;
         final int OSOmax = polyVals._3;
         final int OSNOmax = polyVals._4;
+        final int CSmaxSS = polyVals._5;
+        final int OSOmaxSS = polyVals._6;
+        final int OSNOmaxSS = polyVals._7;
+        final boolean overrideSS = polyVals._8;
         final int max = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
@@ -5461,7 +5466,7 @@ public final class Viewer {
                         final Vector2 here = currentPos.get();
 
                         Utils.runAndWait(() -> {
-                            autoCodesFiltered(here.x, here.y, CSmax, OSOmax, OSNOmax, executor);
+                            autoCodesFiltered(here.x, here.y, CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS, overrideSS, executor);
                             updateProgress(map.pixelY(here.y) + SIDE * map.pixelX(here.x), SIDE * SIDE);
                         });
 
@@ -5529,7 +5534,7 @@ public final class Viewer {
                         }
                         final int place = i * 2;
                         Utils.runAndWait(() -> {
-                            autoCodesFiltered(points.get(place), points.get(place + 1), CSmax, OSOmax, OSNOmax, executor);
+                            autoCodesFiltered(points.get(place), points.get(place + 1), CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS, overrideSS, executor);
                         });
                         updateProgress(i + 1, todo);
                     }
@@ -5669,7 +5674,7 @@ public final class Viewer {
     }
     
     private int autoCodesFiltered(final double rx, final double ry, final int CSmax, final int OSOmax,
-                                  final int OSNOmax, final ExecutorService executor) {
+                                  final int OSNOmax, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final boolean overrideSS, final ExecutorService executor) {
         final Image image = regionsImageView.getImage();
         final PixelReader reader = image.getPixelReader();
         int count = 0;
@@ -5679,7 +5684,8 @@ public final class Viewer {
 
         if (color == 0) {
             final Vector2 coords = Vector2.create(Math.toDegrees(rx), Math.toDegrees(ry));
-            final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = boyanMenu.autoVary(coords, executor);
+
+            final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(coords, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor) : boyanMenu.autoVary(coords, executor);
             // Generate the filtered list
             final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
             for (ClassifiedCodeSequence code : boyanCodes) {

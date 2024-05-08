@@ -16,6 +16,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
@@ -25,7 +26,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple4;
+import javaslang.Tuple8;
 
 public final class PolyVaryLoad {
     // WARNING: Global mutable state
@@ -34,24 +35,39 @@ public final class PolyVaryLoad {
     public static Integer BoundCSMax = 800;
     public static Integer BoundOSOMax = 300;
     public static Integer BoundOSNOMax = 150;
+    public static Integer BoundCSMaxSS = 800;
+    public static Integer BoundOSOMaxSS = 600;
+    public static Integer BoundOSNOMaxSS = 600;
+
     // ------------------------------------------------------------
 
     private final TextArea text = new TextArea();
     private final Button loadButton = new Button();
+    private final Label codel = new Label();
     private final Label CSl = new Label();
     private final Label OSOl = new Label();
     private final Label OSNOl = new Label();
     private final TextField CSbox = new TextField();
     private final TextField OSObox = new TextField();
     private final TextField OSNObox = new TextField();
+    private final Label ssuml = new Label();
+    private final Label CSsl = new Label();
+    private final Label OSOsl = new Label();
+    private final Label OSNOsl = new Label();
+    private final TextField CSsbox = new TextField();
+    private final TextField OSOsbox = new TextField();
+    private final TextField OSNOsbox = new TextField();
+    private final Label overridel = new Label();
+    private final CheckBox overrideBox = new CheckBox();
     private final VBox root = new VBox();
     private final HBox instructHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
+    private final HBox maxOptHBox = new HBox(10);
     private final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
 
-    private Optional<Tuple4<ConvexPolygon, Integer, Integer, Integer>> result;
+    private Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> result;
 
     public PolyVaryLoad(final String windowTitle, final String buttonText, final String fileName,
                     final String boundsFileName, final Rectangle fullScreen) {
@@ -93,6 +109,7 @@ public final class PolyVaryLoad {
         VBox.setVgrow(text, Priority.ALWAYS);
 
         // Get seperate bounds on each code
+        codel.setText("Code len");
     	CSbox.setPrefWidth(150);
     	CSbox.setText(BoundCSMax.toString());
     	CSl.setText("CS max:");
@@ -103,13 +120,33 @@ public final class PolyVaryLoad {
     	OSNObox.setText(BoundOSNOMax.toString());
     	OSNOl.setText("OSNO max:");
 
+        ssuml.setText("Side sum");
+        CSsbox.setPrefWidth(150);
+    	CSsbox.setText(BoundCSMaxSS.toString());
+    	CSsl.setText("CS max:");
+    	OSOsbox.setPrefWidth(150);
+    	OSOsbox.setText(BoundOSOMaxSS.toString());
+    	OSOsl.setText("OSO max:");
+    	OSNOsbox.setPrefWidth(150);
+    	OSNOsbox.setText(BoundOSNOMaxSS.toString());
+    	OSNOsl.setText("OSNO max:");
+
+        overrideBox.setIndeterminate(false);
+        overrideBox.setAllowIndeterminate(false);
+        overrideBox.setSelected(false);
+        overridel.setText("Override side sum:");
+
         instructHBox.getChildren().add(instruct);
 
-        maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, loadButton);
+        maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, loadButton);
         maxHBox.setPadding(new Insets(0, 10, 10, 0));
         maxHBox.setAlignment(Pos.CENTER);
 
-        root.getChildren().addAll(instructHBox, text, maxHBox);
+        maxOptHBox.getChildren().addAll(ssuml, CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox, overridel, overrideBox);
+        maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
+        maxOptHBox.setAlignment(Pos.CENTER);
+
+        root.getChildren().addAll(instructHBox, text, maxHBox, maxOptHBox);
         root.setSpacing(10);
         root.setPadding(new Insets(10));
 
@@ -120,6 +157,9 @@ public final class PolyVaryLoad {
     			BoundCSMax = Integer.parseInt(CSbox.getText().trim());
             	BoundOSOMax = Integer.parseInt(OSObox.getText().trim());
             	BoundOSNOMax = Integer.parseInt(OSNObox.getText().trim());
+    			BoundCSMaxSS = Integer.parseInt(CSsbox.getText().trim());
+            	BoundOSOMaxSS = Integer.parseInt(OSOsbox.getText().trim());
+            	BoundOSNOMaxSS = Integer.parseInt(OSNOsbox.getText().trim());
     		} catch (NumberFormatException e) {
     			final Alert alert = new Alert(AlertType.ERROR);
         		alert.setTitle("PolyVary Error");
@@ -130,7 +170,7 @@ public final class PolyVaryLoad {
             }
             fullContent = text.getText();
             if (fullContent.equals("")) {
-                this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax));
+                this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, overrideBox.isSelected()));
 
             } else {
                 final String[] lines = cleanPolygon(fullContent).split("\n");
@@ -143,7 +183,7 @@ public final class PolyVaryLoad {
                     pointList.add(Vector2.create(x, y));
                 }
                 final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
-                this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax));
+                this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, overrideBox.isSelected()));
             }
             Utils.writeToFile(fileName, fullContent);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax));
@@ -173,7 +213,7 @@ public final class PolyVaryLoad {
         return builder.toString().trim();
     }
 
-    public Optional<Tuple4<ConvexPolygon, Integer, Integer, Integer>> getPolyVaryLoad() {
+    public Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> getPolyVaryLoad() {
         stage.showAndWait();
         return this.result;
     }
