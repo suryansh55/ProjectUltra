@@ -105,9 +105,11 @@ public class AutoPolyVaryLoad {
         reversel.setText("Reverse order:");
     	
     	instructHBox.getChildren().add(instruct);
+
     	maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, reversel, reverseBox, loadButton);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));
     	maxHBox.setAlignment(Pos.CENTER);
+
     	root.getChildren().addAll(instructHBox, text, maxHBox);
     	root.setSpacing(10);
     	root.setPadding(new Insets(10));
