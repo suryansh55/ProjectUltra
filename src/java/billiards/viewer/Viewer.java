@@ -1544,7 +1544,8 @@ public final class Viewer {
 		    				final int place = i * 2;
 		    				// Generate codes
 		    				Utils.runAndWait(() -> {
-		    					autoCodesFiltered(points.get(place), points.get(place + 1), CSmax, OSOmax, OSNOmax, 0, 0, 0, false, executor);
+                                final int[] maxList = {CSmax, OSOmax, OSNOmax, 0, 0, 0};
+		    					autoCodesFiltered(points.get(place), points.get(place + 1), maxList, false, executor);
 		    				});
 		    			}
 		        	}
@@ -5415,6 +5416,7 @@ public final class Viewer {
         final int OSOmaxSS = polyVals._6;
         final int OSNOmaxSS = polyVals._7;
         final boolean overrideSS = polyVals._8;
+        final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
         final int max = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
@@ -5466,7 +5468,7 @@ public final class Viewer {
                         final Vector2 here = currentPos.get();
 
                         Utils.runAndWait(() -> {
-                            autoCodesFiltered(here.x, here.y, CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS, overrideSS, executor);
+                            autoCodesFiltered(here.x, here.y, maxList, overrideSS, executor);
                             updateProgress(map.pixelY(here.y) + SIDE * map.pixelX(here.x), SIDE * SIDE);
                         });
 
@@ -5534,7 +5536,7 @@ public final class Viewer {
                         }
                         final int place = i * 2;
                         Utils.runAndWait(() -> {
-                            autoCodesFiltered(points.get(place), points.get(place + 1), CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS, overrideSS, executor);
+                            autoCodesFiltered(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
                         });
                         updateProgress(i + 1, todo);
                     }
@@ -5673,8 +5675,13 @@ public final class Viewer {
         return count;
     }
     
-    private int autoCodesFiltered(final double rx, final double ry, final int CSmax, final int OSOmax,
-                                  final int OSNOmax, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final boolean overrideSS, final ExecutorService executor) {
+    private int autoCodesFiltered(final double rx, final double ry, final int[] max, final boolean overrideSS, final ExecutorService executor) {
+        final int CSmax = max[0];
+        final int OSOmax = max[1];
+        final int OSNOmax = max[2];
+        final int CSmaxSS = max[3];
+        final int OSOmaxSS = max[4];
+        final int OSNOmaxSS = max[5];
         final Image image = regionsImageView.getImage();
         final PixelReader reader = image.getPixelReader();
         int count = 0;

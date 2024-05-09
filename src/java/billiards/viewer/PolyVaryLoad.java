@@ -35,9 +35,9 @@ public final class PolyVaryLoad {
     public static Integer BoundCSMax = 800;
     public static Integer BoundOSOMax = 300;
     public static Integer BoundOSNOMax = 150;
-    public static Integer BoundCSMaxSS = 800;
-    public static Integer BoundOSOMaxSS = 600;
-    public static Integer BoundOSNOMaxSS = 600;
+    public static Integer BoundCSMaxSS = 2000;
+    public static Integer BoundOSOMaxSS = 300;
+    public static Integer BoundOSNOMaxSS = 150;
 
     // ------------------------------------------------------------
 
@@ -60,9 +60,14 @@ public final class PolyVaryLoad {
     private final Label overridel = new Label();
     private final CheckBox overrideBox = new CheckBox();
     private final VBox root = new VBox();
+    private final VBox typeVBox = new VBox(30);
+    private final VBox maxVBox = new VBox(10);
+    private final VBox controlVBox = new VBox(20);
     private final HBox instructHBox = new HBox();
+    private final HBox bottomHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
     private final HBox maxOptHBox = new HBox(10);
+    private final HBox overrideHBox = new HBox(10);
     private final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
@@ -109,7 +114,7 @@ public final class PolyVaryLoad {
         VBox.setVgrow(text, Priority.ALWAYS);
 
         // Get seperate bounds on each code
-        codel.setText("Code len");
+        codel.setText("Code length:");
     	CSbox.setPrefWidth(150);
     	CSbox.setText(BoundCSMax.toString());
     	CSl.setText("CS max:");
@@ -120,7 +125,7 @@ public final class PolyVaryLoad {
     	OSNObox.setText(BoundOSNOMax.toString());
     	OSNOl.setText("OSNO max:");
 
-        ssuml.setText("Side sum");
+        ssuml.setText("Side sum:");
         CSsbox.setPrefWidth(150);
     	CSsbox.setText(BoundCSMaxSS.toString());
     	CSsl.setText("CS max:");
@@ -138,15 +143,28 @@ public final class PolyVaryLoad {
 
         instructHBox.getChildren().add(instruct);
 
-        maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, loadButton);
+        typeVBox.getChildren().addAll(codel, ssuml);
+        typeVBox.setPadding(new Insets(0, 10, 10, 0));
+        typeVBox.setAlignment(Pos.CENTER);
+
+        maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, loadButton);
         maxHBox.setPadding(new Insets(0, 10, 10, 0));
         maxHBox.setAlignment(Pos.CENTER);
 
-        maxOptHBox.getChildren().addAll(ssuml, CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox, overridel, overrideBox);
+        maxOptHBox.getChildren().addAll(CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox, overridel, overrideBox);
         maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
         maxOptHBox.setAlignment(Pos.CENTER);
 
-        root.getChildren().addAll(instructHBox, text, maxHBox, maxOptHBox);
+        maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
+        overrideHBox.getChildren().addAll(overridel, overrideBox);
+        controlVBox.getChildren().addAll(loadButton, overrideHBox);
+        controlVBox.setPadding(new Insets(0, 10, 10, 0));
+        controlVBox.setAlignment(Pos.CENTER);
+
+        bottomHBox.getChildren().addAll(typeVBox, maxVBox, controlVBox);
+
+
+        root.getChildren().addAll(instructHBox, text, bottomHBox);
         root.setSpacing(10);
         root.setPadding(new Insets(10));
 
