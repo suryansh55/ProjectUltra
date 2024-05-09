@@ -614,9 +614,39 @@ public class BoyanMenu {
         return bareCodesFound;
     }
     public MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(
-    				final Vector2 point, final ExecutorService executor) {
+    				final Vector2 point, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
+        final int max = Integer.parseInt(maxMovesText.getText());
+        final int min = Integer.parseInt(minMovesText.getText());
+        final double shots = Integer.parseInt(shotsText.getText());
+        final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
+                                 CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected()};
         final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-        codesFound.addAll(findCodes(point.x, point.y, 3, executor));
+        codesFound.addAll(findCodes3(point.x, point.y, min, max, shots, types, executor));
+    	return codesFound;
+    }
+
+    // Overloading for seperate maximums
+    public MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(
+    				final Vector2 point, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
+        final int min = Integer.parseInt(minMovesText.getText());
+        final double shots = Integer.parseInt(shotsText.getText());
+        final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
+                                 CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected()};
+        final boolean[] CSonly = {false, CScb.isSelected(), false, false, false};
+        final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
+        final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
+        unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, CSmaxSS, shots, CSonly, executor));
+        unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, Math.max(OSOmaxSS, OSNOmaxSS), shots, types, executor));
+        for(final ClassifiedCodeSequence code: unfilteredCodesFound) { // Filter out overly large OSO/OSNO
+            final CodeType type = code.codeType;
+            if(type.equals(CodeType.OSO) && code.codeSum >= OSOmaxSS) {
+                continue;
+            }
+            if(type.equals(CodeType.OSNO) && code.codeSum >= OSNOmaxSS) {
+                continue;
+            }
+            codesFound.add(code);
+        }
     	return codesFound;
     }
 

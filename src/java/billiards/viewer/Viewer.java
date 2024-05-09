@@ -1328,17 +1328,28 @@ public final class Viewer {
 	        		}
 	        	}
 
-	        	final Optional<Tuple5<MutableList<Vector2>, Integer, Integer, Integer, Boolean>> pointOpt =
+	        	final Optional<Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> pointOpt =
 	        			varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
 	        	if (pointOpt.isPresent()) {
 		            final ExecutorService executor2 = Executors.newFixedThreadPool(Utils.numThreads);
 
-	        		final Tuple5<MutableList<Vector2>, Integer, Integer, Integer, Boolean> point = pointOpt.get();
+	        		final Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> point = pointOpt.get();
 	        		System.out.println(
 	        				"//~~~~~~~~~~~~~~~~~~~~~~~ varyL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
+                    final MutableList<Vector2> pointList = point._1;
+                    final int CSmax = point._2;
+                    final int OSOmax = point._3;
+                    final int OSNOmax = point._4;
+                    final int CSmaxSS = point._5;
+                    final int OSOmaxSS = point._6;
+                    final int OSNOmaxSS = point._7;
+                    final int[] maximums = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
+                    final boolean draw = point._8;
+                    final boolean overrideSS = varyWindow.getOverride();
+
 	        		final Task<MutableSortedSet<ClassifiedCodeSequence>> varyLTask = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
 	        			public MutableSortedSet<ClassifiedCodeSequence> call() {
-	        				return varyLfunction(point._1, point._2, point._3, point._4,
+	        				return varyLfunction(pointList, maximums, overrideSS,
 	    	            		Integer.parseInt(boyanMenu.maxPrinting.getText()), executor2);
 
 	        			}
@@ -1364,7 +1375,7 @@ public final class Viewer {
 	            		progress.close();
 	            		executor2.shutdown();
 	            		try {
-		            		if (point._5) {
+		            		if (draw) {
 		            			// draw is true
 		            			System.out.println("// Drawing... ");
 								drawvaryL(varyLTask.get(), executor);
@@ -1479,7 +1490,7 @@ public final class Viewer {
         	if (autoPolyVaryWindow.stage.isShowing()) {
         		autoPolyVaryWindow.stage.toFront();
         	}
-        	final Optional<Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean>> polyOpt = autoPolyVaryWindow.getLoad();
+        	final Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> polyOpt = autoPolyVaryWindow.getLoad();
         	if (!polyOpt.isPresent()) {
 //        		final Alert alert = new Alert(AlertType.ERROR);
 //        		alert.setTitle("AutoPolyVary");
@@ -1488,12 +1499,16 @@ public final class Viewer {
 //        		alert.showAndWait();
         		return;
         	}
-        	final Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean> polyVals = polyOpt.get();
+        	final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals = polyOpt.get();
         	autoVaryArea = Optional.of(polyVals._1);
         	final int CSmax = polyVals._2;
         	final int OSOmax = polyVals._3;
         	final int OSNOmax = polyVals._4;
-            final boolean reverse = polyVals._5;
+            final int CSmaxSS = polyVals._5;
+            final int OSOmaxSS = polyVals._6;
+            final int OSNOmaxSS = polyVals._7;
+            final boolean reverse = polyVals._8;
+            final boolean overrideSS = autoPolyVaryWindow.getOverride();
         	// Go through all the holes in the specified range
         	final int startIdx = startIdxUser - 1;
             final int stepIdx = stepIdxUser;
@@ -1544,8 +1559,8 @@ public final class Viewer {
 		    				final int place = i * 2;
 		    				// Generate codes
 		    				Utils.runAndWait(() -> {
-                                final int[] maxList = {CSmax, OSOmax, OSNOmax, 0, 0, 0};
-		    					autoCodesFiltered(points.get(place), points.get(place + 1), maxList, false, executor);
+                                final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
+		    					autoCodesFiltered(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
 		    				});
 		    			}
 		        	}
@@ -5353,16 +5368,26 @@ public final class Viewer {
     }
 
     private MutableSortedSet<ClassifiedCodeSequence> varyLfunction(final MutableList<Vector2> points,
-			  final int CSmax, final int OSOmax, final int OSNOmax, final int max,
+			  final int[] maximums, final boolean overrideSS, final int max,
 			  final ExecutorService executor2) {
+        final int CSmax = maximums[0];
+        final int OSOmax = maximums[1];
+        final int OSNOmax = maximums[2];
+        final int CSmaxSS = maximums[3];
+        final int OSOmaxSS = maximums[4];
+        final int OSNOmaxSS = maximums[5];
+        
 		int count = 1;
 		int totalCodes = 0;
 		final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
 
+        if(overrideSS) {
+            System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d", CSmaxSS, OSOmaxSS, OSNOmaxSS);
+        }
 		for (Vector2 point : points) {
 			System.out.println("");
 			System.out.println("//------------- working on point " + count + " -------------"); // george added // sept 27,2017
-			final MutableSortedSet<ClassifiedCodeSequence> codes = boyanMenu.varyTrianglesL(point, executor2);
+			final MutableSortedSet<ClassifiedCodeSequence> codes = overrideSS ? boyanMenu.varyTrianglesL(point, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor2) : boyanMenu.varyTrianglesL(point, executor2);
 			final MutableSortedSet<ClassifiedCodeSequence> localCodesFound = new TreeSortedSet<>();
 
 			for (ClassifiedCodeSequence code : codes) {

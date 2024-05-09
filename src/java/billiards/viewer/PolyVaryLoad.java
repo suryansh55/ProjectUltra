@@ -32,12 +32,13 @@ public final class PolyVaryLoad {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
     private static String fullContent = "";
-    public static Integer BoundCSMax = 800;
-    public static Integer BoundOSOMax = 300;
-    public static Integer BoundOSNOMax = 150;
-    public static Integer BoundCSMaxSS = 2000;
+    public static Integer BoundCSMax = 300;
+    public static Integer BoundOSOMax = 50;
+    public static Integer BoundOSNOMax = 36;
+    public static Integer BoundCSMaxSS = 800;
     public static Integer BoundOSOMaxSS = 300;
     public static Integer BoundOSNOMaxSS = 150;
+    public static Boolean Override = false;
 
     // ------------------------------------------------------------
 
@@ -57,7 +58,6 @@ public final class PolyVaryLoad {
     private final TextField CSsbox = new TextField();
     private final TextField OSOsbox = new TextField();
     private final TextField OSNOsbox = new TextField();
-    private final Label overridel = new Label();
     private final CheckBox overrideBox = new CheckBox();
     private final VBox root = new VBox();
     private final VBox typeVBox = new VBox(30);
@@ -79,15 +79,21 @@ public final class PolyVaryLoad {
 
         fullContent = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
-    	if (boundTokens.length == 3) {
+    	if (boundTokens.length >= 6) {
     		try {
     			BoundCSMax = Integer.parseInt(boundTokens[0]);
     			BoundOSOMax = Integer.parseInt(boundTokens[1]);
     			BoundOSNOMax = Integer.parseInt(boundTokens[2]);
+    			BoundCSMaxSS = Integer.parseInt(boundTokens[3]);
+    			BoundOSOMaxSS = Integer.parseInt(boundTokens[4]);
+    			BoundOSNOMaxSS = Integer.parseInt(boundTokens[5]);
     		} catch (NumberFormatException e) {
-    			BoundCSMax = 800;
-    			BoundOSOMax = 300;
-    			BoundOSNOMax = 150;
+    			BoundCSMax = 200;
+    			BoundOSOMax = 100;
+    			BoundOSNOMax = 36;
+                BoundCSMaxSS = 222;
+                BoundOSOMaxSS = 222;
+                BoundOSNOMaxSS = 222;
     		}
     	}
 
@@ -138,8 +144,8 @@ public final class PolyVaryLoad {
 
         overrideBox.setIndeterminate(false);
         overrideBox.setAllowIndeterminate(false);
-        overrideBox.setSelected(false);
-        overridel.setText("Override side sum:");
+        overrideBox.setSelected(Override);
+        overrideBox.setText("Override side sum");
 
         instructHBox.getChildren().add(instruct);
 
@@ -147,22 +153,22 @@ public final class PolyVaryLoad {
         typeVBox.setPadding(new Insets(0, 10, 10, 0));
         typeVBox.setAlignment(Pos.CENTER);
 
-        maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, loadButton);
+        maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
         maxHBox.setPadding(new Insets(0, 10, 10, 0));
         maxHBox.setAlignment(Pos.CENTER);
 
-        maxOptHBox.getChildren().addAll(CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox, overridel, overrideBox);
+        maxOptHBox.getChildren().addAll(CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
         maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
         maxOptHBox.setAlignment(Pos.CENTER);
 
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
-        overrideHBox.getChildren().addAll(overridel, overrideBox);
+        overrideHBox.getChildren().addAll(overrideBox);
+        overrideHBox.setAlignment(Pos.CENTER);
         controlVBox.getChildren().addAll(loadButton, overrideHBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER);
 
         bottomHBox.getChildren().addAll(typeVBox, maxVBox, controlVBox);
-
 
         root.getChildren().addAll(instructHBox, text, bottomHBox);
         root.setSpacing(10);
@@ -171,6 +177,7 @@ public final class PolyVaryLoad {
         loadButton.setText(buttonText);
         Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
         loadButton.setOnAction(event -> {
+            Override = overrideBox.isSelected();
     		try {
     			BoundCSMax = Integer.parseInt(CSbox.getText().trim());
             	BoundOSOMax = Integer.parseInt(OSObox.getText().trim());
@@ -204,7 +211,7 @@ public final class PolyVaryLoad {
                 this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, overrideBox.isSelected()));
             }
             Utils.writeToFile(fileName, fullContent);
-        	Utils.writeToFile(boundsFileName, String.format("%d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax));
+        	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
         });
     }

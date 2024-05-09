@@ -26,48 +26,73 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple5;
+import javaslang.Tuple8;
 
 public class AutoPolyVaryLoad {
 	// WARNING: Global mutable state
     // ------------------------------------------------------------
     public static String fullContent = "";
-    public static Integer BoundCSMax = 800;
-    public static Integer BoundOSOMax = 300;
-    public static Integer BoundOSNOMax = 150;
+    public static Integer BoundCSMax = 300;
+    public static Integer BoundOSOMax = 50;
+    public static Integer BoundOSNOMax = 36;
+    public static Integer BoundCSMaxSS = 800;
+    public static Integer BoundOSOMaxSS = 300;
+    public static Integer BoundOSNOMaxSS = 150;
+    public static Boolean Override = false;
     // ------------------------------------------------------------
 
     private final TextArea text = new TextArea();
+    private final Label codel = new Label();
     private final Label CSl = new Label();
     private final Label OSOl = new Label();
     private final Label OSNOl = new Label();
-    private final Label reversel = new Label();
     private final TextField CSbox = new TextField();
     private final TextField OSObox = new TextField();
     private final TextField OSNObox = new TextField();
     private final CheckBox reverseBox = new CheckBox();
+    private final Label ssuml = new Label();
+    private final Label CSsl = new Label();
+    private final Label OSOsl = new Label();
+    private final Label OSNOsl = new Label();
+    private final TextField CSsbox = new TextField();
+    private final TextField OSOsbox = new TextField();
+    private final TextField OSNOsbox = new TextField();
+    private final CheckBox overrideBox = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
+    private final VBox typeVBox = new VBox(30);
+    private final VBox maxVBox = new VBox(10);
+    private final VBox controlVBox = new VBox(20);
     private final HBox instructHBox = new HBox();
+    private final HBox bottomHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
+    private final HBox maxOptHBox = new HBox(10);
+    private final HBox overrideHBox = new HBox(10);
+    private final HBox loadHBox = new HBox(10);
     public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
     
-    private Optional<Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean>> result;
+    private Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> result;
     
     public AutoPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName) {
     	fullContent = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
-    	if (boundTokens.length == 3) {
+    	if (boundTokens.length >= 6) {
     		try {
     			BoundCSMax = Integer.parseInt(boundTokens[0]);
     			BoundOSOMax = Integer.parseInt(boundTokens[1]);
     			BoundOSNOMax = Integer.parseInt(boundTokens[2]);
+    			BoundCSMaxSS = Integer.parseInt(boundTokens[3]);
+    			BoundOSOMaxSS = Integer.parseInt(boundTokens[4]);
+    			BoundOSNOMaxSS = Integer.parseInt(boundTokens[5]);
     		} catch (NumberFormatException e) {
-    			BoundCSMax = 800;
-    			BoundOSOMax = 300;
-    			BoundOSNOMax = 150;
+    			BoundCSMax = 300;
+    			BoundOSOMax = 100;
+    			BoundOSNOMax = 36;
+                BoundCSMaxSS = 222;
+                BoundOSOMaxSS = 222;
+                BoundOSNOMaxSS = 222;
     		}
     	}
 
@@ -89,6 +114,7 @@ public class AutoPolyVaryLoad {
     	instruct.setText("Enter points on separate lines, with the coordinates separated by a space.");
     	instruct.setPadding(new Insets(5, 5, 5, 10));
     	
+        codel.setText("Code length:");
     	CSbox.setPrefWidth(150);
     	CSbox.setText(BoundCSMax.toString());
     	CSl.setText("CS max:");
@@ -99,28 +125,66 @@ public class AutoPolyVaryLoad {
     	OSNObox.setText(BoundOSNOMax.toString());
     	OSNOl.setText("OSNO max:");
 
+        ssuml.setText("Side sum:");
+        CSsbox.setPrefWidth(150);
+    	CSsbox.setText(BoundCSMaxSS.toString());
+    	CSsl.setText("CS max:");
+    	OSOsbox.setPrefWidth(150);
+    	OSOsbox.setText(BoundOSOMaxSS.toString());
+    	OSOsl.setText("OSO max:");
+    	OSNOsbox.setPrefWidth(150);
+    	OSNOsbox.setText(BoundOSNOMaxSS.toString());
+    	OSNOsl.setText("OSNO max:");
+
         reverseBox.setIndeterminate(false);
         reverseBox.setAllowIndeterminate(false);
-        reverseBox.setSelected(false);
-        reversel.setText("Reverse order:");
+        reverseBox.setText("Reverse order");
     	
+        overrideBox.setIndeterminate(false);
+        overrideBox.setAllowIndeterminate(false);
+        overrideBox.setSelected(Override);
+        overrideBox.setText("Override side sum");
+
     	instructHBox.getChildren().add(instruct);
 
-    	maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox, reversel, reverseBox, loadButton);
+        typeVBox.getChildren().addAll(codel, ssuml);
+        typeVBox.setPadding(new Insets(0, 10, 10, 0));
+        typeVBox.setAlignment(Pos.CENTER);
+
+    	maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));
     	maxHBox.setAlignment(Pos.CENTER);
 
-    	root.getChildren().addAll(instructHBox, text, maxHBox);
+
+        maxOptHBox.getChildren().addAll(CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
+        maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
+        maxOptHBox.setAlignment(Pos.CENTER);
+
+        maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
+        loadHBox.getChildren().addAll(loadButton, reverseBox);
+        overrideHBox.getChildren().addAll(overrideBox);
+        overrideHBox.setAlignment(Pos.CENTER);
+        controlVBox.getChildren().addAll(loadHBox, overrideHBox);
+        controlVBox.setPadding(new Insets(0, 10, 10, 0));
+        controlVBox.setAlignment(Pos.CENTER);
+
+        bottomHBox.getChildren().addAll(typeVBox, maxVBox, controlVBox);
+
+    	root.getChildren().addAll(instructHBox, text, bottomHBox);
     	root.setSpacing(10);
     	root.setPadding(new Insets(10));
     
     	loadButton.setText(buttonText);
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
     	loadButton.setOnAction(event -> {
+            Override = overrideBox.isSelected();
     		try {
     			BoundCSMax = Integer.parseInt(CSbox.getText().trim());
             	BoundOSOMax = Integer.parseInt(OSObox.getText().trim());
             	BoundOSNOMax = Integer.parseInt(OSNObox.getText().trim());
+    			BoundCSMaxSS = Integer.parseInt(CSsbox.getText().trim());
+            	BoundOSOMaxSS = Integer.parseInt(OSOsbox.getText().trim());
+            	BoundOSNOMaxSS = Integer.parseInt(OSNOsbox.getText().trim());
     		} catch (NumberFormatException e) {
     			final Alert alert = new Alert(AlertType.ERROR);
         		alert.setTitle("AutoPolyVary Error");
@@ -139,16 +203,19 @@ public class AutoPolyVaryLoad {
     			pointList.add(Vector2.create(x, y));
     		}
     		final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
-        	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, reverseBox.isSelected()));
+        	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, reverseBox.isSelected()));
         	Utils.writeToFile(fileName, fullContent);
-        	Utils.writeToFile(boundsFileName, String.format("%d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax));
+        	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
         	stage.close();
     	});
     }
     
-    public Optional<Tuple5<ConvexPolygon, Integer, Integer, Integer, Boolean>> getLoad() {
+    public Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> getLoad() {
     	stage.showAndWait();
     	return this.result;
+    }
+    public Boolean getOverride() {
+        return Override;
     }
     
     private static String cleanPolygon(final String polygonString) {
