@@ -1331,7 +1331,7 @@ public final class Viewer {
 	        	final Optional<Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> pointOpt =
 	        			varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
 	        	if (pointOpt.isPresent()) {
-		            final ExecutorService executor2 = Executors.newFixedThreadPool(Utils.numThreads);
+		            final ExecutorService executor2 = Executors.newFixedThreadPool(Utils.numThreads); // Create thread pool
 
 	        		final Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> point = pointOpt.get();
 	        		System.out.println(
