@@ -5395,7 +5395,7 @@ public final class Viewer {
 					if (code.codeLength <= OSOmax) {
 						localCodesFound.add(code);
 					}
-				} else if (code.codeType.equals(OSNO)) {
+				} else if (code.codeType.equals(CodeType.OSNO)) {
 					if (code.codeLength <= OSNOmax) {
 						localCodesFound.add(code);
 					}

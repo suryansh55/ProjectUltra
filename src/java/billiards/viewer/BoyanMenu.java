@@ -587,8 +587,8 @@ public class BoyanMenu {
 
         final MutableSortedSet<ClassifiedCodeSequence> bareCodesFound = new TreeSortedSet<>();
 
-        for (double cut2 = 0; cut2 <= aCut2; cut2++) {
-            for (double cut1 = 0; cut1 <= aCut1; cut1 = cut1 + 1) {
+        for (double cut2 = 0; cut2 <= aCut2; ++cut2) {
+            for (double cut1 = 0; cut1 <= aCut1;  ++cut1) {
 
                 double a;
                 double b;
@@ -615,13 +615,8 @@ public class BoyanMenu {
     }
     public MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(
     				final Vector2 point, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
-        final int max = Integer.parseInt(maxMovesText.getText());
-        final int min = Integer.parseInt(minMovesText.getText());
-        final double shots = Integer.parseInt(shotsText.getText());
-        final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
-                                 CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected()};
         final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-        codesFound.addAll(findCodes3(point.x, point.y, min, max, shots, types, executor));
+        codesFound.addAll(findCodes(point.x, point.y, 3, executor));
     	return codesFound;
     }
 
