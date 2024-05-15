@@ -102,6 +102,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Stream;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
@@ -921,7 +922,7 @@ public final class Viewer {
                 final Task<Array<Storage>> task;
 
                 // Label 5
-                task = new DrawPictureTask(codes, pool, false);
+                task = new DrawPictureTask(codes, pool, false, false);
                 task.setOnSucceeded(e -> {
 
                     final Array<Storage> storages;
@@ -3264,7 +3265,7 @@ public final class Viewer {
         final Task<Array<Storage>> task;
 
         if (nolrRdoBtn.isSelected()) {
-            task = new DrawPictureTask(classCodeSeqs, pool, true);
+            task = new DrawPictureTask(classCodeSeqs, pool, true, false);
 
         } else if (showlrRdoBtn.isSelected()) {
             task = new DrawPictureTaskShowLR(classCodeSeqs, pool);
@@ -3377,7 +3378,7 @@ public final class Viewer {
 
     private void drawvaryL(final MutableSortedSet<ClassifiedCodeSequence> codes, final ExecutorService executor) {
         final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(codes);
-    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true);
+    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, false);
         final Progress progress = new Progress(task);
 
         task.setOnSucceeded(e -> {
@@ -3447,7 +3448,7 @@ public final class Viewer {
             final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(allCodes);
 
             if (drawPictureCheckBox.isSelected()) {
-                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true);
+                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, false);
                 final Progress progress = new Progress(task);
 
                 task.setOnSucceeded(e -> {
@@ -5432,6 +5433,7 @@ public final class Viewer {
 		return codesFound;
 		}
 
+    // Tries to find coverings for unfilled pixels onscreen
     private void autoVaryFunction(final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals, final ExecutorService executor) {
         final ConvexPolygon area = polyVals._1;
         final int CSmax = polyVals._2;
@@ -5547,25 +5549,33 @@ public final class Viewer {
             }
             System.out.println(headerString);
 
-            final Task<Void> recurseTask = new Task<Void>() {
+            // 2024-05-14 redesign of recurseTask to support multi-threading
+            final Task<MutableSortedSet<ClassifiedCodeSequence>> recurseTask = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
                 @Override
-                public Void call() {
+                public MutableSortedSet<ClassifiedCodeSequence> call() {
                 	updateProgress(0, 1);
                     final MutableList<Double> points = new FastList<>();
-                    autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points);
+                    autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
                     final int todo = points.size() / 2;
+                    final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet();
                     updateProgress(0, todo);
                     for (int i = 0; i < todo; i++) {
                         if (isCancelled()) {
-                            return null;
+                            return codes;
                         }
                         final int place = i * 2;
+                        /*
                         Utils.runAndWait(() -> {
                             autoCodesFiltered(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
                         });
+                        */
+                        MutableSortedSet<ClassifiedCodeSequence> localCodes = autoCodesFilteredNoDraw(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
+                        if(!localCodes.isEmpty()) {
+                            codes.add(localCodes.first());
+                        }
                         updateProgress(i + 1, todo);
                     }
-                    return null;
+                    return codes;
                 }
             };
 
@@ -5573,14 +5583,16 @@ public final class Viewer {
             //Progress progress = new Progress(recurseTask);
 
             recurseTask.setOnSucceeded(e -> {
-
-                final int endHoles = findHoles(area).size();
-
-                System.out.println(String.format(
-                    "+-------------- started with %d holes, filled %d, %d remain --------------+",
-                    startHoles, startHoles - endHoles, endHoles));
-                System.out.println("");
                 progress.close();
+                try {
+                    System.out.println("Drawing");
+                    // Draw all the codes found, then print summary
+                    drawAutoVary(recurseTask.get(), area, "completed", executor);
+
+                } catch (InterruptedException | ExecutionException e1) {
+                    System.out.println("// Failed to draw");
+                }
+
             });
 
             recurseTask.setOnFailed(e -> {
@@ -5589,12 +5601,15 @@ public final class Viewer {
             });
 
             recurseTask.setOnCancelled(e -> {
-                final int endHoles = findHoles(area).size();
+                try {
+                    System.out.println("Drawing");
+                    // Draw all the codes found, then print summary
+                    drawAutoVary(recurseTask.get(), area, "cancelled", executor);
 
-                System.out.println(String.format(
-                    "+------- cancelled; started with %d holes, filled %d, %d remain -------+",
-                    startHoles, startHoles - endHoles, endHoles));
-                System.out.println("");
+                } catch (InterruptedException | ExecutionException e1) {
+                    System.out.println("// Failed to draw");
+                }
+                progress.close();
             });
 
             final Thread recurseThread = new Thread(recurseTask);
@@ -5604,6 +5619,65 @@ public final class Viewer {
         }
     }
 
+    // As the last step to polyVary, we draw the codes it found
+    private void drawAutoVary(final MutableSortedSet<ClassifiedCodeSequence> codes, final ConvexPolygon area, final String status, final ExecutorService executor) {
+        // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
+        onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
+        final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(codes).filter(code -> !onScreenCodes.contains(code)); 
+    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, true);
+        final Progress progress = new Progress(task);
+
+        task.setOnSucceeded(e -> {
+
+            final Array<Storage> storages;
+            try {
+                storages = task.get();
+            } catch (InterruptedException | ExecutionException exception) {
+                throw new RuntimeException(exception);
+            }
+
+            storages.forEach(storage -> {
+                if(!onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = cycle.get();
+                    color = comboBoxColors.get(index);
+                    addToOnScreenSequences(storage, color);
+                }
+            });
+
+            progress.close();
+
+            final int startHoles = findHoles(area).size();
+
+                        // only render the screen after everything has been loaded
+            // There should be a way to do a "diff" so to speak
+            // We render the things we added, which get put on top
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+
+            final int endHoles = findHoles(area).size();
+
+            System.out.println(String.format(
+                "+-------------- "+status+"; started with %d holes, filled %d, %d remain --------------+",
+                startHoles, startHoles - endHoles, endHoles));
+            System.out.println("");
+
+
+        });
+
+        task.setOnFailed(e -> {
+            progress.close();
+            throw new RuntimeException(task.getException());
+        });
+
+        executor.execute(task);
+
+        progress.show();
+
+    }
+
+
+    // Calculate 4^max vary locations which are distributed across the entire query area
     private void autoRecurse(final double xMin, final double xMax, final double yMin, final double yMax,
                              final int depth, final int max, final ConvexPolygon area, final MutableList<Double> points) {
 
@@ -5698,6 +5772,45 @@ public final class Viewer {
             }
         }
         return count;
+    }
+    // Calculates code sequences without doing code regions
+    private MutableSortedSet<ClassifiedCodeSequence> autoCodesFilteredNoDraw(final double rx, final double ry, final int[] max, final boolean overrideSS, final ExecutorService executor) {
+        final int CSmax = max[0];
+        final int OSOmax = max[1];
+        final int OSNOmax = max[2];
+        final int CSmaxSS = max[3];
+        final int OSOmaxSS = max[4];
+        final int OSNOmaxSS = max[5];
+        final Image image = regionsImageView.getImage();
+        final PixelReader reader = image.getPixelReader();
+        int count = 0;
+        final int midX = (int) map.pixelX(rx);
+        final int midY = (int) map.pixelY(ry);
+        int color = reader.getArgb(midX, midY);
+
+        final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
+        if(color == 0) {
+            final Vector2 coords = Vector2.create(Math.toDegrees(rx), Math.toDegrees(ry));
+
+            final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(coords, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor) : boyanMenu.autoVary(coords, executor);
+            // Generate the filtered list
+            for (ClassifiedCodeSequence code : boyanCodes) {
+            	if (code.codeType.equals(CodeType.CS)) {
+            		if (code.codeLength <= CSmax) {
+            			codes.add(code);
+            		}
+            	} else if (code.codeType.equals(CodeType.OSO)) {
+            		if (code.codeLength <= OSOmax) {
+            			codes.add(code);
+            		}
+            	} else if (code.codeType.equals(CodeType.OSNO)) {
+            		if (code.codeLength <= OSNOmax) {
+            			codes.add(code);
+            		}
+            	}
+            }
+        }
+        return codes;
     }
     
     private int autoCodesFiltered(final double rx, final double ry, final int[] max, final boolean overrideSS, final ExecutorService executor) {

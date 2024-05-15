@@ -181,6 +181,18 @@ public abstract class Storage implements Comparable<Storage> {
 
     // All of these methods are implemented using the code sequence
     // so they are the same for the two subclasses
+    public CodeType codeType() {
+        return this.classCodeSeq.codeType;
+    }
+
+    public long codeLength() {
+        return this.classCodeSeq.codeLength;
+    }
+
+    public long codeSum() {
+        return this.classCodeSeq.codeSum;
+    }
+
     @Override
     public int compareTo(final Storage other) {
         return this.classCodeSeq.compareTo(other.classCodeSeq);

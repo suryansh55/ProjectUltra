@@ -1,6 +1,7 @@
 package billiards.viewer;
 
 import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeType;
 import billiards.codeseq.Storage;
 import billiards.database.Database;
 import billiards.wrapper.ConnectionPool;
@@ -21,15 +22,18 @@ import javafx.concurrent.Task;
 public final class DrawPictureTask extends Task<Array<Storage>> {
     private final Array<Callable<Either<String, Storage>>> tasks;
     private final boolean print;
+    private final boolean detailed;
 
     public DrawPictureTask(
-        final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool, boolean print) {
+        final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool, boolean print, boolean detailed) {
         this.print = print;
+        this.detailed = detailed;
         this.tasks = classCodeSeqs.map(classCodeSeq -> () -> {
             // We could check here for Thread.interrupted() to see if we should
             // cancel the task, but this operation is one-shot,
             // so there's not much point
 
+            // Load from database if code already exists. If not, calculate
             final Optional<Storage> opt = Database.loadStorage(classCodeSeq, pool);
 
             if (opt.isPresent()) {
@@ -80,7 +84,23 @@ public final class DrawPictureTask extends Task<Array<Storage>> {
                     } else {
                         final Storage storage = either.get();
                         storages.add(storage);
-                        msg = storage.toString();
+                        if(detailed) {
+                            // print the code, whether it covered the pixel or not
+                            final CodeType type = storage.codeType();
+
+                            String codeStr = "" + type;
+                            // String codeStr = "xxx " + type; //george july 26 2017 -
+                            // type whatever you want between the quotes in the line above
+                            // make sure to add a space after the xxx
+                            if (codeStr.equals("CS")) {
+                                codeStr += "  ";
+                            } else if (!codeStr.equals("OSNO")) {
+                                codeStr += " ";
+                            }
+                            msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                        } else {
+                            msg = storage.toString();
+                        }
                     }
                     
                     if (print) {
