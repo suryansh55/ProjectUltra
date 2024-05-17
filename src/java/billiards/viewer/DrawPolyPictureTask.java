@@ -17,14 +17,37 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javafx.application.Platform;
 import javafx.concurrent.Task;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 
-public final class DrawPictureTask extends Task<Array<Storage>> {
-    protected final Array<Callable<Either<String, Storage>>> tasks;
-    protected final boolean print;
-    protected final boolean detailed;
+public final class DrawPolyPictureTask extends Task<Array<Storage>> {
+    // Expose task property representing partial results
+    private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
+            new ReadOnlyObjectWrapper<>(
+                    this, 
+                    "partialResults",
+                    FXCollections.observableArrayList(
+                            new ArrayList<>()
+                    )
+            );
+    // These expose partialResults to the FX application thread
+    public final ObservableList<Storage> getPartials() {
+        return partialResults.get();
+    }
+    public final ReadOnlyObjectProperty<ObservableList<Storage>> getPartialProperty() {
+        return partialResults.getReadOnlyProperty();
+    }
 
-    public DrawPictureTask(
+
+    private final Array<Callable<Either<String, Storage>>> tasks;
+    private final boolean print;
+    private final boolean detailed;
+
+    public DrawPolyPictureTask(
         final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool, boolean print, boolean detailed) {
         this.print = print;
         this.detailed = detailed;
@@ -84,6 +107,10 @@ public final class DrawPictureTask extends Task<Array<Storage>> {
                     } else {
                         final Storage storage = either.get();
                         storages.add(storage);
+                        // Add a new item to the partial results
+                        Platform.runLater(() -> {
+                            partialResults.get().add(storage);
+                        });
                         if(detailed) {
                             // print the code, whether it covered the pixel or not
                             final CodeType type = storage.codeType();

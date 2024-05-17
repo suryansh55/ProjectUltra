@@ -106,6 +106,10 @@ import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
+import javafx.collections.ListChangeListener;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -5541,9 +5545,12 @@ public final class Viewer {
 
         } else {
             // shooting at points determined by subdivision
-            String headerString = String.format(//george may 3,2019 changed the name to polyvary instead of auto vary3
-                                      "+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, max) +
-                                  " looking for: " + boyanMenu.typeString() + "-----+";
+            //george may 3,2019 changed the name to polyvary instead of auto vary3
+            String headerString = !overrideSS ? 
+                                    String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, max) +
+                                    " looking for: " + boyanMenu.typeString() + "-----+" :
+                                    String.format("+----- poly vary: %d shots, overrided moves and %d subdivisions,", shots, max) +
+                                    " looking for: " + boyanMenu.typeString() + "-----+" ;
             if (proverCheckBox.isSelected()) {
                 headerString += "  (with prover)";
             }
@@ -5601,15 +5608,8 @@ public final class Viewer {
             });
 
             recurseTask.setOnCancelled(e -> {
-                try {
-                    System.out.println("Drawing");
-                    // Draw all the codes found, then print summary
-                    drawAutoVary(recurseTask.get(), area, "cancelled", executor);
-
-                } catch (InterruptedException | ExecutionException e1) {
-                    System.out.println("// Failed to draw");
-                }
                 progress.close();
+                System.out.println("Process cancelled");
             });
 
             final Thread recurseThread = new Thread(recurseTask);
@@ -5625,8 +5625,30 @@ public final class Viewer {
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(codes).filter(code -> !onScreenCodes.contains(code)); 
-    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, true);
+        // Create the task
+    	final DrawPolyPictureTask task = new DrawPolyPictureTask(classCodeSeqs, pool, true, true);
+        final ObservableList<Storage> partials = task.getPartials();
         final Progress progress = new Progress(task);
+
+        // Update screen when change detected
+        partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
+            while (c.next()) {
+                if(c.wasAdded()) {
+                    // Draw all new additions
+                    c.getAddedSubList().forEach(storage -> {
+                        if(!onScreenSequences.containsKey(storage)) {
+                            final Color color;
+                            final int index = cycle.get();
+                            color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storage, color);
+                            renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+                        }
+
+                    });
+                }
+            }
+
+        });
 
         task.setOnSucceeded(e -> {
 
