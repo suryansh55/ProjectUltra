@@ -602,7 +602,7 @@ public final class CoverWindow {
             }
             final ClassifiedCodeSequence codeSeq = either.get();
             if (!codeSeq.stable) {
-                throw new RuntimeException("unstable code " + codeSeq + " put in stables");
+                throw new RuntimeException("unstable code " + codeSeq + " from line " + line + " put in stables");
             }
 
             if (!Wrapper.saveToDatabase(codeSeq, pool)) {

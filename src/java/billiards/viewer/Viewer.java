@@ -5557,32 +5557,26 @@ public final class Viewer {
             System.out.println(headerString);
 
             // 2024-05-14 redesign of recurseTask to support multi-threading
-            final Task<MutableSortedSet<ClassifiedCodeSequence>> recurseTask = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
+            final Task<MutableList<Double>> recurseTask = new Task<MutableList<Double>>() {
                 @Override
-                public MutableSortedSet<ClassifiedCodeSequence> call() {
+                public MutableList<Double> call() {
                 	updateProgress(0, 1);
                     final MutableList<Double> points = new FastList<>();
+                    final MutableList<Double> pointsFiltered = new FastList<>();
                     autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
-                    final int todo = points.size() / 2;
-                    final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet();
-                    updateProgress(0, todo);
-                    for (int i = 0; i < todo; i++) {
-                        if (isCancelled()) {
-                            return codes;
+                    final Image image = regionsImageView.getImage();
+                    final PixelReader reader = image.getPixelReader();
+                    // Filter out filled pixels
+                    for(int i = 0; i < points.size(); i += 2) {
+                        int count = 0;
+                        final int midX = (int) map.pixelX(points.get(i));
+                        final int midY = (int) map.pixelY(points.get(i+1));
+                        int color = reader.getArgb(midX, midY);
+                        if(color == 0) {
+                            pointsFiltered.addAll({points.get(i), points.get(i+1)});
                         }
-                        final int place = i * 2;
-                        /*
-                        Utils.runAndWait(() -> {
-                            autoCodesFiltered(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
-                        });
-                        */
-                        MutableSortedSet<ClassifiedCodeSequence> localCodes = autoCodesFilteredNoDraw(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
-                        if(!localCodes.isEmpty()) {
-                            codes.add(localCodes.first());
-                        }
-                        updateProgress(i + 1, todo);
                     }
-                    return codes;
+                    return pointsFiltered;
                 }
             };
 
@@ -5594,7 +5588,7 @@ public final class Viewer {
                 try {
                     System.out.println("Drawing");
                     // Draw all the codes found, then print summary
-                    drawAutoVary(recurseTask.get(), area, "completed", executor);
+                    drawAutoVary(recurseTask.get(), maxList, overrideSS, area, "completed", executor);
 
                 } catch (InterruptedException | ExecutionException e1) {
                     System.out.println("// Failed to draw");
@@ -5620,15 +5614,15 @@ public final class Viewer {
     }
 
     // As the last step to polyVary, we draw the codes it found
-    private void drawAutoVary(final MutableSortedSet<ClassifiedCodeSequence> codes, final ConvexPolygon area, final String status, final ExecutorService executor) {
+    private void drawAutoVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final ConvexPolygon area, final String status, final ExecutorService executor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
-        final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(codes).filter(code -> !onScreenCodes.contains(code)); 
         // Create the task
-    	final DrawPolyPictureTask task = new DrawPolyPictureTask(classCodeSeqs, pool, true, true);
+    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, max, overrideSS, pool, true, true);
         final ObservableList<Storage> partials = task.getPartials();
         final Progress progress = new Progress(task);
+        final int startHoles = findHoles(area).size();
 
         // Update screen when change detected
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -5652,7 +5646,7 @@ public final class Viewer {
 
         task.setOnSucceeded(e -> {
 
-            final Array<Storage> storages;
+            final ObservableList<Storage> storages;
             try {
                 storages = task.get();
             } catch (InterruptedException | ExecutionException exception) {
@@ -5670,11 +5664,8 @@ public final class Viewer {
 
             progress.close();
 
-            final int startHoles = findHoles(area).size();
 
                         // only render the screen after everything has been loaded
-            // There should be a way to do a "diff" so to speak
-            // We render the things we added, which get put on top
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
