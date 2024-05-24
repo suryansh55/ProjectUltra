@@ -32,6 +32,7 @@ public final class Main extends Application {
 
     @Override
     public void start(final Stage mainWindow) {
+        System.out.println("Threads available: " + Utils.numThreads);
         final DBGui dbGui = new DBGui();
         // Shows and waits until the window closes
         final Optional<String> databaseName = dbGui.getDbName();

@@ -5459,6 +5459,7 @@ public final class Viewer {
         final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
 
         if (boyanMenu.allPixCheckBox.isSelected()) {
+            /* The allPixCheckBox has been removed since forever.
             // shooting at all uncovered pixels
             if (startHoles > 100) {
                 final Alert alert = new Alert(AlertType.CONFIRMATION);
@@ -5542,7 +5543,7 @@ public final class Viewer {
             allPixThread.start();
 
             progress.show();
-
+        */
         } else {
             // shooting at points determined by subdivision
             //george may 3,2019 changed the name to polyvary instead of auto vary3
@@ -5556,72 +5557,40 @@ public final class Viewer {
             }
             System.out.println(headerString);
 
-            // 2024-05-14 redesign of recurseTask to support multi-threading
-            final Task<MutableList<Double>> recurseTask = new Task<MutableList<Double>>() {
-                @Override
-                public MutableList<Double> call() {
-                	updateProgress(0, 1);
-                    final MutableList<Double> points = new FastList<>();
-                    final MutableList<Double> pointsFiltered = new FastList<>();
-                    autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
-                    final Image image = regionsImageView.getImage();
-                    final PixelReader reader = image.getPixelReader();
-                    // Filter out filled pixels
-                    for(int i = 0; i < points.size(); i += 2) {
-                        int count = 0;
-                        final int midX = (int) map.pixelX(points.get(i));
-                        final int midY = (int) map.pixelY(points.get(i+1));
-                        int color = reader.getArgb(midX, midY);
-                        if(color == 0) {
-                            pointsFiltered.addAll({points.get(i), points.get(i+1)});
-                        }
-                    }
-                    return pointsFiltered;
+            // 2024-05-23 complete redesign of autoPolyVary to support multi-threading
+            final MutableList<Double> points = new FastList<>();
+            final MutableList<Double> pointsFiltered = new FastList<>();
+            autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
+            final Image image = regionsImageView.getImage();
+            final PixelReader reader = image.getPixelReader();
+            // Filter out filled pixels
+            for(int i = 0; i < points.size(); i += 2) {
+                int count = 0;
+                final int midX = (int) map.pixelX(points.get(i));
+                final int midY = (int) map.pixelY(points.get(i+1));
+                int color = reader.getArgb(midX, midY);
+                if(color == 0) {
+                    pointsFiltered.add(points.get(i));
+                    pointsFiltered.add(points.get(i+1));
                 }
-            };
-
-            final ProgressWithStatus progress = new ProgressWithStatus(recurseTask, "%d / %d", 0);
-            //Progress progress = new Progress(recurseTask);
-
-            recurseTask.setOnSucceeded(e -> {
-                progress.close();
-                try {
-                    System.out.println("Drawing");
-                    // Draw all the codes found, then print summary
-                    drawAutoVary(recurseTask.get(), maxList, overrideSS, area, "completed", executor);
-
-                } catch (InterruptedException | ExecutionException e1) {
-                    System.out.println("// Failed to draw");
-                }
-
-            });
-
-            recurseTask.setOnFailed(e -> {
-                System.out.println("Something went wrong (PolyVary recurseTask Failed)");
-                progress.close();
-            });
-
-            recurseTask.setOnCancelled(e -> {
-                progress.close();
-                System.out.println("Process cancelled");
-            });
-
-            final Thread recurseThread = new Thread(recurseTask);
-            recurseThread.start();
-
-            progress.show();
+            }
+            // Now that points have been found, pass to drawAutoVary for actual work
+            System.out.println("Drawing");
+            // Draw all the codes found, then print summary
+            drawPolyVary(pointsFiltered, maxList, overrideSS, area, executor);
         }
     }
 
-    // As the last step to polyVary, we draw the codes it found
-    private void drawAutoVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final ConvexPolygon area, final String status, final ExecutorService executor) {
+    // Calculates and draws codes at each of the list of points 
+    private void drawPolyVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final ConvexPolygon area, final ExecutorService executor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, max, overrideSS, pool, true, true);
+    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
         final ObservableList<Storage> partials = task.getPartials();
-        final Progress progress = new Progress(task);
+        final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
+        // Count the number of holes we start with
         final int startHoles = findHoles(area).size();
 
         // Update screen when change detected
@@ -5636,8 +5605,23 @@ public final class Viewer {
                             color = comboBoxColors.get(index);
                             addToOnScreenSequences(storage, color);
                             renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
-                        }
 
+                            // print the code
+                            final String msg;
+                            final CodeType type = storage.codeType();
+
+                            String codeStr = "" + type;
+                            // String codeStr = "xxx " + type; //george july 26 2017 -
+                            // type whatever you want between the quotes in the line above
+                            // make sure to add a space after the xxx
+                            if (codeStr.equals("CS")) {
+                                codeStr += "  ";
+                            } else if (!codeStr.equals("OSNO")) {
+                                codeStr += " ";
+                            }
+                            msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                    	    System.out.println(msg);
+                        }
                     });
                 }
             }
@@ -5664,6 +5648,30 @@ public final class Viewer {
 
             progress.close();
 
+                        // only render the screen after everything has been loaded
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+
+            final int endHoles = findHoles(area).size();
+
+            System.out.println(String.format(
+                "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
+                startHoles, startHoles - endHoles, endHoles));
+            System.out.println("");
+
+
+        });
+
+        task.setOnCancelled(e -> {
+            partials.forEach(storage -> {
+                if(!onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = cycle.get();
+                    color = comboBoxColors.get(index);
+                    addToOnScreenSequences(storage, color);
+                }
+            });
+
+            progress.close();
 
                         // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5671,11 +5679,9 @@ public final class Viewer {
             final int endHoles = findHoles(area).size();
 
             System.out.println(String.format(
-                "+-------------- "+status+"; started with %d holes, filled %d, %d remain --------------+",
+                "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
                 startHoles, startHoles - endHoles, endHoles));
             System.out.println("");
-
-
         });
 
         task.setOnFailed(e -> {
