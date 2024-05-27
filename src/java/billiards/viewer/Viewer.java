@@ -1521,78 +1521,26 @@ public final class Viewer {
         	// Run the AutoPolyVary algorithm parallel to the application so that the screen can be rendered in real time instead
         	// of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
         	// _is_ updating, but the user is unable to see this happen).
-        	final Task<Void> autoPolyVaryTask = new Task<Void>() {
-        		@Override
-        		public Void call() {
-        			final int maxSubdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
-        			final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
-        	        final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
-        			System.out.println(String.format(
-        				"+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
-        				endIdx - startIdx + 1,
-        				shots,
-        				maxSubdivisions,
-        				maxMoves
-        			));
-		        	for (int holeIndex = startIdx; holeIndex <= endIdx; holeIndex += stepIdx) {
-		        		if (isCancelled()) {
-		        			return null;
-		        		}
-		        		// Update progress...
-		        		final int currentHoleProgress = holeIndex - startIdx + 1;
-		        		final int totalHolesTodo = endIdx - startIdx + 1;
-		        		updateProgress(currentHoleProgress, totalHolesTodo);
-		        		// Move the screen
-                        if(!reverse) { // Check if reverse order is selected
-		    			    setOBO(holeIndex, pool, executor);
-                        } else {
-                            setOBO(endIdx - holeIndex, pool, executor);
-                        }
-		    			ConvexPolygon area = polyOpt.get()._1;
-		    	    	final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
-		    	    	final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
-		    	    	final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
-		    	    	final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
-		    	    	
-		    			final MutableList<Double> points = new FastList<>();
-		    			autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
-		    			final int todo = points.size() / 2;
-		    			for (int i = 0; i < todo; i++) {
-		    				if (isCancelled()) {
-		    					return null;
-		    				}
-		    				final int place = i * 2;
-		    				// Generate codes
-		    				Utils.runAndWait(() -> {
-                                final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
-		    					autoCodesFiltered(points.get(place), points.get(place + 1), maxList, overrideSS, executor);
-		    				});
-		    			}
-		        	}
-		        	// Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
-		        	// invocation found some new covers.
-		        	renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-		        	return null;
-        		}
-        	};
-        	final ProgressWithStatus progress = new ProgressWithStatus(autoPolyVaryTask, "Line: %d, Stopping at: %d", startIdx);
-        	autoPolyVaryTask.setOnSucceeded(e -> {
-        		System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
-        		System.out.println("");
-        		progress.close();
-        	});
-        	autoPolyVaryTask.setOnCancelled(e -> {
-        		System.out.println("+------------------------------ AutoPolyVary cancelled ------------------------------+");
-        		System.out.println("");
-        	});
-        	autoPolyVaryTask.setOnFailed(e -> {
-        		System.out.println("+------------------------------- AutoPolyVary failed -------------------------------+");
-        		System.out.println("");
-        		progress.close();
-        	});
-        	final Thread autoPolyVaryThread = new Thread(autoPolyVaryTask);
-        	autoPolyVaryThread.start();
-        	progress.show();
+            final int maxSubdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+            final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
+            final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
+            System.out.println(String.format(
+                "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
+                endIdx - startIdx + 1,
+                shots,
+                maxSubdivisions,
+                maxMoves
+            ));
+            ConvexPolygon area = polyVals._1;
+            // Count the number of holes we start with
+            final int startHoles = findHoles(area).size();
+            final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
+        	//final ProgressWithStatus progress = new ProgressWithStatus(autoPolyVaryTask, "Line: %d, Stopping at: %d", startIdx);
+        	//progress.show();
+            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, reverse, overrideSS, area, executor);
+            // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
+            // invocation found some new covers.
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
 
         fillScreenBtn.setText("Fill Screen");
@@ -5657,8 +5605,6 @@ public final class Viewer {
                 "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
                 startHoles, startHoles - endHoles, endHoles));
             System.out.println("");
-
-
         });
 
         task.setOnCancelled(e -> {
@@ -5690,9 +5636,116 @@ public final class Viewer {
         });
 
         executor.execute(task);
-
         progress.show();
+    }
 
+    // Recursively iterate through the list of holes, running polyVary at each hole.
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final boolean reverse, final boolean overrideSS, final ConvexPolygon area, final ExecutorService executor) {
+        // Move the screen
+        if(!reverse) { // Check if reverse order is selected
+            setOBO(currIdx, pool, executor);
+        } else {
+            setOBO(endIdx - currIdx, pool, executor);
+        }
+        final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
+        final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
+        final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
+        final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
+        
+        final MutableList<Double> points = new FastList<>();
+        autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
+        // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
+        onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
+        // Create the task
+    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
+        final ObservableList<Storage> partials = task.getPartials();
+        final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
+
+        // Update screen when change detected
+        partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
+            while (c.next()) {
+                if(c.wasAdded()) {
+                    // Draw all new additions
+                    c.getAddedSubList().forEach(storage -> {
+                        if(!onScreenSequences.containsKey(storage)) {
+                            final Color color;
+                            final int index = cycle.get();
+                            color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storage, color);
+                            renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+
+                            // print the code
+                            final String msg;
+                            final CodeType type = storage.codeType();
+
+                            String codeStr = "" + type;
+                            // String codeStr = "xxx " + type; //george july 26 2017 -
+                            // type whatever you want between the quotes in the line above
+                            // make sure to add a space after the xxx
+                            if (codeStr.equals("CS")) {
+                                codeStr += "  ";
+                            } else if (!codeStr.equals("OSNO")) {
+                                codeStr += " ";
+                            }
+                            msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                    	    System.out.println(msg);
+                        }
+                    });
+                }
+            }
+
+        });
+
+        task.setOnSucceeded(e -> {
+
+            final ObservableList<Storage> storages;
+            try {
+                storages = task.get();
+            } catch (InterruptedException | ExecutionException exception) {
+                throw new RuntimeException(exception);
+            }
+
+            storages.forEach(storage -> {
+                if(!onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = cycle.get();
+                    color = comboBoxColors.get(index);
+                    addToOnScreenSequences(storage, color);
+                }
+            });
+            progress.close();
+            // Run at the next hole
+            if(currIdx + stepIdx <= endIdx) {
+                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, area, executor);
+            } else {
+                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+        		System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+            }
+        });
+
+        task.setOnCancelled(e -> {
+            partials.forEach(storage -> {
+                if(!onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = cycle.get();
+                    color = comboBoxColors.get(index);
+                    addToOnScreenSequences(storage, color);
+                }
+            });
+            progress.close();
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+
+        		System.out.println("+------------------------------ AutoPolyVary cancelled ------------------------------+");
+        });
+
+        task.setOnFailed(e -> {
+            progress.close();
+            throw new RuntimeException(task.getException());
+        });
+        progress.show();
+        executor.execute(task);
+        return 0;
     }
 
 

@@ -88,6 +88,7 @@ public final class ProgressWithStatus {
     }
 
     public void show() {
+        stage.centerOnScreen();
         stage.show();
     }
 }
