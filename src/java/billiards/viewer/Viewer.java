@@ -1535,9 +1535,9 @@ public final class Viewer {
             // Count the number of holes we start with
             final int startHoles = findHoles(area).size();
             final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
-        	//final ProgressWithStatus progress = new ProgressWithStatus(autoPolyVaryTask, "Line: %d, Stopping at: %d", startIdx);
-        	//progress.show();
-            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, reverse, overrideSS, area, executor);
+        	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", startIdx+1, endIdx+1);
+        	progress.show();
+            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, reverse, overrideSS, area, progress, executor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5505,7 +5505,7 @@ public final class Viewer {
             }
             System.out.println(headerString);
 
-            // 2024-05-23 complete redesign of autoPolyVary to support multi-threading
+            // 2024-05-23 complete redesign of PolyVary to support multi-threading
             final MutableList<Double> points = new FastList<>();
             final MutableList<Double> pointsFiltered = new FastList<>();
             autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
@@ -5640,7 +5640,7 @@ public final class Viewer {
     }
 
     // Recursively iterate through the list of holes, running polyVary at each hole.
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final boolean reverse, final boolean overrideSS, final ConvexPolygon area, final ExecutorService executor) {
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final boolean reverse, final boolean overrideSS, final ConvexPolygon area, final ProgressMultiTask overallProgress, final ExecutorService executor) {
         // Move the screen
         if(!reverse) { // Check if reverse order is selected
             setOBO(currIdx, pool, executor);
@@ -5653,14 +5653,30 @@ public final class Viewer {
         final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
         
         final MutableList<Double> points = new FastList<>();
+        final MutableList<Double> pointsFiltered = new FastList<>();
         autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
+        final Image image = regionsImageView.getImage();
+        final PixelReader reader = image.getPixelReader();
+        // Filter out filled pixels
+        for(int i = 0; i < points.size(); i += 2) {
+            int count = 0;
+            final int midX = (int) map.pixelX(points.get(i));
+            final int midY = (int) map.pixelY(points.get(i+1));
+            int color = reader.getArgb(midX, midY);
+            if(color == 0) {
+                pointsFiltered.add(points.get(i));
+                pointsFiltered.add(points.get(i+1));
+            }
+        }
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
+    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
         final ObservableList<Storage> partials = task.getPartials();
-        final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
+        //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
+        overallProgress.changeTask(task);
+
 
         // Update screen when change detected
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -5683,9 +5699,9 @@ public final class Viewer {
                             // String codeStr = "xxx " + type; //george july 26 2017 -
                             // type whatever you want between the quotes in the line above
                             // make sure to add a space after the xxx
-                            if (codeStr.equals("CS")) {
+                            if (type.equals(CodeType.CS)) {
                                 codeStr += "  ";
-                            } else if (!codeStr.equals("OSNO")) {
+                            } else if (!type.equals(CodeType.OSNO)) {
                                 codeStr += " ";
                             }
                             msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
@@ -5714,13 +5730,15 @@ public final class Viewer {
                     addToOnScreenSequences(storage, color);
                 }
             });
-            progress.close();
+            //progress.close();
+            overallProgress.increment(stepIdx);
             // Run at the next hole
             if(currIdx + stepIdx <= endIdx) {
-                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, area, executor);
+                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, area, overallProgress, executor);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         		System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+                overallProgress.close();
             }
         });
 
@@ -5733,17 +5751,18 @@ public final class Viewer {
                     addToOnScreenSequences(storage, color);
                 }
             });
-            progress.close();
+            //progress.close();
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-
-        		System.out.println("+------------------------------ AutoPolyVary cancelled ------------------------------+");
+            System.out.println("+------------------------------ AutoPolyVary cancelled ------------------------------+");
+            overallProgress.close();
         });
 
         task.setOnFailed(e -> {
-            progress.close();
+            //progress.close();
+            overallProgress.close();
             throw new RuntimeException(task.getException());
         });
-        progress.show();
+        //progress.show();
         executor.execute(task);
         return 0;
     }
@@ -5782,109 +5801,7 @@ public final class Viewer {
         return;
     }
 
-    private int autoCodes(final double rx, final double ry, final ExecutorService executor) {
-        final Image image = regionsImageView.getImage();
-        final PixelReader reader = image.getPixelReader();
-        int count = 0;
-        final int midX = (int) map.pixelX(rx);
-        final int midY = (int) map.pixelY(ry);
-        int color = reader.getArgb(midX, midY);
-
-        if (color == 0) {
-            final Vector2 coords = Vector2.create(Math.toDegrees(rx), Math.toDegrees(ry));
-            final MutableSortedSet<ClassifiedCodeSequence> codes = boyanMenu.autoVary(coords, executor);
-            
-            if (!codes.isEmpty()) {
-                final Iterator<ClassifiedCodeSequence> iterator = codes.iterator();
-                ClassifiedCodeSequence current = codes.first();
-                while (color == 0 && iterator.hasNext()) {
-                    current = iterator.next();
-                    Optional<Storage> storage;
-                    try {
-                        final ClassifiedCodeSequence finalCurrent = current;
-                        storage = executor.submit(() -> Database.loadStorage(finalCurrent, pool)).get();
-                    } catch (InterruptedException | ExecutionException e) {
-                        throw new RuntimeException("Autovary failed when searching");
-                    }
-
-                    if (storage.isPresent()) {
-                        if (current.codeType.equals(OSNO) &&
-                            2 * current.codeLength > Integer.parseInt(boyanMenu.maxMovesText.getText())) {
-                            continue;
-                        }
-                        if (!onScreenSequences.containsKey(storage.get())) {
-                            final WritableImage regionImage = (WritableImage) regionsImageView.getImage();
-                            final int index = cycle.get();
-                            final Color drawColor = comboBoxColors.get(index);
-                            addToOnScreenSequences(storage.get(), drawColor);
-                            renderRegion(storage.get(), regionImage, drawColor);
-
-                            color = reader.getArgb(midX, midY);
-
-                            // print the code, whether it covered the pixel or not
-                            final CodeType type = current.codeType;
-
-                            String codeStr = "" + type;
-                            // String codeStr = "xxx " + type; //george july 26 2017 -
-                            // type whatever you want between the quotes in the line above
-                            // make sure to add a space after the xxx
-                            if (codeStr.equals("CS")) {
-                                codeStr += "  ";
-                            } else if (!codeStr.equals("OSNO")) {
-                                codeStr += " ";
-                            }
-                            final String codeString = codeStr + " (" + current.codeLength + ", " + current.codeSum + ") " + current;
-
-                            System.out.println(codeString);
-
-                            count += 1;
-                        }
-                    }
-                }
-            }
-        }
-        return count;
-    }
-    // Calculates code sequences without doing code regions
-    private MutableSortedSet<ClassifiedCodeSequence> autoCodesFilteredNoDraw(final double rx, final double ry, final int[] max, final boolean overrideSS, final ExecutorService executor) {
-        final int CSmax = max[0];
-        final int OSOmax = max[1];
-        final int OSNOmax = max[2];
-        final int CSmaxSS = max[3];
-        final int OSOmaxSS = max[4];
-        final int OSNOmaxSS = max[5];
-        final Image image = regionsImageView.getImage();
-        final PixelReader reader = image.getPixelReader();
-        int count = 0;
-        final int midX = (int) map.pixelX(rx);
-        final int midY = (int) map.pixelY(ry);
-        int color = reader.getArgb(midX, midY);
-
-        final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
-        if(color == 0) {
-            final Vector2 coords = Vector2.create(Math.toDegrees(rx), Math.toDegrees(ry));
-
-            final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(coords, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor) : boyanMenu.autoVary(coords, executor);
-            // Generate the filtered list
-            for (ClassifiedCodeSequence code : boyanCodes) {
-            	if (code.codeType.equals(CodeType.CS)) {
-            		if (code.codeLength <= CSmax) {
-            			codes.add(code);
-            		}
-            	} else if (code.codeType.equals(CodeType.OSO)) {
-            		if (code.codeLength <= OSOmax) {
-            			codes.add(code);
-            		}
-            	} else if (code.codeType.equals(CodeType.OSNO)) {
-            		if (code.codeLength <= OSNOmax) {
-            			codes.add(code);
-            		}
-            	}
-            }
-        }
-        return codes;
-    }
-    
+   
     private int autoCodesFiltered(final double rx, final double ry, final int[] max, final boolean overrideSS, final ExecutorService executor) {
         final int CSmax = max[0];
         final int OSOmax = max[1];

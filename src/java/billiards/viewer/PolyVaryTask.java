@@ -183,6 +183,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
                 // Each task checks cancellation on it's own, so we only have to cancel the rest
                 future.cancel(false);
+                storageExecutor.shutdown();
+                shotExecutor.shutdown();
             } else {
                 try {
                     final Either<String, Storage> either = future.get();
