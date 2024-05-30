@@ -523,7 +523,7 @@ public final class Viewer {
 
     public Viewer(final Stage primaryStage, final String version, final ExecutorService executor,
                   final ConnectionPool pool, final String dbName) {
-        this.dbname=dbName;
+        Viewer.dbname=dbName;
 
         try {
             if (!Files.exists(Paths.get(tmpDir))) {
@@ -5532,7 +5532,7 @@ public final class Viewer {
     // Calculates and draws codes at each of the list of points 
     private void drawPolyVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final ConvexPolygon area, final ExecutorService executor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
-        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
     	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
@@ -5669,7 +5669,7 @@ public final class Viewer {
             }
         }
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
-        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet();  
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
     	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);

@@ -379,8 +379,8 @@ public class StablesWindow {
         final int empty = 0;
         final boolean mrr = true;
 
-        ArrayList<String> stables = new ArrayList();
-        ArrayList<String> unstables = new ArrayList();
+        ArrayList<String> stables = new ArrayList<>();
+        ArrayList<String> unstables = new ArrayList<>();
 
         stables.add(item.split(",")[0]);
         unstables.add(item.split(",")[1]);
