@@ -98,6 +98,8 @@ sqlite::ConnectionPool* create_connection_pool(const char* const db_path, const 
 }
 
 void destroy_connection_pool(const sqlite::ConnectionPool* const pool) {
+    std::cout << "Started with "<< pool->start_size() << " DB connections\n";
+    std::cout << "Ending with " << pool->curr_size() << " DB connections" << std::endl;
     delete pool;
 }
 

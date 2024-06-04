@@ -1533,7 +1533,6 @@ public final class Viewer {
             ));
             ConvexPolygon area = polyVals._1;
             // Count the number of holes we start with
-            final int startHoles = findHoles(area).size();
             final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
         	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", startIdx+1, endIdx+1);
         	progress.show();
@@ -2977,6 +2976,7 @@ public final class Viewer {
             // close all the windows
             // TODOx? simply close all remaining windows directly instead
             // of using Platform.exit() (which causes a crash sometimes)
+            System.out.println("Send close request");
             Platform.exit();
         });
         mainWindow.setScene(scene);
@@ -5625,9 +5625,9 @@ public final class Viewer {
             final int endHoles = findHoles(area).size();
 
             System.out.println(String.format(
-                "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
+                "+-------------- Cancelling; started with %d holes, filled %d, %d remain --------------+",
                 startHoles, startHoles - endHoles, endHoles));
-            System.out.println("");
+            System.out.println("...");
         });
 
         task.setOnFailed(e -> {
@@ -5659,7 +5659,6 @@ public final class Viewer {
         final PixelReader reader = image.getPixelReader();
         // Filter out filled pixels
         for(int i = 0; i < points.size(); i += 2) {
-            int count = 0;
             final int midX = (int) map.pixelX(points.get(i));
             final int midY = (int) map.pixelY(points.get(i+1));
             int color = reader.getArgb(midX, midY);
@@ -5730,10 +5729,12 @@ public final class Viewer {
                     addToOnScreenSequences(storage, color);
                 }
             });
-            //progress.close();
             overallProgress.increment(stepIdx);
             // Run at the next hole
-            if(currIdx + stepIdx <= endIdx) {
+            if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
+                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                System.out.println("+------------------------------ Cancelled AutoPolyVary ------------------------------+");
+            } else if(currIdx + stepIdx <= endIdx) {
                 drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, area, overallProgress, executor);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5753,8 +5754,10 @@ public final class Viewer {
             });
             //progress.close();
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-            System.out.println("+------------------------------ AutoPolyVary cancelled ------------------------------+");
-            overallProgress.close();
+            System.out.println("+------------------------------ Cancelling AutoPolyVary ------------------------------+");
+            System.out.println("...");
+            // Unnecessary: overallProgress closes itself
+            //overallProgress.close(); 
         });
 
         task.setOnFailed(e -> {

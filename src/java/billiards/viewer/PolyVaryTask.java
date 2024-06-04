@@ -11,14 +11,13 @@ import javaslang.collection.Array;
 import javaslang.control.Either;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Platform;
 import javafx.concurrent.Task;
@@ -61,9 +60,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     private final int OSNOmaxSS;
     private final boolean overrideSS;
 
-    // Initialized on call()
-    private Array<Callable<Either<String, Storage>>> tasks;
-
     // Calculates codeSequence set at a specific coordinate 
     private MutableSortedSet<ClassifiedCodeSequence> autoCodesFiltered(final Vector2 coords, final ExecutorService executor) {
         final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
@@ -91,6 +87,28 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         return Array.ofAll(out);
     }
 
+    // Copied from Oracle docs https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ExecutorService.html
+    private void shutdownAndTerminate(ExecutorService pool, final boolean print) {
+        pool.shutdown(); // Disable new tasks from being submitted
+        try {
+             // Wait a while for existing tasks to terminate
+             if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+               pool.shutdownNow(); // Cancel currently executing tasks
+               // Wait a while for tasks to respond to being cancelled
+               if (!pool.awaitTermination(60, TimeUnit.SECONDS))
+                   System.err.println("Pool did not terminate");
+             } else if(print) {
+               System.out.println("Successfully terminated");
+             }
+        } catch (InterruptedException ie) {
+            System.out.println("Interrupt during cancel");
+            // (Re-)Cancel if current thread also interrupted
+            pool.shutdownNow();
+            // Preserve interrupt status
+            Thread.currentThread().interrupt();
+       }
+       System.out.println("Finish Cancellation");
+    }
 
     // These expose partialResults to the FX application thread
     public final ObservableList<Storage> getPartials() {
@@ -131,8 +149,23 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
-        this.coordList.forEach(coord -> {
-            MutableSortedSet<ClassifiedCodeSequence> localCodes = autoCodesFiltered(coord, shotExecutor);
+        for(Vector2 coord: this.coordList) {
+            MutableSortedSet<ClassifiedCodeSequence> localCodes;
+            // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
+            try {
+                localCodes = autoCodesFiltered(coord, shotExecutor);
+            } catch(RuntimeException e) {
+                //System.out.println("Caught interrupt");
+                // Break out of for loop to cancel gracefully
+                if(this.isCancelled() || Thread.interrupted()) {
+                    break;
+                } else {
+                    System.out.println("Terminating because of uncaught exception when finding codeSet");
+                    shutdownAndTerminate(storageExecutor, false);
+                    shutdownAndTerminate(shotExecutor, true);
+                    throw e;
+                }
+            }
             // We want to know if we submitted a task that will update the progress for us.
             boolean noCodes = true;
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
@@ -142,10 +175,18 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 noCodes = false;
                 // Submit the runnable for this code
                 futures.add(storageExecutor.submit(() -> {
+                        // Check to see if cancel was called
+                        if(Thread.interrupted()) {
+                            Thread.currentThread().interrupt();
+                            System.out.println("Cancel detected before loadStorage");
+                            return Either.left("");
+                        }
                         // Load from database if code already exists. If not, calculate
                         final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
                         // Check to see if cancel was called
-                        if(this.isCancelled()) {
+                        if(Thread.interrupted()) {
+                            Thread.currentThread().interrupt();
+                            System.out.println("Cancel detected after loadStorage");
                             return Either.left("");
                         }
                         this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
@@ -166,7 +207,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             if(noCodes) { // Still need to update progress even if nothing found
                 this.updateProgress(progress.incrementAndGet(), todo);
             }
-        });
+        }
 
 
         Optional<ExecutionException> except = Optional.empty();
@@ -175,20 +216,17 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         // calculate exception), we need to save it, cancel the rest of
         // the futures, and then throw that exception to bubble up the stack
 
+        //System.out.println("+------------Waiting for futures------------+");
         // This is where we do checking to see if we were cancelled
         for (final Future<Either<String, Storage>> future : futures) {
             if (this.isCancelled() || except.isPresent()) {
                 // If the task was cancelled, or one of the futures threw an
                 // exception, we need to cancel the rest of the futures
-
-                // Each task checks cancellation on it's own, so we only have to cancel the rest
-                future.cancel(false);
-                storageExecutor.shutdown();
-                shotExecutor.shutdown();
+                System.out.println("Cancelling submitted future");
+                future.cancel(true);
             } else {
                 try {
                     final Either<String, Storage> either = future.get();
-                    final String msg;
                     if (either.isLeft()) { // Print things like empty sets 
                         System.out.println(either.isLeft());
                     }
@@ -204,8 +242,14 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             }
         }
 
-        storageExecutor.shutdown();
-        shotExecutor.shutdown();
+        System.out.println("Shutting down executors");
+        if(this.isCancelled() || Thread.interrupted()) { // We must clear interrupted status for shutdownAndTerminate to terminate properly
+            shutdownAndTerminate(shotExecutor, false);
+            shutdownAndTerminate(storageExecutor, true);
+        } else {
+            shutdownAndTerminate(shotExecutor, false);
+            shutdownAndTerminate(storageExecutor, false);
+        }
 
         // If there is an exception that happened, throw it now after shutting down the executor
         if (except.isPresent()) {

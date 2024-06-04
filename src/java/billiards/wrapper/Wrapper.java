@@ -46,6 +46,7 @@ public final class Wrapper {
     private static native Pointer create_connection_pool(final String dbPath, final int poolSize);
     private static native void destroy_connection_pool(final Pointer dbPtr);
 
+
     public static Pointer createConnectionPool(final String dbPath, final int poolSize) {
         return create_connection_pool(dbPath, poolSize);
     }

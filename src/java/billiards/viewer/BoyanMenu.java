@@ -898,6 +898,7 @@ public class BoyanMenu {
                     }
                 }
             } catch (InterruptedException | ExecutionException e) {
+                //System.out.println("Throw");
                 throw new RuntimeException(e);
             }
         }

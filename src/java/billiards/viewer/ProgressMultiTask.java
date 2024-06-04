@@ -28,8 +28,10 @@ public final class ProgressMultiTask {
     
     private Task<?> task;
     private long completed;
+    private boolean cancelled = false;
     private final long total;
     private final String formatString;
+
     
     // We don't care what task return type is
     public ProgressMultiTask(String formatString, long offset, long total) {
@@ -46,6 +48,7 @@ public final class ProgressMultiTask {
 
         stage.setScene(scene);
         stage.setOnCloseRequest(event -> {
+            cancelled = true;
             this.task.cancel();
             stage.close();
         });
@@ -59,6 +62,7 @@ public final class ProgressMultiTask {
         
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
+            cancelled = true;
             this.task.cancel();
             stage.close();
         });
@@ -77,6 +81,7 @@ public final class ProgressMultiTask {
 
     public void increment(final long step) {
         completed += step;
+        completed = Math.min(total, completed);
         syncProgress();
     }
 
@@ -88,4 +93,9 @@ public final class ProgressMultiTask {
         stage.centerOnScreen();
         stage.show();
     }
+
+    public boolean isCancelled() {
+        return cancelled;
+    }
 }
+    

@@ -432,6 +432,7 @@ class ConnectionPool final {
     friend class PooledConnection;
 
   private:
+    size_t pool_size;
     std::mutex mut;
     std::queue<Database> connections;
 
@@ -465,11 +466,19 @@ class ConnectionPool final {
     // Create a pool
     // TODO should we also have a default value?
     template <typename Func>
-    explicit ConnectionPool(const Func& func, const size_t pool_size) {
+    explicit ConnectionPool(const Func& func, const size_t pool_size) : pool_size{pool_size} {
 
-        for (size_t i = 0; i < pool_size; ++i) {
+        for (size_t i = 0; i < this->pool_size; ++i) {
             connections.push(func());
         }
+    }
+
+    size_t curr_size() const {
+        return connections.size();
+    }
+
+    size_t start_size() const {
+        return this->pool_size;
     }
 };
 
@@ -485,6 +494,7 @@ class PooledConnection final {
 
     ~PooledConnection() {
         pool.unborrow(std::move(db));
+        //std::cout << "Connection returned" << std::endl;
     }
 };
 
