@@ -38,6 +38,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Tooltip;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.paint.Color;
+import java.util.concurrent.ExecutorService;
 import javafx.util.Duration;
 import javaslang.control.Either;
 
@@ -76,6 +77,25 @@ public final class Utils {
         return Optional.of(list.toImmutable());
     }
 
+    // Initialize orderly shutdown of an executorService and block the calling thread until complete. Returns true if successful
+    public static boolean safeShutdownExecutor(ExecutorService executor) {
+        executor.shutdown(); // Prevent further submissions
+        try {
+            if(!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                // Attempt cancellation again, if necessary
+                executor.shutdownNow();
+                if(!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                    System.err.println("Warning: Executor not terminated after 120 seconds");
+                    return false;
+                }
+            }
+            return true;
+        } catch(InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
     // converts a side sequence to a code sequence
     public static Optional<ClassifiedCodeSequence> convert(final IntList codeList) {
 

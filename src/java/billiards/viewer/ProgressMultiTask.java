@@ -1,8 +1,5 @@
 package billiards.viewer;
 
-import javafx.beans.property.ReadOnlyDoubleProperty;
-import javafx.beans.value.ChangeListener;
-import javafx.beans.value.ObservableValue;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -47,10 +44,11 @@ public final class ProgressMultiTask {
         root.setPadding(new Insets(10));
 
         stage.setScene(scene);
+        // IMPORTANT: This progress must be closed from the enclosing scope, not from here.
         stage.setOnCloseRequest(event -> {
             cancelled = true;
             this.task.cancel();
-            stage.close();
+            //stage.close();
         });
 
         // Block from accessing the main window until this stage is closed
@@ -60,11 +58,12 @@ public final class ProgressMultiTask {
         this.total = total;
         this.formatString = formatString;
         
+        // IMPORTANT: This progress must be closed from the enclosing scope, not from here. This allows us to block until cancellation is complete
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
             cancelled = true;
             this.task.cancel();
-            stage.close();
+            //stage.close();
         });
         
         syncProgress();

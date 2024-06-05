@@ -15,16 +15,18 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.FutureTask;
 
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.concurrent.Task;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.beans.property.ReadOnlyObjectWrapper;
-import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.scene.image.PixelReader;
 
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
@@ -59,11 +61,17 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     private final int OSOmaxSS;
     private final int OSNOmaxSS;
     private final boolean overrideSS;
+    private final ExecutorService storageExecutor;
+    private final ExecutorService shotExecutor;
+    private final ImageView screenImage;
+    private final PixelRadianMap screenMap; 
 
     // Calculates codeSequence set at a specific coordinate 
     private MutableSortedSet<ClassifiedCodeSequence> autoCodesFiltered(final Vector2 coords, final ExecutorService executor) {
+        // autoVary requires coordinates to be in degree format
+        final Vector2 radCoords = Vector2.create(Math.toDegrees(coords.x), Math.toDegrees(coords.y));
         final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
-        final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(coords, this.CSmaxSS, this.OSOmaxSS, this.OSNOmaxSS, executor) : boyanMenu.autoVary(coords, executor);
+        final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(radCoords, this.CSmaxSS, this.OSOmaxSS, this.OSNOmaxSS, executor) : boyanMenu.autoVary(radCoords, executor);
         // Generate the filtered list
         for (ClassifiedCodeSequence code : boyanCodes) {
             if (code.codeType.equals(CodeType.CS)) {
@@ -77,37 +85,66 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         return codes;
     }
 
-    // Converts coordinates to correct format
+    // Converts into coordinate pair 
     private Array<Vector2> toCoords(final MutableList<Double> points) {
         final MutableList<Vector2> out = new FastList<Vector2>();
         for(int i = 0; i < points.size(); i += 2) {
-            final Vector2 coords = Vector2.create(Math.toDegrees(points.get(i)), Math.toDegrees(points.get(i+1)));
+            final Vector2 coords = Vector2.create(points.get(i), points.get(i+1));
             out.add(coords);
         }
         return Array.ofAll(out);
     }
 
-    // Copied from Oracle docs https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/ExecutorService.html
-    private void shutdownAndTerminate(ExecutorService pool, final boolean print) {
-        pool.shutdown(); // Disable new tasks from being submitted
+    // Runs a fast application thread task which determines the color of the pixel at a point
+    private int pixelColor(final Vector2 point) {
+        FutureTask<Integer> task = new FutureTask<Integer>(() -> {
+            final Image image = this.screenImage.getImage();
+            final PixelReader reader = image.getPixelReader();
+            final int midX = (int) this.screenMap.pixelX(point.x);
+            final int midY = (int) this.screenMap.pixelY(point.y);
+            return reader.getArgb(midX, midY);
+        });
+        Platform.runLater(task);
         try {
-             // Wait a while for existing tasks to terminate
-             if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
-               pool.shutdownNow(); // Cancel currently executing tasks
-               // Wait a while for tasks to respond to being cancelled
-               if (!pool.awaitTermination(60, TimeUnit.SECONDS))
-                   System.err.println("Pool did not terminate");
-             } else if(print) {
-               System.out.println("Successfully terminated");
-             }
-        } catch (InterruptedException ie) {
-            System.out.println("Interrupt during cancel");
-            // (Re-)Cancel if current thread also interrupted
-            pool.shutdownNow();
-            // Preserve interrupt status
+            System.err.println("//Found pixel color");
+            return task.get();
+        } catch(InterruptedException e) {
+            return 0;
+        } catch(ExecutionException e) {
+            System.err.println("//Failed to find pixel color");
+            e.printStackTrace();
+            return 0;
+        }
+
+    }
+
+    // Find the storage associated to a codeSequence if it exists. Return the error if not
+    private Either<String, Storage> loadStorage(final ClassifiedCodeSequence classCodeSeq) {
+        // Check to see if cancel was called
+        if(this.isCancelled() || Thread.interrupted()) {
+            // Note that this method is indended to be submitted to an executor, hence this interrupts the thread inside the threadpool
             Thread.currentThread().interrupt();
-       }
-       System.out.println("Finish Cancellation");
+            System.out.println("//Cancel detected before loadStorage");
+            return Either.left("");
+        }
+        // Load from database if code already exists. If not, calculate
+        final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
+        // Check to see if cancel was called
+        if(this.isCancelled() || Thread.interrupted()) {
+            Thread.currentThread().interrupt();
+            System.out.println("//Cancel detected after loadStorage");
+            return Either.left("");
+        }
+        if (opt.isPresent()) {
+            final Storage storage = opt.get();
+            // Platform.runLater lets us update partialResults on the application thread, in order to enforce thread safety
+            Platform.runLater(() -> {
+                this.partialResults.get().add(storage);
+            });
+            return Either.right(storage);
+        } else {
+            return Either.left("//empty set " + classCodeSeq);
+        }
     }
 
     // These expose partialResults to the FX application thread
@@ -119,7 +156,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     }
     // Constructor takes a list of points to vary at
     public PolyVaryTask(
-        final MutableList<Double> points, final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes, final BoyanMenu boyan, final Array<Integer> max, final ConnectionPool pool, final boolean override) {
+        final MutableList<Double> points, final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes, final BoyanMenu boyan, final Array<Integer> max, final ConnectionPool pool, final boolean override, final ExecutorService eOne, final ExecutorService eTwo, final ImageView screen, final PixelRadianMap map) {
         this.coordList = toCoords(points);
         this.onScreenCodes = onScreenCodes;
         this.boyanMenu = boyan;
@@ -129,16 +166,18 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         this.CSmaxSS = max.get(3);
         this.OSOmaxSS = max.get(4);
         this.OSNOmaxSS = max.get(5);
-        this.overrideSS = override;
         this.pool = pool;
+        this.overrideSS = override;
+        this.storageExecutor = eOne;
+        this.shotExecutor = eTwo;
+        this.screenImage = screen;
+        this.screenMap = map;
     }
 
     @Override
     protected ObservableList<Storage> call() {
         // We create two executors. storageExecutor handles the more expensive process of calculating code regions,
         // while shotExecutor handles the much faster calculation of finding the codes present at a given point
-        final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads); 
-        final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // Used specifically for finding codes
 
         final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<ClassifiedCodeSequence>();
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
@@ -161,45 +200,27 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                     break;
                 } else {
                     System.out.println("Terminating because of uncaught exception when finding codeSet");
-                    shutdownAndTerminate(storageExecutor, false);
-                    shutdownAndTerminate(shotExecutor, true);
                     throw e;
                 }
             }
             // We want to know if we submitted a task that will update the progress for us.
             boolean noCodes = true;
+
+            // Take the first code not already drawn, and submit it to the storageExecutor for processing 
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                // Take the first code not already drawn
                 if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
                 usedCodes.add(classCodeSeq); 
                 noCodes = false;
                 // Submit the runnable for this code
                 futures.add(storageExecutor.submit(() -> {
-                        // Check to see if cancel was called
-                        if(Thread.interrupted()) {
-                            Thread.currentThread().interrupt();
-                            System.out.println("Cancel detected before loadStorage");
+                        int color = pixelColor(coord);
+                        if(color != 0) {
+                            System.out.println("//Pixel already filled, skipping");
                             return Either.left("");
                         }
-                        // Load from database if code already exists. If not, calculate
-                        final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
-                        // Check to see if cancel was called
-                        if(Thread.interrupted()) {
-                            Thread.currentThread().interrupt();
-                            System.out.println("Cancel detected after loadStorage");
-                            return Either.left("");
-                        }
+                        Either<String, Storage> result = loadStorage(classCodeSeq);
                         this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
-                        if (opt.isPresent()) {
-                            final Storage storage = opt.get();
-                            // Platform.runLater removes need for synchronization
-                            Platform.runLater(() -> {
-                                this.partialResults.get().add(storage);
-                            });
-                            return Either.right(storage);
-                        } else {
-                            return Either.left("//empty set " + classCodeSeq);
-                        }
+                        return result;
                     })
                 );
                 break;
@@ -242,16 +263,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             }
         }
 
-        System.out.println("Shutting down executors");
-        if(this.isCancelled() || Thread.interrupted()) { // We must clear interrupted status for shutdownAndTerminate to terminate properly
-            shutdownAndTerminate(shotExecutor, false);
-            shutdownAndTerminate(storageExecutor, true);
-        } else {
-            shutdownAndTerminate(shotExecutor, false);
-            shutdownAndTerminate(storageExecutor, false);
-        }
-
-        // If there is an exception that happened, throw it now after shutting down the executor
+        // We trust the thread calling PolyVarytask to cancel the executors after it's finished
         if (except.isPresent()) {
             throw new RuntimeException(except.get());
         }

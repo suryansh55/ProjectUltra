@@ -49,16 +49,11 @@ import javafx.scene.control.TextArea;
 import javaslang.Tuple;
 import javaslang.Tuple2;
 import javaslang.Tuple3;
-import javaslang.Tuple4;
-import javaslang.Tuple5;
 import javaslang.Tuple8;
 import javaslang.collection.Array;
 import javaslang.control.Either;
 
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.mutable.Mutable;
-import org.checkerframework.checker.units.qual.C;
 import org.eclipse.collections.api.bimap.MutableBiMap;
 import org.eclipse.collections.api.list.ImmutableList;
 import org.eclipse.collections.api.list.MutableList;
@@ -102,12 +97,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Stream;
-import java.util.stream.Collectors;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.concurrent.Task;
@@ -142,9 +134,6 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
-import org.w3c.dom.css.Rect;
-
-import javax.xml.soap.Text;
 
 import static billiards.codeseq.CodeType.OSNO;
 import static billiards.viewer.Utils.readFromFile;
@@ -1536,7 +1525,9 @@ public final class Viewer {
             final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
         	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", startIdx+1, endIdx+1);
         	progress.show();
-            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, reverse, overrideSS, area, progress, executor);
+            final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+            final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, reverse, overrideSS, area, progress, executor, storageExecutor, shotExecutor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5513,7 +5504,6 @@ public final class Viewer {
             final PixelReader reader = image.getPixelReader();
             // Filter out filled pixels
             for(int i = 0; i < points.size(); i += 2) {
-                int count = 0;
                 final int midX = (int) map.pixelX(points.get(i));
                 final int midY = (int) map.pixelY(points.get(i+1));
                 int color = reader.getArgb(midX, midY);
@@ -5525,17 +5515,19 @@ public final class Viewer {
             // Now that points have been found, pass to drawAutoVary for actual work
             System.out.println("Drawing");
             // Draw all the codes found, then print summary
-            drawPolyVary(pointsFiltered, maxList, overrideSS, area, executor);
+            final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+            final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+            drawPolyVary(pointsFiltered, maxList, overrideSS, area, executor, storageExecutor, shotExecutor);
         }
     }
 
     // Calculates and draws codes at each of the list of points 
-    private void drawPolyVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final ConvexPolygon area, final ExecutorService executor) {
+    private void drawPolyVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final ConvexPolygon area, final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
+    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
         final ObservableList<Storage> partials = task.getPartials();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         // Count the number of holes we start with
@@ -5594,6 +5586,9 @@ public final class Viewer {
                 }
             });
 
+            Utils.safeShutdownExecutor(storageExecutor);
+            Utils.safeShutdownExecutor(shotExecutor);
+
             progress.close();
 
                         // only render the screen after everything has been loaded
@@ -5617,17 +5612,19 @@ public final class Viewer {
                 }
             });
 
-            progress.close();
+            // Wait for orderly cancellation of unfinished tasks 
+            Utils.safeShutdownExecutor(storageExecutor);
+            Utils.safeShutdownExecutor(shotExecutor);
 
+            progress.close();
                         // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
 
             System.out.println(String.format(
-                "+-------------- Cancelling; started with %d holes, filled %d, %d remain --------------+",
+                "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
                 startHoles, startHoles - endHoles, endHoles));
-            System.out.println("...");
         });
 
         task.setOnFailed(e -> {
@@ -5640,12 +5637,12 @@ public final class Viewer {
     }
 
     // Recursively iterate through the list of holes, running polyVary at each hole.
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final boolean reverse, final boolean overrideSS, final ConvexPolygon area, final ProgressMultiTask overallProgress, final ExecutorService executor) {
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final boolean reverse, final boolean overrideSS, final ConvexPolygon area, final ProgressMultiTask overallProgress, final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // Move the screen
         if(!reverse) { // Check if reverse order is selected
-            setOBO(currIdx, pool, executor);
+            setOBO(currIdx, pool, drawExecutor);
         } else {
-            setOBO(endIdx - currIdx, pool, executor);
+            setOBO(endIdx - currIdx, pool, drawExecutor);
         }
         final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
         final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
@@ -5671,7 +5668,7 @@ public final class Viewer {
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS);
+    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
         final ObservableList<Storage> partials = task.getPartials();
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
@@ -5679,6 +5676,7 @@ public final class Viewer {
 
         // Update screen when change detected
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
+            if(overallProgress.isCancelled()) return; // Don't update after cancel received. This prevents codes being printed after the ending line 
             while (c.next()) {
                 if(c.wasAdded()) {
                     // Draw all new additions
@@ -5721,23 +5719,45 @@ public final class Viewer {
                 throw new RuntimeException(exception);
             }
 
+            // This takes care of the very last codes completed, in case the listChangeListener doesn't catch them in time
             storages.forEach(storage -> {
                 if(!onScreenSequences.containsKey(storage)) {
                     final Color color;
                     final int index = cycle.get();
                     color = comboBoxColors.get(index);
                     addToOnScreenSequences(storage, color);
+
+                    // print the code
+                    final String msg;
+                    final CodeType type = storage.codeType();
+
+                    String codeStr = "" + type;
+                    // String codeStr = "xxx " + type; //george july 26 2017 -
+                    // type whatever you want between the quotes in the line above
+                    // make sure to add a space after the xxx
+                    if (type.equals(CodeType.CS)) {
+                        codeStr += "  ";
+                    } else if (!type.equals(CodeType.OSNO)) {
+                        codeStr += " ";
+                    }
+                    msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                    System.out.println(msg);
                 }
             });
             overallProgress.increment(stepIdx);
             // Run at the next hole
             if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
-                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-                System.out.println("+------------------------------ Cancelled AutoPolyVary ------------------------------+");
+                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
+                Utils.safeShutdownExecutor(storageExecutor);
+                Utils.safeShutdownExecutor(shotExecutor);
+                System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+                overallProgress.close();
             } else if(currIdx + stepIdx <= endIdx) {
-                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, area, overallProgress, executor);
+                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, area, overallProgress, drawExecutor, storageExecutor, shotExecutor);
             } else {
-                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
+                Utils.safeShutdownExecutor(storageExecutor);
+                Utils.safeShutdownExecutor(shotExecutor);
         		System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
                 overallProgress.close();
             }
@@ -5750,23 +5770,39 @@ public final class Viewer {
                     final int index = cycle.get();
                     color = comboBoxColors.get(index);
                     addToOnScreenSequences(storage, color);
+
+                    // print the code
+                    final String msg;
+                    final CodeType type = storage.codeType();
+
+                    String codeStr = "" + type;
+                    // String codeStr = "xxx " + type; //george july 26 2017 -
+                    // type whatever you want between the quotes in the line above
+                    // make sure to add a space after the xxx
+                    if (type.equals(CodeType.CS)) {
+                        codeStr += "  ";
+                    } else if (!type.equals(CodeType.OSNO)) {
+                        codeStr += " ";
+                    }
+                    msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                    System.out.println(msg);
                 }
             });
-            //progress.close();
-            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-            System.out.println("+------------------------------ Cancelling AutoPolyVary ------------------------------+");
-            System.out.println("...");
-            // Unnecessary: overallProgress closes itself
-            //overallProgress.close(); 
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
+            Utils.safeShutdownExecutor(storageExecutor);
+            Utils.safeShutdownExecutor(shotExecutor);
+            System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+            overallProgress.close(); 
         });
 
         task.setOnFailed(e -> {
             //progress.close();
+            Utils.safeShutdownExecutor(storageExecutor);
+            Utils.safeShutdownExecutor(shotExecutor);
             overallProgress.close();
             throw new RuntimeException(task.getException());
         });
-        //progress.show();
-        executor.execute(task);
+        drawExecutor.execute(task);
         return 0;
     }
 

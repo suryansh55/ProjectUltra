@@ -21,6 +21,14 @@ public final class PixelRadianMap {
         this.translateY = -0.2;
     }
 
+    // Copy constructor
+    public PixelRadianMap(final PixelRadianMap p) {
+        this.side = p.side;
+        this.scale = p.scale;
+        this.translateX = p.translateX;
+        this.translateY = p.translateY;
+    }
+
     public double radianX(final double pixelX) {
         return pixelX * Math.PI / this.side / this.scale + this.translateX;
     }
