@@ -5512,10 +5512,9 @@ public final class Viewer {
                     pointsFiltered.add(points.get(i+1));
                 }
             }
-            // Now that points have been found, pass to drawAutoVary for actual work
+            // Now that points have been found, pass to drawPolyVary for actual work
             // System.out.println("Drawing");
             // Draw all the codes found, then print summary
-            // 2024-06-06 thread pool experiments
             final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             drawPolyVary(pointsFiltered, maxList, overrideSS, area, executor, storageExecutor, shotExecutor);
