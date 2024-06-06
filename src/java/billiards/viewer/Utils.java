@@ -81,11 +81,11 @@ public final class Utils {
     public static boolean safeShutdownExecutor(ExecutorService executor) {
         executor.shutdown(); // Prevent further submissions
         try {
-            if(!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+            if(!executor.awaitTermination(600, TimeUnit.SECONDS)) {
                 // Attempt cancellation again, if necessary
                 executor.shutdownNow();
-                if(!executor.awaitTermination(60, TimeUnit.SECONDS)) {
-                    System.err.println("Warning: Executor not terminated after 120 seconds");
+                if(!executor.awaitTermination(600, TimeUnit.SECONDS)) {
+                    System.err.println("Warning: Executor not terminated after 20 minutes");
                     return false;
                 }
             }
