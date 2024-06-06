@@ -18,7 +18,7 @@ public final class Main extends Application {
     private final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
     private ConnectionPool pool = null;
 
-    private final String versionNumber = "BilliardsEverything 2024-05-31-Max-Kaiden-Austin-Triples2polyThreads";
+    private final String versionNumber = "BilliardsEverything 2024-06-05-Max-Kaiden-Austin-Triples2polyThreads";
 
     // Order is constructor, init, start, stop
     // It would be a lot simpler if these methods didn't exist, and I just did
@@ -45,6 +45,7 @@ public final class Main extends Application {
 
         databaseName.ifPresent(dbName -> {
 
+            // 2024-06-06 Austin experimenting with thread and connection pool sizes
             pool = Admin.getConnectionPool(dbName, Utils.numThreads);
             if (viewerSelected) {
 	            final Viewer viewer = new Viewer(mainWindow, versionNumber, executor, pool, dbName);

@@ -106,9 +106,10 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         });
         Platform.runLater(task);
         try {
-            System.err.println("//Found pixel color");
+            //System.err.println("//Found pixel color");
             return task.get();
         } catch(InterruptedException e) {
+            System.err.println("//Interruption when finding pixel color");
             return 0;
         } catch(ExecutionException e) {
             System.err.println("//Failed to find pixel color");
@@ -122,7 +123,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     private Either<String, Storage> loadStorage(final ClassifiedCodeSequence classCodeSeq) {
         // Check to see if cancel was called
         if(this.isCancelled() || Thread.interrupted()) {
-            // Note that this method is indended to be submitted to an executor, hence this interrupts the thread inside the threadpool
+            // Note that this method is intended to be submitted to an executor, hence this interrupts the thread inside the threadpool
             Thread.currentThread().interrupt();
             System.out.println("//Cancel detected before loadStorage");
             return Either.left("");
@@ -215,7 +216,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 futures.add(storageExecutor.submit(() -> {
                         int color = pixelColor(coord);
                         if(color != 0) {
-                            System.out.println("//Pixel already filled, skipping");
+                            //System.out.println("//Pixel already filled, skipping");
+                            this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
                             return Either.left("");
                         }
                         Either<String, Storage> result = loadStorage(classCodeSeq);
@@ -243,13 +245,13 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             if (this.isCancelled() || except.isPresent()) {
                 // If the task was cancelled, or one of the futures threw an
                 // exception, we need to cancel the rest of the futures
-                System.out.println("Cancelling submitted future");
+                System.out.println("//Cancelling submitted future");
                 future.cancel(true);
             } else {
                 try {
                     final Either<String, Storage> either = future.get();
                     if (either.isLeft()) { // Print things like empty sets 
-                        System.out.println(either.isLeft());
+                        if(!either.left().get().equals("")) System.out.println(either.isLeft());
                     }
                 } catch (final ExecutionException e) {
                     // One of the futures threw an exception during its calculation,
