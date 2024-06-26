@@ -39,9 +39,7 @@ import billiards.geometry.*;
 import billiards.geometry.Rectangle;
 
 import billiards.geometry.Vector2;
-import billiards.math.CoverSquare;
 import billiards.math.XYPi;
-import billiards.wrapper.CInfo;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 import javafx.scene.control.TextArea;
@@ -2001,13 +1999,14 @@ public final class Viewer {
         reflectCheckBox.setTooltip(Utils.toolTip("Reflects the map into usual cartesian coordinates"));
         reflectCheckBox.setStyle(textBoxColor);
 
-        //Affine reflectTransform = new Affine();
-        // BorderPane
-        //reflectTransform.setMyy(-1);
-        //reflectTransform.setTy(imageStack.getBoundsInLocal().getHeight());
-        //imageStack.getTransforms().clear();
-        //imageStack.getTransforms().add(reflectTransform);
+        Affine startReflect = new Affine();
+        //BorderPane
+        startReflect.setMyy(-1);
+        startReflect.setTy(imageStack.getBoundsInLocal().getHeight());
+        imageStack.getTransforms().clear();
+        imageStack.getTransforms().add(startReflect);
         // Based on https://gist.github.com/jewelsea/1436935
+        reflectCheckBox.setSelected(true);
         reflectCheckBox.setOnAction(event -> {
             if (reflectCheckBox.isSelected()) {
                 final Affine reflectTransform = new Affine();

@@ -31,11 +31,11 @@ public final class CoverStuff {
     private static double rationalToRadians(final String rat) {
         if (rat.indexOf('/') == -1) {
             // Does not contain /, so an integer
-            final BigInteger num = new BigInteger(rat);
+            final BigInteger num = new BigInteger(rat.trim());
             return num.doubleValue() * Math.PI / 2.0;
         } else {
             final String[] nums = StringUtils.split(rat, '/');
-            final BigInteger numer = new BigInteger(nums[0]);
+            final BigInteger numer = new BigInteger(nums[0].trim());
             final BigInteger denom = new BigInteger(nums[1].trim());
 
             final BigFraction fraction = new BigFraction(numer, denom);

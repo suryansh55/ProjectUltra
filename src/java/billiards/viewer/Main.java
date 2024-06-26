@@ -18,7 +18,7 @@ public final class Main extends Application {
     private final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
     private ConnectionPool pool = null;
 
-    private final String versionNumber = "BilliardsEverything 2024-06-05-Max-Kaiden-Austin-Triples2polyThreads";
+    private final String versionNumber = "The Tokarsky-Marinov Finder, Tester and Prover";
 
     // Order is constructor, init, start, stop
     // It would be a lot simpler if these methods didn't exist, and I just did
