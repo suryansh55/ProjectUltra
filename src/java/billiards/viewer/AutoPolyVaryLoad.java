@@ -39,6 +39,7 @@ public class AutoPolyVaryLoad {
     public static Integer BoundOSOMaxSS = 300;
     public static Integer BoundOSNOMaxSS = 150;
     public static Boolean Override = false;
+    public static Boolean AutoCover = false;
     // ------------------------------------------------------------
 
     private final TextArea text = new TextArea();
@@ -58,6 +59,7 @@ public class AutoPolyVaryLoad {
     private final TextField OSOsbox = new TextField();
     private final TextField OSNOsbox = new TextField();
     private final CheckBox overrideBox = new CheckBox();
+    private final CheckBox autoCoverBox = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
     private final VBox typeVBox = new VBox(30);
@@ -145,30 +147,35 @@ public class AutoPolyVaryLoad {
         overrideBox.setSelected(Override);
         overrideBox.setText("Override side sum");
 
+        autoCoverBox.setIndeterminate(false);
+        autoCoverBox.setAllowIndeterminate(false);
+        autoCoverBox.setSelected(AutoCover);
+        autoCoverBox.setText("Add codes to cover");
+
     	instructHBox.getChildren().add(instruct);
 
-        typeVBox.getChildren().addAll(codel, ssuml);
+        /*
+        typeVBox.getChildren().addAll(, );
         typeVBox.setPadding(new Insets(0, 10, 10, 0));
         typeVBox.setAlignment(Pos.CENTER);
+        */
 
-    	maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
+    	maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));
     	maxHBox.setAlignment(Pos.CENTER);
 
 
-        maxOptHBox.getChildren().addAll(CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
+        maxOptHBox.getChildren().addAll(ssuml, CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
         maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
         maxOptHBox.setAlignment(Pos.CENTER);
 
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
         loadHBox.getChildren().addAll(loadButton, reverseBox);
-        overrideHBox.getChildren().addAll(overrideBox);
-        overrideHBox.setAlignment(Pos.CENTER);
-        controlVBox.getChildren().addAll(loadHBox, overrideHBox);
+        controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
-        controlVBox.setAlignment(Pos.CENTER);
+        controlVBox.setAlignment(Pos.CENTER_LEFT);
 
-        bottomHBox.getChildren().addAll(typeVBox, maxVBox, controlVBox);
+        bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
     	root.getChildren().addAll(instructHBox, text, bottomHBox);
     	root.setSpacing(10);
@@ -178,6 +185,7 @@ public class AutoPolyVaryLoad {
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
     	loadButton.setOnAction(event -> {
             Override = overrideBox.isSelected();
+            AutoCover = autoCoverBox.isSelected();
     		try {
     			BoundCSMax = Integer.parseInt(CSbox.getText().trim());
             	BoundOSOMax = Integer.parseInt(OSObox.getText().trim());

@@ -218,14 +218,14 @@ public class StablesWindow {
                 all = true;
             }
             if (all){
-                coverWindow.setStablesInfo(workingTriples);
+                coverWindow.setTriplesInfo(workingTriples);
                 coverWindow.show();
             } else {
                 ArrayList<String> triplesToSend = new ArrayList<>();
                 for (int i = 0; i < numberOfPairs * 2; i++) {
                     triplesToSend.add(workingTriples.get(i));
                 }
-                coverWindow.setStablesInfo(triplesToSend);
+                coverWindow.setTriplesInfo(triplesToSend);
                 coverWindow.show();
             }
 

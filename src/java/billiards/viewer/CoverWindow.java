@@ -263,17 +263,20 @@ public final class CoverWindow {
         base.setPadding(new Insets(10));
     }
     
-    public void setStablesInfo(ArrayList<String> triples){
-        String triple = triples.get(0);
-
-        //Filling triple string
-        for (int i = 1; i < triples.size(); i++) {
-            triple += "\n" + triples.get(i);
-        }
-
+    // Allows other classes to update the list of triples
+    public void setTriplesInfo(ArrayList<String> triples){
         String currentText = triplesText.getText().toString();
-        currentText += "\n" + triple;
+        //Filling triple string
+        for (int i = 0; i < triples.size(); i++) {
+            currentText += "\n" + triples.get(i);
+        }
         triplesText.setText(currentText);
+    }
+    
+    // Allows other classes to update the list of stables 
+    public void appendStablesInfo(String stable) {
+        String currentText = bottomText.getText().toString();
+        bottomText.setText(currentText + "\n" + stable);
     }
 
     private void saveToFile() {
@@ -713,4 +716,5 @@ public final class CoverWindow {
         this.stage.show();
         this.stage.toFront();
     }
+
 }
