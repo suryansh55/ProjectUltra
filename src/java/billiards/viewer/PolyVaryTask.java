@@ -69,9 +69,9 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     // Calculates codeSequence set at a specific coordinate 
     private MutableSortedSet<ClassifiedCodeSequence> autoCodesFiltered(final Vector2 coords, final ExecutorService executor) {
         // autoVary requires coordinates to be in degree format
-        final Vector2 radCoords = Vector2.create(Math.toDegrees(coords.x), Math.toDegrees(coords.y));
+        final Vector2 degCoords = Vector2.create(Math.toDegrees(coords.x), Math.toDegrees(coords.y));
         final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
-        final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(radCoords, this.CSmaxSS, this.OSOmaxSS, this.OSNOmaxSS, executor) : boyanMenu.autoVary(radCoords, executor);
+        final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(degCoords, this.CSmaxSS, this.OSOmaxSS, this.OSNOmaxSS, executor) : boyanMenu.autoVary(degCoords, executor);
         // Generate the filtered list
         for (ClassifiedCodeSequence code : boyanCodes) {
             if (code.codeType.equals(CodeType.CS)) {
@@ -85,7 +85,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         return codes;
     }
 
-    // Converts into coordinate pair 
+    // Converts list of points into array of coordinate pairs 
     private Array<Vector2> toCoords(final MutableList<Double> points) {
         final MutableList<Vector2> out = new FastList<Vector2>();
         for(int i = 0; i < points.size(); i += 2) {
@@ -138,10 +138,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         }
         if (opt.isPresent()) {
             final Storage storage = opt.get();
-            // Platform.runLater lets us update partialResults on the application thread, in order to enforce thread safety
-            Platform.runLater(() -> {
-                this.partialResults.get().add(storage);
-            });
+            // Update partialResults on the application thread in order to enforce thread safety
+            Platform.runLater(() -> this.partialResults.get().add(storage));
             return Either.right(storage);
         } else {
             return Either.left("//empty set " + classCodeSeq);
@@ -177,7 +175,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
     @Override
     protected ObservableList<Storage> call() {
-        // We create two executors. storageExecutor handles the more expensive process of calculating code regions,
+        // storageExecutor handles the more expensive process of calculating code regions,
         // while shotExecutor handles the much faster calculation of finding the codes present at a given point
 
         final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<ClassifiedCodeSequence>();
@@ -200,7 +198,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 if(this.isCancelled() || Thread.interrupted()) {
                     break;
                 } else {
-                    System.out.println("Terminating because of uncaught exception when finding codeSet");
+                    System.err.println("Terminating because of uncaught exception when finding codeSet");
                     throw e;
                 }
             }
@@ -251,7 +249,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 try {
                     final Either<String, Storage> either = future.get();
                     if (either.isLeft()) { // Print things like empty sets 
-                        if(!either.left().get().equals("")) System.out.println(either.isLeft());
+                        if(!either.left().get().equals("")) System.out.println(either.left().get());
                     }
                 } catch (final ExecutionException e) {
                     // One of the futures threw an exception during its calculation,
@@ -265,7 +263,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             }
         }
 
-        // We trust the thread calling PolyVarytask to cancel the executors after it's finished
+        // We trust the thread calling PolyVarytask to cancel the passed executors after execution is finished
         if (except.isPresent()) {
             throw new RuntimeException(except.get());
         }
