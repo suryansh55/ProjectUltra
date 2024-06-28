@@ -17,7 +17,6 @@ import org.eclipse.collections.api.list.primitive.IntList;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Optional;//added oct 15,2017 george
 
 import javafx.geometry.Insets;
@@ -278,7 +277,7 @@ public final class CoverWindow {
         String currentText = bottomText.getText().toString();
         bottomText.setText(currentText + "\n" + stable);
     }
-
+    
     private void saveToFile() {
 
         polygonString = topText.getText().trim();
