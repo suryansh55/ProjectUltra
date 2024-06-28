@@ -8,7 +8,6 @@ import org.eclipse.collections.impl.list.mutable.FastList;
 import java.util.Optional;
 
 import billiards.geometry.ConvexPolygon;
-import billiards.geometry.Rectangle;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -26,7 +25,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple8;
+import javaslang.Tuple7;
 
 public class AutoPolyVaryLoad {
 	// WARNING: Global mutable state
@@ -38,8 +37,9 @@ public class AutoPolyVaryLoad {
     public static Integer BoundCSMaxSS = 800;
     public static Integer BoundOSOMaxSS = 300;
     public static Integer BoundOSNOMaxSS = 150;
+    public static Boolean Reverse = false;
     public static Boolean Override = false;
-    public static Boolean AutoCover = false;
+    public static Boolean AutoCover = true;
     // ------------------------------------------------------------
 
     private final TextArea text = new TextArea();
@@ -62,20 +62,18 @@ public class AutoPolyVaryLoad {
     private final CheckBox autoCoverBox = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
-    private final VBox typeVBox = new VBox(30);
     private final VBox maxVBox = new VBox(10);
     private final VBox controlVBox = new VBox(20);
     private final HBox instructHBox = new HBox();
     private final HBox bottomHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
     private final HBox maxOptHBox = new HBox(10);
-    private final HBox overrideHBox = new HBox(10);
     private final HBox loadHBox = new HBox(10);
     public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
     
-    private Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> result;
+    private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
     
     public AutoPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName) {
     	fullContent = Utils.readFromFile(fileName);
@@ -140,6 +138,7 @@ public class AutoPolyVaryLoad {
 
         reverseBox.setIndeterminate(false);
         reverseBox.setAllowIndeterminate(false);
+        reverseBox.setSelected(Reverse);
         reverseBox.setText("Reverse order");
     	
         overrideBox.setIndeterminate(false);
@@ -154,16 +153,9 @@ public class AutoPolyVaryLoad {
 
     	instructHBox.getChildren().add(instruct);
 
-        /*
-        typeVBox.getChildren().addAll(, );
-        typeVBox.setPadding(new Insets(0, 10, 10, 0));
-        typeVBox.setAlignment(Pos.CENTER);
-        */
-
     	maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));
     	maxHBox.setAlignment(Pos.CENTER);
-
 
         maxOptHBox.getChildren().addAll(ssuml, CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
         maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
@@ -184,6 +176,7 @@ public class AutoPolyVaryLoad {
     	loadButton.setText(buttonText);
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
     	loadButton.setOnAction(event -> {
+            Reverse = reverseBox.isSelected();
             Override = overrideBox.isSelected();
             AutoCover = autoCoverBox.isSelected();
     		try {
@@ -211,14 +204,14 @@ public class AutoPolyVaryLoad {
     			pointList.add(Vector2.create(x, y));
     		}
     		final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
-        	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, reverseBox.isSelected()));
+        	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
         	Utils.writeToFile(fileName, fullContent);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
         	stage.close();
     	});
     }
     
-    public Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> getLoad() {
+    public Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> getLoad() {
     	stage.showAndWait();
     	return this.result;
     }

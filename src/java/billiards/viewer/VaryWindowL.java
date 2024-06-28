@@ -24,7 +24,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple8;
+import javaslang.Tuple7;
 
 public final class VaryWindowL {
     // WARNING: Global mutable state
@@ -36,7 +36,9 @@ public final class VaryWindowL {
     public static Integer BoundCSMaxSS = 800;
     public static Integer BoundOSOMaxSS = 300;
     public static Integer BoundOSNOMaxSS = 150;
+    public static Boolean Draw = true;
     public static Boolean Override = false;
+    public static Boolean AutoCover = true;
     // ------------------------------------------------------------
 
     private final TextArea text = new TextArea();
@@ -55,6 +57,7 @@ public final class VaryWindowL {
     private final TextField OSOsbox = new TextField();
     private final TextField OSNOsbox = new TextField();
     private final CheckBox overrideBox = new CheckBox();
+    private final CheckBox autoCoverBox = new CheckBox();
     private final CheckBox drawCB = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
@@ -71,7 +74,7 @@ public final class VaryWindowL {
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
 
-    private Optional<Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> result;
+    private Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
     public VaryWindowL(final String windowTitle, final String buttonText, final String fileName, final String varyBoundFileName) {
         fullContent = Utils.readFromFile(fileName);
@@ -143,7 +146,12 @@ public final class VaryWindowL {
         overrideBox.setSelected(Override);
         overrideBox.setText("Override side sum");
 
-        drawCB.setSelected(true);//changed true to false george oct 5,2017
+        autoCoverBox.setIndeterminate(false);
+        autoCoverBox.setAllowIndeterminate(false);
+        autoCoverBox.setSelected(AutoCover);
+        autoCoverBox.setText("Add codes to cover");
+
+        drawCB.setSelected(Draw);//changed true to false george oct 5,2017
         drawCB.setText("Draw"); 
 
         instructHBox.getChildren().addAll(instruct);
@@ -164,9 +172,9 @@ public final class VaryWindowL {
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
         loadHBox.getChildren().addAll(loadButton, drawCB);
         overrideHBox.getChildren().addAll(overrideBox);
-        controlVBox.getChildren().addAll(loadHBox, overrideHBox);
+        controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
-        controlVBox.setAlignment(Pos.CENTER);
+        controlVBox.setAlignment(Pos.CENTER_LEFT);
 
         bottomHBox.getChildren().addAll(typeVBox, maxVBox, controlVBox);
 
@@ -178,6 +186,8 @@ public final class VaryWindowL {
         Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
         loadButton.setOnAction(event -> {
             Override = overrideBox.isSelected();
+            Draw = drawCB.isSelected();
+            AutoCover =autoCoverBox.isSelected();
         	try {
         		BoundCSMax = Integer.parseInt(CSbox.getText().trim());
         		BoundOSOMax = Integer.parseInt(OSObox.getText().trim());
@@ -206,7 +216,7 @@ public final class VaryWindowL {
                 final double y = Double.parseDouble(coords[1]);
                 pointList.add(Vector2.create(x, y));
             }
-            this.result = Optional.of(Tuple.of(pointList, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, drawCB.isSelected()));
+            this.result = Optional.of(Tuple.of(pointList, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             Utils.writeToFile(fileName, fullContent);
             Utils.writeToFile(varyBoundFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
@@ -235,7 +245,7 @@ public final class VaryWindowL {
         return builder.toString().trim();
     }
 
-    public Optional<Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> 
+    public Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> 
     	   getPoints(final String x, final String y, final boolean onePoint) {
     	if (onePoint) {
     		fullContent = x + " " + y;

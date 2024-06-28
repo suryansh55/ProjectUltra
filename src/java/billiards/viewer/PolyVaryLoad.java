@@ -26,7 +26,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple8;
+import javaslang.Tuple7;
 
 public final class PolyVaryLoad {
     // WARNING: Global mutable state
@@ -39,7 +39,7 @@ public final class PolyVaryLoad {
     public static Integer BoundOSOMaxSS = 300;
     public static Integer BoundOSNOMaxSS = 150;
     public static Boolean Override = false;
-    public static Boolean AutoCover = false;
+    public static Boolean AutoCover = true;
 
     // ------------------------------------------------------------
 
@@ -62,19 +62,17 @@ public final class PolyVaryLoad {
     private final CheckBox overrideBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
     private final VBox root = new VBox();
-    private final VBox typeVBox = new VBox(30);
     private final VBox maxVBox = new VBox(10);
     private final VBox controlVBox = new VBox(20);
     private final HBox instructHBox = new HBox();
     private final HBox bottomHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
     private final HBox maxOptHBox = new HBox(10);
-    private final HBox overrideHBox = new HBox(10);
     private final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
 
-    private Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> result;
+    private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
     public PolyVaryLoad(final String windowTitle, final String buttonText, final String fileName,
                     final String boundsFileName, final Rectangle fullScreen) {
@@ -205,7 +203,7 @@ public final class PolyVaryLoad {
             }
             fullContent = text.getText();
             if (fullContent.equals("")) {
-                this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, overrideBox.isSelected()));
+                this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
 
             } else {
                 final String[] lines = cleanPolygon(fullContent).split("\n");
@@ -218,7 +216,7 @@ public final class PolyVaryLoad {
                     pointList.add(Vector2.create(x, y));
                 }
                 final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
-                this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, overrideBox.isSelected()));
+                this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             }
             Utils.writeToFile(fileName, fullContent);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
@@ -248,7 +246,7 @@ public final class PolyVaryLoad {
         return builder.toString().trim();
     }
 
-    public Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> getPolyVaryLoad() {
+    public Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> getPolyVaryLoad() {
         stage.showAndWait();
         return this.result;
     }

@@ -47,7 +47,7 @@ import javafx.scene.control.TextArea;
 import javaslang.Tuple;
 import javaslang.Tuple2;
 import javaslang.Tuple3;
-import javaslang.Tuple8;
+import javaslang.Tuple7;
 import javaslang.collection.Array;
 import javaslang.control.Either;
 
@@ -1249,7 +1249,7 @@ public final class Viewer {
         	}
         	else {
         		final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
-        		autoVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100, false), executor);
+        		autoVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), executor);
         	}
         });
 
@@ -1286,10 +1286,10 @@ public final class Viewer {
             if (boyanMenu.CScb.isSelected() || boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
                         || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
 	            final Rectangle screen = map.getViewRectangle();
-	            final Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> polyOpt =
+	            final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt =
 	                new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
 	            if (polyOpt.isPresent()) {
-                    final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals = polyOpt.get();
+                    final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 	                autoVaryArea = Optional.of(polyVals._1);
 	                autoVaryFunction(polyVals, executor);
 	                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -1321,12 +1321,12 @@ public final class Viewer {
 	        		}
 	        	}
 
-	        	final Optional<Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> pointOpt =
+	        	final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
 	        			varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
 	        	if (pointOpt.isPresent()) {
 		            final ExecutorService executor2 = Executors.newFixedThreadPool(Utils.numThreads); // Create thread pool
 
-	        		final Tuple8<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> point = pointOpt.get();
+	        		final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
 	        		System.out.println(
 	        				"//~~~~~~~~~~~~~~~~~~~~~~~ varyL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
                     final MutableList<Vector2> pointList = point._1;
@@ -1337,8 +1337,8 @@ public final class Viewer {
                     final int OSOmaxSS = point._6;
                     final int OSNOmaxSS = point._7;
                     final int[] maximums = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
-                    final boolean draw = point._8;
-                    final boolean overrideSS = varyWindow.getOverride();
+                    final boolean draw = VaryWindowL.Draw;
+                    final boolean overrideSS = VaryWindowL.Override;
 
 	        		final Task<MutableSortedSet<ClassifiedCodeSequence>> varyLTask = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
 	        			public MutableSortedSet<ClassifiedCodeSequence> call() {
@@ -1482,7 +1482,7 @@ public final class Viewer {
         	if (autoPolyVaryWindow.stage.isShowing()) {
         		autoPolyVaryWindow.stage.toFront();
         	}
-        	final Optional<Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean>> polyOpt = autoPolyVaryWindow.getLoad();
+        	final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = autoPolyVaryWindow.getLoad();
         	if (!polyOpt.isPresent()) {
 //        		final Alert alert = new Alert(AlertType.ERROR);
 //        		alert.setTitle("AutoPolyVary");
@@ -1491,7 +1491,7 @@ public final class Viewer {
 //        		alert.showAndWait();
         		return;
         	}
-        	final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals = polyOpt.get();
+        	final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
         	autoVaryArea = Optional.of(polyVals._1);
         	final int CSmax = polyVals._2;
         	final int OSOmax = polyVals._3;
@@ -1499,8 +1499,8 @@ public final class Viewer {
             final int CSmaxSS = polyVals._5;
             final int OSOmaxSS = polyVals._6;
             final int OSNOmaxSS = polyVals._7;
-            final boolean reverse = polyVals._8;
-            final boolean overrideSS = autoPolyVaryWindow.getOverride();
+            final boolean reverse = AutoPolyVaryLoad.Reverse;
+            final boolean overrideSS = AutoPolyVaryLoad.Override;
             final boolean autoCover = AutoPolyVaryLoad.AutoCover;
         	// Go through all the holes in the specified range
         	final int startIdx = startIdxUser - 1;
@@ -2001,14 +2001,14 @@ public final class Viewer {
         reflectCheckBox.setTooltip(Utils.toolTip("Reflects the map into usual cartesian coordinates"));
         reflectCheckBox.setStyle(textBoxColor);
 
-        Affine startReflect = new Affine();
+        //Affine startReflect = new Affine();
         //BorderPane
-        startReflect.setMyy(-1);
-        startReflect.setTy(imageStack.getBoundsInLocal().getHeight());
-        imageStack.getTransforms().clear();
-        imageStack.getTransforms().add(startReflect);
+        //startReflect.setMyy(-1);
+        //startReflect.setTy(imageStack.getBoundsInLocal().getHeight());
+        //imageStack.getTransforms().clear();
+        //imageStack.getTransforms().add(startReflect);
         // Based on https://gist.github.com/jewelsea/1436935
-        reflectCheckBox.setSelected(true);
+        reflectCheckBox.setSelected(false);
         reflectCheckBox.setOnAction(event -> {
             if (reflectCheckBox.isSelected()) {
                 final Affine reflectTransform = new Affine();
@@ -3325,6 +3325,8 @@ public final class Viewer {
     	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, false);
         final Progress progress = new Progress(task);
 
+        if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo("// Start VaryL");
+
         task.setOnSucceeded(e -> {
 
             final Array<Storage> storages;
@@ -3339,6 +3341,7 @@ public final class Viewer {
                 final int index = cycle.get();
                 color = comboBoxColors.get(index);
 
+                if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo(storage.toString());
                 addToOnScreenSequences(storage, color);
             });
 
@@ -3348,6 +3351,7 @@ public final class Viewer {
             // There should be a way to do a "diff" so to speak
             // We render the things we added, which get put on top
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+            if(VaryWindowL.AutoCover) coverWindow.show();
 
         });
 
@@ -5378,7 +5382,7 @@ public final class Viewer {
 		}
 
     // Tries to find coverings for unfilled pixels onscreen
-    private void autoVaryFunction(final Tuple8<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer, Boolean> polyVals, final ExecutorService executor) {
+    private void autoVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
         final ConvexPolygon area = polyVals._1;
         final int CSmax = polyVals._2;
         final int OSOmax = polyVals._3;
@@ -5398,128 +5402,40 @@ public final class Viewer {
         final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
         final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
 
-        if (boyanMenu.allPixCheckBox.isSelected()) {
-            /* The allPixCheckBox has been removed since forever.
-            // shooting at all uncovered pixels
-            if (startHoles > 100) {
-                final Alert alert = new Alert(AlertType.CONFIRMATION);
-
-                alert.setTitle("Auto Vary3");
-                alert.setHeaderText("Auto Vary3");
-                alert.setContentText(
-                    String.format("AutoVary using all %d pixels?", startHoles));
-                final Optional<ButtonType> response = alert.showAndWait();
-
-                if (response.isPresent() && response.get() == ButtonType.CANCEL) {
-                    return;
-                }
-            }
-
-            String headerString = String.format(
-                                      "+----- auto vary3: %d shots, %d moves, all pixels,", shots, sum) +
-                                  " looking for: " + boyanMenu.typeString() + "-----+";
-            if (proverCheckBox.isSelected()) {
-                headerString += "  (with prover)";
-            }
-            System.out.println(headerString);
-
-            final Task<Void> allPixTask = new Task<Void>() {
-                @Override
-                public Void call() {
-
-                    final int pxMin = (int) map.pixelX(xMin);
-                    final int pxMax = (int) map.pixelX(xMax);
-                    final int pyMin = (int) map.pixelY(yMin);
-                    final int pyMax = (int) map.pixelY(yMax);
-
-                    Optional<Vector2> currentPos = findHole(pxMin, pxMax, pyMin, pyMax, area);
-                    final FastList<Vector2> already = new FastList<>();
-
-                    while (currentPos.isPresent() && !isCancelled()) {
-                        already.add(currentPos.get());
-                        final Vector2 here = currentPos.get();
-
-                        Utils.runAndWait(() -> {
-                            autoCodesFiltered(here.x, here.y, maxList, overrideSS, executor);
-                            updateProgress(map.pixelY(here.y) + SIDE * map.pixelX(here.x), SIDE * SIDE);
-                        });
-
-                        currentPos = findHole(pxMin, pxMax, pyMin, pyMax, area, already);
-                    }
-
-                    return null;
-                }
-            };
-
-            final Progress progress = new Progress(allPixTask);
-
-            allPixTask.setOnSucceeded(e -> {
-
-                final int endHoles = findHoles(area).size();
-
-                System.out.println(String.format(
-                    "+-------------- started with %d holes, filled %d, %d remain --------------+",
-                    startHoles, startHoles - endHoles, endHoles));
-                System.out.println("");
-                progress.close();
-            });
-
-            allPixTask.setOnFailed(e -> {
-                System.out.println("Something went wrong (allPixTask Failed)");
-                progress.close();
-            });
-
-            allPixTask.setOnCancelled(e -> {
-                final int endHoles = findHoles(area).size();
-
-                System.out.println(String.format(
-                    "+------- cancelled; started with %d holes, filled %d, %d remain -------+",
-                    startHoles, startHoles - endHoles, endHoles));
-                System.out.println("");
-
-            });
-
-            final Thread allPixThread = new Thread(allPixTask);
-            allPixThread.start();
-
-            progress.show();
-        */
-        } else {
-            // shooting at points determined by subdivision
-            //george may 3,2019 changed the name to polyvary instead of auto vary3
-            String headerString = !overrideSS ? 
-                                    String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, max) +
-                                    " looking for: " + boyanMenu.typeString() + "-----+" :
-                                    String.format("+----- poly vary: %d shots, overrided moves and %d subdivisions,", shots, max) +
-                                    " looking for: " + boyanMenu.typeString() + "-----+" ;
-            if (proverCheckBox.isSelected()) {
-                headerString += "  (with prover)";
-            }
-            System.out.println(headerString);
-
-            // 2024-05-23 complete redesign of PolyVary to support multi-threading
-            final MutableList<Double> points = new FastList<>();
-            final MutableList<Double> pointsFiltered = new FastList<>();
-            autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
-            final Image image = regionsImageView.getImage();
-            final PixelReader reader = image.getPixelReader();
-            // Filter out filled pixels
-            for(int i = 0; i < points.size(); i += 2) {
-                final int midX = (int) map.pixelX(points.get(i));
-                final int midY = (int) map.pixelY(points.get(i+1));
-                int color = reader.getArgb(midX, midY);
-                if(color == 0) {
-                    pointsFiltered.add(points.get(i));
-                    pointsFiltered.add(points.get(i+1));
-                }
-            }
-            // Now that points have been found, pass to drawPolyVary for actual work
-            // System.out.println("Drawing");
-            // Draw all the codes found, then print summary
-            final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-            final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-            drawPolyVary(pointsFiltered, maxList, overrideSS, autoCover, area, executor, storageExecutor, shotExecutor);
+        // shooting at points determined by subdivision
+        //george may 3,2019 changed the name to polyvary instead of auto vary3
+        String headerString = !overrideSS ? 
+                                String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, max) +
+                                " looking for: " + boyanMenu.typeString() + "-----+" :
+                                String.format("+----- poly vary: %d shots, overrided moves and %d subdivisions,", shots, max) +
+                                " looking for: " + boyanMenu.typeString() + "-----+" ;
+        if (proverCheckBox.isSelected()) {
+            headerString += "  (with prover)";
         }
+        System.out.println(headerString);
+
+        // 2024-05-23 complete redesign of PolyVary to support multi-threading
+        final MutableList<Double> points = new FastList<>();
+        final MutableList<Double> pointsFiltered = new FastList<>();
+        autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
+        final Image image = regionsImageView.getImage();
+        final PixelReader reader = image.getPixelReader();
+        // Filter out filled pixels
+        for(int i = 0; i < points.size(); i += 2) {
+            final int midX = (int) map.pixelX(points.get(i));
+            final int midY = (int) map.pixelY(points.get(i+1));
+            int color = reader.getArgb(midX, midY);
+            if(color == 0) {
+                pointsFiltered.add(points.get(i));
+                pointsFiltered.add(points.get(i+1));
+            }
+        }
+        // Now that points have been found, pass to drawPolyVary for calculations 
+        // System.out.println("Drawing");
+        // Draw all the codes found, then print summary
+        final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+        final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+        drawPolyVary(pointsFiltered, maxList, overrideSS, autoCover, area, executor, storageExecutor, shotExecutor);
     }
 
     // Calculates and draws codes at each of the list of points 
@@ -5682,37 +5598,35 @@ public final class Viewer {
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
             if(overallProgress.isCancelled()) return; // Don't update after cancel received. This prevents codes being printed after the ending line 
             while (c.next()) {
-                if(c.wasAdded()) {
-                    // Draw all new additions
-                    c.getAddedSubList().forEach(storage -> {
-                        if(!onScreenSequences.containsKey(storage)) {
-                            final Color color;
-                            final int index = cycle.get();
-                            color = comboBoxColors.get(index);
-                            addToOnScreenSequences(storage, color);
-                            renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+                if(!c.wasAdded()) continue; 
+                // Draw all new additions
+                c.getAddedSubList().forEach(storage -> {
+                    if(!onScreenSequences.containsKey(storage)) {
+                        final Color color;
+                        final int index = cycle.get();
+                        color = comboBoxColors.get(index);
+                        addToOnScreenSequences(storage, color);
+                        renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
-                            // print the code
-                            final String msg;
-                            final CodeType type = storage.codeType();
+                        // print the code
+                        final String msg;
+                        final CodeType type = storage.codeType();
 
-                            String codeStr = "" + type;
-                            // String codeStr = "xxx " + type; //george july 26 2017 -
-                            // type whatever you want between the quotes in the line above
-                            // make sure to add a space after the xxx
-                            if (type.equals(CodeType.CS)) {
-                                codeStr += "  ";
-                            } else if (!type.equals(CodeType.OSNO)) {
-                                codeStr += " ";
-                            }
-                            msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
-                    	    System.out.println(msg);
-                            if(autoCover) coverWindow.appendStablesInfo(msg);
+                        String codeStr = "" + type;
+                        // String codeStr = "xxx " + type; //george july 26 2017 -
+                        // type whatever you want between the quotes in the line above
+                        // make sure to add a space after the xxx
+                        if (type.equals(CodeType.CS)) {
+                            codeStr += "  ";
+                        } else if (!type.equals(CodeType.OSNO)) {
+                            codeStr += " ";
                         }
-                    });
-                }
+                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                        System.out.println(msg);
+                        if(autoCover) coverWindow.appendStablesInfo(msg);
+                    }
+                });
             }
-
         });
 
         task.setOnSucceeded(e -> {

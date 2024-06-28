@@ -263,7 +263,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             }
         }
 
-        // We trust the thread calling PolyVarytask to cancel the passed executors after execution is finished
         if (except.isPresent()) {
             throw new RuntimeException(except.get());
         }
