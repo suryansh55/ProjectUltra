@@ -42,13 +42,9 @@ $ sudo apt install gcc
 
 # Java
 
-The GUI component of this project is written in Java. This project uses Java 8. There are two versions of Java, the JRE and the JDK. The former is for consumers who only want to run Java code, and the latter is for developers (us) who want to compile it. Getting these two mixed up has caused a lot of trouble for me (eg. some questions on Stack Overflow deal with one and not the other), so be aware of the difference. There are also different "flavors" of Java that come packaged in different ways. The standard one is OpenJDK, which you lucky Linux folks can just get from your package manager (you will likely also need to grab JavaFX, which we use too). On Mac, we have to use Oracle's bundled package, though feel free to ditch it for OpenJDK if it ever makes it into Homebrew (but don't use Homebrew cask, it just installs the Oracle version and has caused me a lot of problems). Go to the [Oracle](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) website (the link may change in the future, so poke around if the webpage doesn't work), accept the license agreement, and install the Mac OS X one (the demos and samples are optional). Follow all the instructions, and there you go (you may also want to go to the Java Control Pane and disable Java in the browser for security reasons).
+The GUI component of this project is written in Java. This project uses Java 8. There are two versions of Java, the JRE and the JDK. The former is for consumers who only want to run Java code, and the latter is for developers (us) who want to compile it. Getting these two mixed up has caused a lot of trouble for me (eg. some questions on Stack Overflow deal with one and not the other), so be aware of the difference. There are also different "flavors" of Java that come packaged in different ways. 
 
-```
-$ sudo apt install openjdk-8-jdk openjfx
-$ sudo dnf install java-1.8.0-openjdk-devel java-1.8.0-openjdk-openjfx-devel
-```
-*If you are on ubuntu and encounter issues with ./gradlew run because of openjfx, this is likely because the version of openjfx in your package manager doesn't support java 8. Instead, I would recomend downloading Java 8u66 from [Oracle](https://www.oracle.com/java/technologies/javase/javase8-archive-downloads.html), since the oracle jdk packages include javafx that works for that version. 
+Regardless of your operating system, I recommend installing the Oracle 8u66 jdk from the [Oracle](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) website (the link may change in the future, so poke around if the webpage doesn't work), accept the license agreement, and install the version for your system (the demos and samples are optional). Follow all the instructions, and there you go (you may also want to go to the Java Control Pane and disable Java in the browser for security reasons). Oracle jdks come prepackaged with the correct javafx version, so this will save you a lot of trouble compared to installing the jdk and javafx seperately.
 
 # Version Control
 
@@ -70,7 +66,7 @@ The application depends on the following libraries.
 - [Thread Building Blocks](https://www.threadingbuildingblocks.org/): Parallelism library.
 - [Jemalloc](http://jemalloc.net/): High performance memory allocator. Our program uses a decent amount of memory for the multiprecision arithmetic calculations, and using this allocator improves the performance of the application by about 15% over the system allocator (at least, it does on Mac).
 
-Let's install these using the package manager.
+Let's install these using the package manager. (Run the command matching your package manager)
 
 ```
 $ brew install gmp mpfr mpfi boost eigen tbb jemalloc
@@ -91,17 +87,14 @@ $ sudo dnf install sqlite-devel
 
 ## Gradle
 
+
+The project comes with gradlew and gradlew.bat files, so you do not need to install gradle yourself. Instead, use the gradlew file to build and run the project. Currently the wrapper uses Gradle 4.9, but you are welcome to update it to a newer version if you can get it working. 
+
+As an example, the following command will run the project using the gradle wrapper.
 ```
-$ brew install gradle
+$ ./gradlew run
 
 ```
-
-After each update of gradle, re-run `gradle wrapper` to update the wrapper to the latest version of gradle.
-Gradle 4.9 is required, and instead of installing gradle manually, you can use the gradlew file to build using
-the specific version.
-
-```
-$ ./gradlew build
 
 
 ## Meson
@@ -169,9 +162,7 @@ However, Java does have several advantages:
 
 # In the Future
 
-C++ and Java are not great, but at the moment (2016) they get the job done. However, on the horizon are two languages that could eat C++ and Java's lunch once they are more mature. Those languages are Rust and Kotlin. In a few years from now, I think it would be very benificial to rewrite the C++ part of the project in Rust, and the Java part in Kotlin. The Rust part may be a bit ambitious, but Kotlin should be very doable. (Another alternative for Java is Scala. Perhaps also check that out when Scala 3 comes out.)
-
-Also, the build system should be revamped. Right now we are using Gradle for Java and Meson for C++. I'd like to have one build system that handles both. Gradle support for C++ isn't the greatest now, but if it improves (say, in Gradle 5), feel free to switch back to that. Also, maybe check out Bazel once it hits 1.0. In the meantime, I believe there are significant changes coming to Gradle in version 5 (a new components thing, and Kotlin-script too), so feel free to update that if there are no better build systems by that time.
+The build system should be revamped. Right now we are using Gradle for Java and Meson for C++. I'd like to have one build system that handles both. Gradle support for C++ isn't the greatest now, but if it improves (say, in Gradle 5), feel free to switch back to that. Also, maybe check out Bazel once it hits 1.0. In the meantime, I believe there are significant changes coming to Gradle in version 5 (a new components thing, and Kotlin-script too), so feel free to update that if there are no better build systems by that time.
 
 # Books
 
