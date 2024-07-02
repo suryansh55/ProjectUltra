@@ -1267,7 +1267,7 @@ public final class Viewer {
                 return;
             }
         	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
+        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !PolyVaryLoad.Override) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("PolyVary");
                 alert.setHeaderText("No CodeTypes");
@@ -1302,7 +1302,7 @@ public final class Viewer {
         Utils.colorButton(varyLBtn, Color.LIGHTPINK, Color.GOLD);
         varyLBtn.setOnAction(event -> {
         	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
+        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !VaryWindowL.Override) {
         		final Alert alert = new Alert(AlertType.ERROR);
 
                 alert.setTitle("Vary");
@@ -1461,7 +1461,7 @@ public final class Viewer {
         	}
         	// The following block was ripped from the polyAutoBtn's action event.
         	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        		&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
+        		&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !AutoPolyVaryLoad.Override) {
         		final Alert alert = new Alert(AlertType.ERROR);
         		alert.setTitle("AutoPolyVary");
         		alert.setHeaderText("No CodeTypes");
@@ -1527,7 +1527,7 @@ public final class Viewer {
             final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
-            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, reverse, overrideSS, autoCover, area, progress, executor, storageExecutor, shotExecutor);
+            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, area, progress, executor, storageExecutor, shotExecutor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5407,8 +5407,8 @@ public final class Viewer {
         String headerString = !overrideSS ? 
                                 String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, max) +
                                 " looking for: " + boyanMenu.typeString() + "-----+" :
-                                String.format("+----- poly vary: %d shots, overrided moves and %d subdivisions,", shots, max) +
-                                " looking for: " + boyanMenu.typeString() + "-----+" ;
+                                String.format("+----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, max) +
+                                " looking for: Overrided -----+" ;
         if (proverCheckBox.isSelected()) {
             headerString += "  (with prover)";
         }
@@ -5435,21 +5435,21 @@ public final class Viewer {
         // Draw all the codes found, then print summary
         final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
         final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-        drawPolyVary(pointsFiltered, maxList, overrideSS, autoCover, area, executor, storageExecutor, shotExecutor);
+        drawPolyVary(pointsFiltered, maxList, area, executor, storageExecutor, shotExecutor);
     }
 
     // Calculates and draws codes at each of the list of points 
-    private void drawPolyVary(final MutableList<Double> points, final int[] max, final boolean overrideSS, final boolean autoCover, final ConvexPolygon area, final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+    private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area, final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
+    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, PolyVaryLoad.Override, storageExecutor, shotExecutor, regionsImageView, map);
         final ObservableList<Storage> partials = task.getPartials();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         // Count the number of holes we start with
         final int startHoles = findHoles(area).size();
-        if(autoCover) coverWindow.appendStablesInfo("// Start PolyVary");
+        if(PolyVaryLoad.AutoCover) coverWindow.appendStablesInfo("// Start PolyVary");
 
         // Update screen when change detected
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -5479,7 +5479,7 @@ public final class Viewer {
                         }
                         msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                         System.out.println(msg);
-                        if(autoCover) coverWindow.appendStablesInfo(msg);
+                        if(PolyVaryLoad.AutoCover) coverWindow.appendStablesInfo(msg);
                     }
                 });
             }
@@ -5518,7 +5518,7 @@ public final class Viewer {
                 "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
                 startHoles, startHoles - endHoles, endHoles));
             System.out.println("");
-            if(autoCover) coverWindow.show();
+            if(PolyVaryLoad.AutoCover) coverWindow.show();
         });
 
         task.setOnCancelled(e -> {
@@ -5544,7 +5544,7 @@ public final class Viewer {
             System.out.println(String.format(
                 "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
                 startHoles, startHoles - endHoles, endHoles));
-            if(autoCover) coverWindow.show();
+            if(PolyVaryLoad.AutoCover) coverWindow.show();
         });
 
         task.setOnFailed(e -> {
@@ -5557,9 +5557,10 @@ public final class Viewer {
     }
 
     // Recursively iterate through the list of holes, running polyVary at each hole.
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final boolean reverse, final boolean overrideSS, final boolean autoCover, final ConvexPolygon area, final ProgressMultiTask overallProgress, final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress, final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+        final boolean autoCover = AutoPolyVaryLoad.AutoCover;
         // Move the screen
-        if(!reverse) { // Check if reverse order is selected
+        if(!AutoPolyVaryLoad.Reverse) { // Check if reverse order is selected
             setOBO(currIdx, pool, drawExecutor);
         } else {
             setOBO(endIdx - currIdx, pool, drawExecutor);
@@ -5588,7 +5589,7 @@ public final class Viewer {
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
+    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, AutoPolyVaryLoad.Override, storageExecutor, shotExecutor, regionsImageView, map);
         final ObservableList<Storage> partials = task.getPartials();
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
@@ -5674,7 +5675,7 @@ public final class Viewer {
                 overallProgress.close();
                 if(autoCover) coverWindow.show();
             } else if(currIdx + stepIdx <= endIdx) {
-                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, reverse, overrideSS, autoCover, area, overallProgress, drawExecutor, storageExecutor, shotExecutor);
+                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, drawExecutor, storageExecutor, shotExecutor);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
@@ -5871,7 +5872,7 @@ public final class Viewer {
         }
     }
 
-    //insert repteaded elements for expando
+    /*insert repeated elements for expando
     private static void insertRepeatedElement(final MutableIntList baseList, final int element, final int repeat,final int position) {
        for (int i = 0; i < baseList.size(); ++i){
            if (i==position){
@@ -5879,6 +5880,7 @@ public final class Viewer {
            }
        }
     }
+    */
 
     public void drawSearch(final List<Storage> list) {
         list.forEach(storage -> {

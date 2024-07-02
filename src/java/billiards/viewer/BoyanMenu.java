@@ -576,7 +576,7 @@ public class BoyanMenu {
                     b = aY1;
                 }
 
-                final MutableSet<ClassifiedCodeSequence> pointCodes = findCodes(a, b, version, exe);
+                final MutableSortedSet<ClassifiedCodeSequence> pointCodes = findCodes(a, b, version, exe);
                 bareCodesFound.addAll(pointCodes);
             }
         }
@@ -594,9 +594,9 @@ public class BoyanMenu {
     				final Vector2 point, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
         final int min = Integer.parseInt(minMovesText.getText());
         final double shots = Integer.parseInt(shotsText.getText());
-        final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
-                                 CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected()};
-        final boolean[] CSonly = {false, CScb.isSelected(), false, false, false};
+        final boolean[] types = {OSOmaxSS > 0, CSmaxSS > 0,
+                                 CNScb.isSelected(), ONScb.isSelected(), OSNOmaxSS > 0};
+        final boolean[] CSonly = {false, CSmaxSS > 0, false, false, false};
         final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
         final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
         unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, CSmaxSS, shots, CSonly, executor));
@@ -642,7 +642,7 @@ public class BoyanMenu {
         }
         return new TreeSortedSet<>();
     }
-    // Overloading of autoVary for seperate maximums
+    // Overloading of autoVary for seperate maximums during overrideSS
     public MutableSortedSet<ClassifiedCodeSequence> autoVary(
                 final Vector2 point, final int CSmax, final int OSOmax, final int OSNOmax, final ExecutorService exe) {
         int CSmin = Integer.parseInt(minMovesText.getText());
@@ -652,11 +652,11 @@ public class BoyanMenu {
         final int iterate = Integer.parseInt(autoIterText.getText());
         final int step = Integer.parseInt(autoStepText.getText());
         final int shots = Integer.parseInt(shotsText.getText());
-        final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
-                                 CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected(), OSO2cb.isSelected(), CS2cb.isSelected(),
+        final boolean[] types = {OSOmax > 0, CSmax > 0,
+                                 CNScb.isSelected(), ONScb.isSelected(), OSNOmax > 0, OSO2cb.isSelected(), CS2cb.isSelected(),
                                  CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()};
         
-        final boolean[] csOnly = {false, CScb.isSelected(),
+        final boolean[] csOnly = {false, CSmax > 0,
             false, false, false, false, false, false, false, false
         };
         //george june 12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
@@ -665,7 +665,7 @@ public class BoyanMenu {
         for (int i = 0; i < iterate + 1; i++) {
             final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
             final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-            if(CScb.isSelected()) {
+            if(CSmax > 0) {
                 unfilteredCodesFound.addAll(findCodes3(point.x, point.y, CSmin, CSmax + CSstep, shots, csOnly, exe));
             }
             unfilteredCodesFound.addAll(findCodes3(point.x, point.y, OSmin, Math.max(OSOmax, OSNOmax) + OSstep, shots, types, exe));
@@ -694,13 +694,16 @@ public class BoyanMenu {
         return new TreeSortedSet<>();
     }
 
-    private MutableSet<ClassifiedCodeSequence> findCodes(
+    private MutableSortedSet<ClassifiedCodeSequence> findCodes(
     		final double xCoord, final double yCoord, final int version, final ExecutorService exe) {
+        final MutableSortedSet<ClassifiedCodeSequence> out = new TreeSortedSet<>();
         final int max = Integer.parseInt(maxMovesText.getText());
         final int min = Integer.parseInt(minMovesText.getText());
         final double shots = Integer.parseInt(shotsText.getText());
         final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
                                  CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected()};
+        final boolean[] CSonly = {false, CScb.isSelected(),
+                                 false, false, false};
         final boolean[] types2 = {OSO2cb.isSelected(), CS2cb.isSelected(),
                 CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()};
 
@@ -708,14 +711,16 @@ public class BoyanMenu {
         //george june12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
         //CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()
         if (version == 4) {
-        	return findCodes4(xCoord, yCoord, min, max, shots, types);
+        	out.addAll(findCodes4(xCoord, yCoord, min, max, shots, types));
         } else if (version == 3) {
-        	return findCodes3(xCoord, yCoord, min, max, shots, types, exe);
+        	out.addAll(findCodes3(xCoord, yCoord, min, max, shots, types, exe));
+            out.addAll(findCodes3(xCoord, yCoord, min, max, shots, CSonly, exe));
         } else if (version == 2) {
-        	return findCodes2(xCoord, yCoord, min, max, shots, types2, exe);
+        	out.addAll(findCodes2(xCoord, yCoord, min, max, shots, types2, exe));
         } else {
         	throw new RuntimeException("Version for varyTriangles must be 3 or 4");
         }
+        return out;
     }
 
     // boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
