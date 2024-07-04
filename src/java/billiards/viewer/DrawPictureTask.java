@@ -17,6 +17,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 
 public final class DrawPictureTask extends Task<Array<Storage>> {
@@ -24,10 +29,30 @@ public final class DrawPictureTask extends Task<Array<Storage>> {
     protected final boolean print;
     protected final boolean detailed;
 
+    private final ExecutorService executor;
+    private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
+            new ReadOnlyObjectWrapper<>(
+                    this, 
+                    "partialResults",
+                    FXCollections.observableArrayList(
+                            new ArrayList<Storage>()
+                    )
+            );
+
+    // These expose partialResults to the FX application thread
+    public final ObservableList<Storage> getPartials() {
+        return this.partialResults.get();
+    }
+    
+    public final ReadOnlyObjectProperty<ObservableList<Storage>> getPartialProperty() {
+        return this.partialResults.getReadOnlyProperty();
+    }
+
     public DrawPictureTask(
-        final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool, boolean print, boolean detailed) {
+        final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool, final ExecutorService executor, boolean print, boolean detailed) {
         this.print = print;
         this.detailed = detailed;
+        this.executor = executor;
         this.tasks = classCodeSeqs.map(classCodeSeq -> () -> {
             // We could check here for Thread.interrupted() to see if we should
             // cancel the task, but this operation is one-shot,
@@ -38,6 +63,7 @@ public final class DrawPictureTask extends Task<Array<Storage>> {
 
             if (opt.isPresent()) {
                 final Storage storage = opt.get();
+                Platform.runLater(() -> this.partialResults.get().add(storage));
                 return Either.right(storage);
             } else {
                 return Either.left("//empty set " + classCodeSeq);
@@ -47,10 +73,10 @@ public final class DrawPictureTask extends Task<Array<Storage>> {
 
     @Override
     protected Array<Storage> call() {
-        final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
+        //final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
         final Array<Future<Either<String, Storage>>> futures =
-            this.tasks.map(task -> executor.submit(task));
+            this.tasks.map(task -> this.executor.submit(task));
 
         int progress = 0;
         final int todo = futures.size();
@@ -125,7 +151,6 @@ public final class DrawPictureTask extends Task<Array<Storage>> {
         // TODO This does not cancel futures that are currently running
         // (like when we hit cancel or a future throws an exception). Should we wait for them to
         // finish?
-        executor.shutdown();
 
         // If there is an exception that happened, throw it now after shutting down the executor
         if (except.isPresent()) {

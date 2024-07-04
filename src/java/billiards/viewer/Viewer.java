@@ -914,7 +914,8 @@ public final class Viewer {
                 final Task<Array<Storage>> task;
 
                 // Label 5
-                task = new DrawPictureTask(codes, pool, false, false);
+                final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+                task = new DrawPictureTask(codes, pool, drawExecutor, false, false);
                 task.setOnSucceeded(e -> {
 
                     final Array<Storage> storages;
@@ -937,9 +938,13 @@ public final class Viewer {
                     }
                     // Label 6
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                    Utils.safeShutdownExecutor(drawExecutor);
                 });
-
+                task.setOnCancelled(e -> {
+                    Utils.safeShutdownExecutor(drawExecutor);
+                });
                 task.setOnFailed(e -> {
+                    Utils.safeShutdownExecutor(drawExecutor);
                     throw new RuntimeException(task.getException());
                 });
 
@@ -987,7 +992,7 @@ public final class Viewer {
             //System.out.println(size+"\n");
             // Shiyu, get left right string
 
-            String lr = leftrightsTextArea.getText();
+            //String lr = leftrightsTextArea.getText();
             //System.out.println("asdsadas"+lr+"x");
 
             for (int i = 0; i < size; i++) {
@@ -1339,10 +1344,11 @@ public final class Viewer {
                     final int[] maximums = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
                     final boolean draw = VaryWindowL.Draw;
                     final boolean overrideSS = VaryWindowL.Override;
+                    final MutableSortedSet<ClassifiedCodeSequence> varyLCodes = new TreeSortedSet<>();
 
 	        		final Task<MutableSortedSet<ClassifiedCodeSequence>> varyLTask = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
 	        			public MutableSortedSet<ClassifiedCodeSequence> call() {
-	        				return varyLfunction(pointList, maximums, overrideSS,
+	        				return varyLFunction(varyLCodes, pointList, maximums, overrideSS,
 	    	            		Integer.parseInt(boyanMenu.maxPrinting.getText()), executor2);
 
 	        			}
@@ -1352,35 +1358,39 @@ public final class Viewer {
 
 	            	varyLTask.setOnCancelled(cancel -> {
 	            		varyLThread.interrupt();
-	            		executor2.shutdownNow();
+                        Utils.safeShutdownExecutor(executor2);
 	            		System.out.println("// VaryL cancelled");
 	            		progress.close();
+                        if (draw) {
+                            // draw is true
+                            System.out.println("// Drawing codes found so far... ");
+                            drawVaryL(varyLCodes, executor);
+                        }
+                        if (boyanMenu.varyOnePoint.isSelected()) {
+                            BoyanMenu.printCodes(varyLCodes, "VaryOnePoint.txt", false, false,
+                                    Integer.parseInt(boyanMenu.maxPrinting.getText()));
+                        }
 	            	});
 
 	            	varyLTask.setOnFailed(fail -> {
 	            		System.out.println("// VaryL failed");
 	            		progress.close();
-	            		executor2.shutdown();
-	            		// throw new RuntimeException(varyLTask.getException());
+                        Utils.safeShutdownExecutor(executor2);
+	            		throw new RuntimeException(varyLTask.getException());
 	            	});
 
 	            	varyLTask.setOnSucceeded(succeed -> {
 	            		progress.close();
-	            		executor2.shutdown();
-	            		try {
-		            		if (draw) {
-		            			// draw is true
-		            			System.out.println("// Drawing... ");
-								drawvaryL(varyLTask.get(), executor);
-		            		}
-		            		if (boyanMenu.varyOnePoint.isSelected()) {
-		            			BoyanMenu.printCodes(varyLTask.get(), "VaryOnePoint.txt", false, false,
-		            					Integer.parseInt(boyanMenu.maxPrinting.getText()));
-		            		}
-	            		} catch (InterruptedException | ExecutionException e1) {
-							System.out.println("// Failed to draw");
-							// throw new RuntimeException(e1);
-						}
+                        Utils.safeShutdownExecutor(executor2);
+                        if (draw) {
+                            // draw is true
+                            System.out.println("// Drawing... ");
+                            drawVaryL(varyLCodes, executor);
+                        }
+                        if (boyanMenu.varyOnePoint.isSelected()) {
+                            BoyanMenu.printCodes(varyLCodes, "VaryOnePoint.txt", false, false,
+                                    Integer.parseInt(boyanMenu.maxPrinting.getText()));
+                        }
 	            	});
 
 	            	varyLThread.start();
@@ -1499,8 +1509,6 @@ public final class Viewer {
             final int CSmaxSS = polyVals._5;
             final int OSOmaxSS = polyVals._6;
             final int OSNOmaxSS = polyVals._7;
-            final boolean reverse = AutoPolyVaryLoad.Reverse;
-            final boolean overrideSS = AutoPolyVaryLoad.Override;
             final boolean autoCover = AutoPolyVaryLoad.AutoCover;
         	// Go through all the holes in the specified range
         	final int startIdx = startIdxUser - 1;
@@ -3207,9 +3215,10 @@ public final class Viewer {
 
         //}
         final Task<Array<Storage>> task;
+        final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
 
         if (nolrRdoBtn.isSelected()) {
-            task = new DrawPictureTask(classCodeSeqs, pool, true, false);
+            task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, true, false);
 
         } else if (showlrRdoBtn.isSelected()) {
             task = new DrawPictureTaskShowLR(classCodeSeqs, pool);
@@ -3225,7 +3234,7 @@ public final class Viewer {
         }
 
         //final Progress progress = new Progress(task);
-           final ArrayList<ClassifiedCodeSequence> finalClassCodeSeqs = new ArrayList<>();
+        final ArrayList<ClassifiedCodeSequence> finalClassCodeSeqs = new ArrayList<>();
 
         task.setOnSucceeded(e -> {
 
@@ -3255,13 +3264,18 @@ public final class Viewer {
             } catch (final NullPointerException exception) {
                 // this is when were iterating from a file, and the iterations window isn't open
             }
+            Utils.safeShutdownExecutor(drawExecutor);
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+        });
+        task.setOnCancelled(e -> {
+            Utils.safeShutdownExecutor(drawExecutor);
         });
 
         // If the task throws an exception during the call phase,
         // simply close the window and throw the exception
         task.setOnFailed(e -> {
             //progress.close();
+            Utils.safeShutdownExecutor(drawExecutor);
             throw new RuntimeException(task.getException());
         });
 
@@ -3320,12 +3334,44 @@ public final class Viewer {
         return todo;
     }
 
-    private void drawvaryL(final MutableSortedSet<ClassifiedCodeSequence> codes, final ExecutorService executor) {
+    private void drawVaryL(final MutableSortedSet<ClassifiedCodeSequence> codes, final ExecutorService executor) {
         final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(codes);
-    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, false);
+        final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, false, false);
         final Progress progress = new Progress(task);
 
         if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo("// Start VaryL");
+
+        task.getPartialProperty().get().addListener((ListChangeListener.Change<? extends Storage> c) -> {
+            while (c.next()) {
+                if(!c.wasAdded()) continue;
+                // Draw all new additions
+                c.getAddedSubList().forEach(storage -> {
+                    if(!onScreenSequences.containsKey(storage)) {
+                        final Color color;
+                        final int index = cycle.get();
+                        color = comboBoxColors.get(index);
+                        addToOnScreenSequences(storage, color);
+                        renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+                        // print the code
+                        final String msg;
+                        final CodeType type = storage.codeType();
+                        String codeStr = "" + type;
+                        // String codeStr = "xxx " + type; //george july 26 2017 -
+                        // type whatever you want between the quotes in the line above
+                        // make sure to add a space after the xxx
+                        if (codeStr.equals("CS")) {
+                            codeStr += "  ";
+                        } else if (!codeStr.equals("OSNO")) {
+                            codeStr += " ";
+                        }
+                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                        System.out.println(msg);
+                        if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo(msg);
+                    }
+                });
+            }
+        });
 
         task.setOnSucceeded(e -> {
 
@@ -3340,23 +3386,39 @@ public final class Viewer {
                 final Color color;
                 final int index = cycle.get();
                 color = comboBoxColors.get(index);
-
-                if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo(storage.toString());
                 addToOnScreenSequences(storage, color);
             });
 
+            Utils.safeShutdownExecutor(drawExecutor);
             progress.close();
 
             // only render the screen after everything has been loaded
-            // There should be a way to do a "diff" so to speak
-            // We render the things we added, which get put on top
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
             if(VaryWindowL.AutoCover) coverWindow.show();
+            System.out.println("+-------------- Draw varyL completed --------------+");
+        });
 
+        task.setOnCancelled(e -> {
+            task.getPartialProperty().get().forEach(storage -> {
+                if(!onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = cycle.get();
+                    color = comboBoxColors.get(index);
+                    addToOnScreenSequences(storage, color);
+                }
+            });
+
+            Utils.safeShutdownExecutor(drawExecutor);
+            progress.close();
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+            if(VaryWindowL.AutoCover) coverWindow.show();
+            System.out.println("+-------------- Draw varyL cancelled --------------+");
         });
 
         task.setOnFailed(e -> {
+            Utils.safeShutdownExecutor(drawExecutor);
             progress.close();
+            System.out.println("+-------------- Draw varyL failed --------------+");
             throw new RuntimeException(task.getException());
         });
 
@@ -3396,7 +3458,8 @@ public final class Viewer {
             final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(allCodes);
 
             if (drawPictureCheckBox.isSelected()) {
-                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, true, false);
+                final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, true, false);
                 final Progress progress = new Progress(task);
 
                 task.setOnSucceeded(e -> {
@@ -3425,6 +3488,7 @@ public final class Viewer {
                         }
                     });
 
+                    Utils.safeShutdownExecutor(drawExecutor);
                     progress.close();
 
                     if (tup._1.isPresent()) {
@@ -3452,7 +3516,13 @@ public final class Viewer {
 
                 });
 
+                task.setOnCancelled(e -> {
+                    Utils.safeShutdownExecutor(drawExecutor);
+                    progress.close();
+                });
+
                 task.setOnFailed(e -> {
+                    Utils.safeShutdownExecutor(drawExecutor);
                     progress.close();
                     throw new RuntimeException(task.getException());
                 });
@@ -5316,7 +5386,7 @@ public final class Viewer {
         return Tuple.of(optRect, map, optIter);
     }
 
-    private MutableSortedSet<ClassifiedCodeSequence> varyLfunction(final MutableList<Vector2> points,
+    private MutableSortedSet<ClassifiedCodeSequence> varyLFunction(final MutableSortedSet<ClassifiedCodeSequence> codesFound, final MutableList<Vector2> points,
 			  final int[] maximums, final boolean overrideSS, final int max,
 			  final ExecutorService executor2) {
         final int CSmax = maximums[0];
@@ -5328,7 +5398,6 @@ public final class Viewer {
         
 		int count = 1;
 		int totalCodes = 0;
-		final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
 
         if(overrideSS) {
             System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d", CSmaxSS, OSOmaxSS, OSNOmaxSS);
@@ -5339,38 +5408,28 @@ public final class Viewer {
 			final MutableSortedSet<ClassifiedCodeSequence> codes = overrideSS ? boyanMenu.varyTrianglesL(point, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor2) : boyanMenu.varyTrianglesL(point, executor2);
 			final MutableSortedSet<ClassifiedCodeSequence> localCodesFound = new TreeSortedSet<>();
 
-			for (ClassifiedCodeSequence code : codes) {
-				if (code.codeType.equals(CodeType.OSO)) {
-					if (code.codeLength <= OSOmax) {
-						localCodesFound.add(code);
-					}
-				} else if (code.codeType.equals(CodeType.OSNO)) {
-					if (code.codeLength <= OSNOmax) {
-						localCodesFound.add(code);
-					}
-				} else if (code.codeType.equals(CodeType.CS)) {
-					if (code.codeLength <= CSmax) {
-						localCodesFound.add(code);
-					}
-				}
-			}
-			int i = max;
-			if (i == 0) {
-				i = localCodesFound.size();
-			}
+			int i = max == 0 ? localCodesFound.size() : max;
 			int codeNum = 0;
 			final int maxPrint = i;
             List <String> codeList = Arrays.asList(Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
             codeList.replaceAll(j -> Utils.tripleTrimmer(j));
-            for (ClassifiedCodeSequence code : localCodesFound) {
+
+			for (ClassifiedCodeSequence code : codes) {
+                if(i == 0) break; // Already printed out the first i codes
+				if (code.codeType.equals(CodeType.OSO) && code.codeLength > OSOmax) {
+					continue;
+				} else if (code.codeType.equals(CodeType.OSNO) && code.codeLength > OSNOmax) {
+					continue;
+				} else if (code.codeType.equals(CodeType.CS) && code.codeLength > CSmax) {
+					continue;
+				}
                 if (codeNum < maxPrint && !codeList.contains(code.codeSequence.toString()) && i>0) {
                     codeNum += 1;
                     System.out.println(Utils.standard(code, codeNum));
-                    codesFound.add(code);
+                    Platform.runLater(() -> codesFound.add(code));
                     i -= 1;
                 }
-            }
-
+			}
 			totalCodes += codes.size();
 			count += 1;
 		}
@@ -5379,7 +5438,7 @@ public final class Viewer {
 		+ " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
 
 		return codesFound;
-		}
+	}
 
     // Tries to find coverings for unfilled pixels onscreen
     private void autoVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
@@ -5391,7 +5450,6 @@ public final class Viewer {
         final int OSOmaxSS = polyVals._6;
         final int OSNOmaxSS = polyVals._7;
         final boolean overrideSS = PolyVaryLoad.Override;
-        final boolean autoCover = PolyVaryLoad.AutoCover;
         final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
         final int max = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
@@ -5445,14 +5503,14 @@ public final class Viewer {
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
     	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, PolyVaryLoad.Override, storageExecutor, shotExecutor, regionsImageView, map);
-        final ObservableList<Storage> partials = task.getPartials();
+        //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         // Count the number of holes we start with
         final int startHoles = findHoles(area).size();
         if(PolyVaryLoad.AutoCover) coverWindow.appendStablesInfo("// Start PolyVary");
 
         // Update screen when change detected
-        partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
+        task.getPartialProperty().get().addListener((ListChangeListener.Change<? extends Storage> c) -> {
             while (c.next()) {
                 if(!c.wasAdded()) continue;
                 // Draw all new additions
@@ -5483,7 +5541,6 @@ public final class Viewer {
                     }
                 });
             }
-
         });
 
         task.setOnSucceeded(e -> {
@@ -5522,7 +5579,7 @@ public final class Viewer {
         });
 
         task.setOnCancelled(e -> {
-            partials.forEach(storage -> {
+            task.getPartialProperty().get().forEach(storage -> {
                 if(!onScreenSequences.containsKey(storage)) {
                     final Color color;
                     final int index = cycle.get();
