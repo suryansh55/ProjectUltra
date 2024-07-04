@@ -266,8 +266,8 @@ public final class CoverWindow {
     public void setTriplesInfo(ArrayList<String> triples){
         String currentText = triplesText.getText().toString();
         //Filling triple string
-        for (int i = 0; i < triples.size(); i++) {
-            currentText += "\n" + triples.get(i);
+        for (int i = triples.size() - 1; i >= 0; --i) {
+            currentText = triples.get(i) + "\n" + currentText;
         }
         triplesText.setText(currentText);
     }
@@ -275,7 +275,7 @@ public final class CoverWindow {
     // Allows other classes to update the list of stables 
     public void appendStablesInfo(String stable) {
         String currentText = bottomText.getText().toString();
-        bottomText.setText(currentText + "\n" + stable);
+        bottomText.setText(stable + "\n" + currentText);
     }
     
     private void saveToFile() {
