@@ -83,6 +83,7 @@ public class BoyanMenu {
 
 
     final TextField autoCycleText = new TextField();
+    final TextField cycleStepText = new TextField();
     final TextField autoIterText = new TextField();
     final TextField autoStepText = new TextField();
 
@@ -117,7 +118,7 @@ public class BoyanMenu {
 
 	public BoyanMenu(final Button autoVaryButton, final Button polyAutoBtn, final Button varyLBtn,
                      final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField, final TextField lineEndField,
-                     final double TipOpenDelay, final double TipCloseDelay) {
+                     final Button superPolyVaryBtn, final double TipOpenDelay, final double TipCloseDelay) {
 
         Utils.setupCustomTooltipBehavior((int) (TipOpenDelay * 1000), (int) (TipCloseDelay * 1000), 200);
 
@@ -134,6 +135,7 @@ public class BoyanMenu {
         shotsText.setPrefWidth(35);//george set 40 instead of 60
         shotsText.setText("4");//george set 4 instead of 8
         shotsText.setTooltip(Utils.toolTip("How many places along the base it should shoot"));
+
 
         varyX1Text.setPrefWidth(155);
         varyX1Text.setText("30");
@@ -212,6 +214,10 @@ public class BoyanMenu {
         autoCycleText.setText("3");
         autoCycleText.setTooltip(Utils.toolTip("For PolyVary, the number of subdivisions done"));
         autoCycleText.setPrefWidth(40);
+        
+        cycleStepText.setText("1");
+        cycleStepText.setTooltip(Utils.toolTip("For SuperPolyVary, the change in subdivisions each iteration"));
+        cycleStepText.setPrefWidth(40);
 
         autoIterText.setText("0");
         autoIterText.setPrefWidth(40);
@@ -497,6 +503,10 @@ public class BoyanMenu {
         newHBox.setPadding(new Insets(0, 10, 10, 0));
         newHBox.setAlignment(Pos.CENTER);
 
+        final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText);
+        newHBox.setPadding(new Insets(0, 10, 10, 0));
+        newHBox.setAlignment(Pos.CENTER);
+
         vary3HBox.setPadding(new Insets(0, 10, 10, 0));
         vary3HBox.setAlignment(Pos.CENTER);
         //note vary4Btn says V4 on the button george June 18,2019
@@ -513,7 +523,7 @@ public class BoyanMenu {
 
        // wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, varyLine3HBox,
          //     varyInfoHBox, codeTypesHBox, codeTypes2HBox, vary3HBox);
-        wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, autoPolyVaryHBox, vary3HBox, codeTypesHBox, newHBox);
+        wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, autoPolyVaryHBox, vary3HBox, codeTypesHBox, newHBox, superHBox);
         //wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, varyLine3HBox,
          //                            varyInfoHBox, codeTypes2HBox, vary3HBox, autoHBox);
     }//george june 12,2019 changed codeTypesHBox to codeTypes2HBox

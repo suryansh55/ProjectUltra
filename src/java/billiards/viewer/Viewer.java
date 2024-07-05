@@ -498,14 +498,18 @@ public final class Viewer {
 
     // the Boyan Menu
     final Button autoVaryBtn = new Button();
-    final Button polyAutoBtn = new Button();
+    final Button polyVaryBtn = new Button();
     final Button varyLBtn = new Button();
     // Fields for the AutoPolyVary button
     final TextField lineStartField = new TextField();
     final TextField lineStepField = new TextField(); // 2024-05-06 Step interval for auto
     final TextField lineEndField = new TextField();
     final Button autoPolyVaryBtn = new Button();
-    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyAutoBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, TipOpenDelay, TipCloseDelay);
+
+    final Button superPolyVaryBtn = new Button();
+
+    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, TipOpenDelay, TipCloseDelay);
+
 
     final CoverWindow coverWindow;
 
@@ -546,6 +550,7 @@ public final class Viewer {
                 labelMainWindow, () -> loadCover("cover2", executor));
         final VaryWindowL varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt");
         final AutoPolyVaryLoad autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt");
+        final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
 
         executorService = executor;
 
@@ -1258,11 +1263,11 @@ public final class Viewer {
         	}
         });
 
-        polyAutoBtn.setText("PolyVary");
-        polyAutoBtn.setTooltip(Utils.toolTip("Search for code sequences which cover points in a "
+        polyVaryBtn.setText("PolyVary");
+        polyVaryBtn.setTooltip(Utils.toolTip("Search for code sequences which cover points in a "
                                              + "specified polygon. See instructions for details"));
-        Utils.colorButton(polyAutoBtn, Color.LIGHTPINK, Color.GOLD);
-        polyAutoBtn.setOnAction(event -> {
+        Utils.colorButton(polyVaryBtn, Color.LIGHTPINK, Color.GOLD);
+        polyVaryBtn.setOnAction(event -> {
             if (compareCheckBox.isSelected()) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("PolyVary");
@@ -1540,6 +1545,51 @@ public final class Viewer {
             // invocation found some new covers.
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
+
+        superPolyVaryBtn.setText("SuperPolyVary");
+        superPolyVaryBtn.setTooltip(Utils.toolTip("Repeat PolyVary or AutoPolyVary a set number of times"));
+        Utils.colorButton(superPolyVaryBtn, Color.GREEN, Color.GOLD);
+        superPolyVaryBtn.setOnAction(event -> {
+            if (compareCheckBox.isSelected()) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("PolyVary");
+                alert.setHeaderText("MatchV3 is on");
+                alert.setContentText("MatchV3 does not go with PolyVary.");
+                alert.showAndWait();
+                return;
+            }
+        	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !PolyVaryLoad.Override) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("PolyVary");
+                alert.setHeaderText("No CodeTypes");
+                alert.setContentText("Please Select at least one codetype.");
+                alert.showAndWait();
+                return;
+        	}
+            if (boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
+                    || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
+                final Alert alert = new Alert(AlertType.WARNING);
+                alert.setHeaderText("CodeTypes other than CS are chosen");
+                alert.setContentText("Make sure you have the correct CodeTypes chosen.");
+                alert.showAndWait();
+                // return;  <-- Don't exit from this call, because PolyVary can still run with 
+            }
+        	if (superPolyVaryWindow.stage.isShowing()) {
+        		superPolyVaryWindow.stage.toFront();
+        	}
+        	final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = superPolyVaryWindow.getLoad();
+        	if (!polyOpt.isPresent()) {
+//        		final Alert alert = new Alert(AlertType.ERROR);
+//        		alert.setTitle("AutoPolyVary");
+//        		alert.setHeaderText("Operation Aborted");
+//        		alert.setContentText("AutoPolyVary was aborted because the polygon selection window was closed.");
+//        		alert.showAndWait();
+        		return;
+        	}
+
+        });
+
 
         fillScreenBtn.setText("Fill Screen");
         fillScreenBtn.setTooltip(Utils.toolTip("Color in the area currently on screen"));
@@ -2735,7 +2785,7 @@ public final class Viewer {
           //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
         hbox2.getChildren().addAll(reflectCheckBox, allCheckBox,infoButton);
 
-        final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
+        final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, superPolyVaryBtn, oboHBox,
                   backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
         colorsHBox1.getChildren().clear();
         backForOBOHBox.getChildren().clear();
