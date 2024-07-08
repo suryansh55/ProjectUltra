@@ -12,7 +12,8 @@ import javafx.stage.Modality;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
 
-// Progress bar which can be used across multible tasks. Must be updated manually, as it is not synced to the task it currently tracks
+// Progress bar which can be used across multiple (zero or more) tasks. 
+// Must be updated manually, as it is not synced to the task it currently tracks
 // Main use is to provide a way to monitor the progress of a list of tasks, and cancel the current one
 public final class ProgressMultiTask {
     private final HBox root = new HBox();
@@ -23,14 +24,14 @@ public final class ProgressMultiTask {
     private final Scene scene = new Scene(root);
     private final Stage stage = new Stage();
     
-    private Task<?> task;
+    
+    private Task<?> task; // We don't care what task return type is
     private long completed;
     private boolean cancelled = false;
     private final long total;
     private final String formatString;
 
     
-    // We don't care what task return type is
     public ProgressMultiTask(String formatString, long offset, long total) {
     	progressBar.setMaxWidth(Double.MAX_VALUE);
     	progressText.setMaxWidth(Double.MAX_VALUE);

@@ -97,6 +97,8 @@ import java.util.stream.Stream;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.property.SimpleIntegerProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.concurrent.Task;
@@ -1259,7 +1261,7 @@ public final class Viewer {
         	}
         	else {
         		final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
-        		autoVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), executor);
+        		polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), executor);
         	}
         });
 
@@ -1301,7 +1303,7 @@ public final class Viewer {
 	            if (polyOpt.isPresent()) {
                     final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 	                autoVaryArea = Optional.of(polyVals._1);
-	                autoVaryFunction(polyVals, executor);
+	                polyVaryFunction(polyVals, Optional.empty(), executor);
 	                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 	            }
             }
@@ -1587,6 +1589,7 @@ public final class Viewer {
 //        		alert.showAndWait();
         		return;
         	}
+            superPolyVaryFunction(polyOpt.get(), executor);
 
         });
 
@@ -2785,7 +2788,7 @@ public final class Viewer {
           //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
         hbox2.getChildren().addAll(reflectCheckBox, allCheckBox,infoButton);
 
-        final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, superPolyVaryBtn, oboHBox,
+        final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
                   backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
         colorsHBox1.getChildren().clear();
         backForOBOHBox.getChildren().clear();
@@ -5490,18 +5493,32 @@ public final class Viewer {
 		return codesFound;
 	}
 
+    // Runs polyVary a set number of times 
+    private void superPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
+        final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
+        step.setValue(-1);
+        step.addListener((o, oldVal, newVal) -> {
+            if(newVal >= SuperPolyVaryLoad.Reps) {
+                return;
+            }
+            final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> curVals = Tuple.of(polyVals._1, polyVals._2, polyVals._3, polyVals._4,
+                    Math.max(0, polyVals._5 + SuperPolyVaryLoad.BoundCSstep * newVal),
+                    Math.max(0, polyVals._6 + SuperPolyVaryLoad.BoundOSOstep * newVal),
+                    Math.max(0, polyVals._7 + SuperPolyVaryLoad.BoundOSNOstep * newVal));
+            polyVaryFunction(curVals, Optional.of(step), executor);
+        });
+        step.setValue(0);
+    }
+    
     // Tries to find coverings for unfilled pixels onscreen
-    private void autoVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
+    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final Optional<SimpleObjectProperty<Integer>> step, final ExecutorService executor) {
+        // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
+        final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         final ConvexPolygon area = polyVals._1;
-        final int CSmax = polyVals._2;
-        final int OSOmax = polyVals._3;
-        final int OSNOmax = polyVals._4;
-        final int CSmaxSS = polyVals._5;
-        final int OSOmaxSS = polyVals._6;
-        final int OSNOmaxSS = polyVals._7;
-        final boolean overrideSS = PolyVaryLoad.Override;
-        final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
-        final int max = Integer.parseInt(boyanMenu.autoCycleText.getText());
+        final boolean overrideSS = PolyVaryLoad.Override || step.isPresent(); // If doing super, we must override
+        int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+        final int subdivStep = Integer.parseInt(boyanMenu.cycleStepText.getText());
+        if(step.isPresent()) subdivisions = Math.max(0, subdivisions + subdivStep * step.get().getValue());
         final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
 
@@ -5513,9 +5530,9 @@ public final class Viewer {
         // shooting at points determined by subdivision
         //george may 3,2019 changed the name to polyvary instead of auto vary3
         String headerString = !overrideSS ? 
-                                String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, max) +
+                                String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, subdivisions) +
                                 " looking for: " + boyanMenu.typeString() + "-----+" :
-                                String.format("+----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, max) +
+                                String.format("+----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, subdivisions) +
                                 " looking for: Overrided -----+" ;
         if (proverCheckBox.isSelected()) {
             headerString += "  (with prover)";
@@ -5525,7 +5542,7 @@ public final class Viewer {
         // 2024-05-23 complete redesign of PolyVary to support multi-threading
         final MutableList<Double> points = new FastList<>();
         final MutableList<Double> pointsFiltered = new FastList<>();
-        autoRecurse(xMin, xMax, yMin, yMax, 0, max, area, points); // Generate list of coords
+        autoRecurse(xMin, xMax, yMin, yMax, 0, subdivisions, area, points); // Generate list of coords
         final Image image = regionsImageView.getImage();
         final PixelReader reader = image.getPixelReader();
         // Filter out filled pixels
@@ -5539,15 +5556,13 @@ public final class Viewer {
             }
         }
         // Now that points have been found, pass to drawPolyVary for calculations 
-        // System.out.println("Drawing");
-        // Draw all the codes found, then print summary
         final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
         final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-        drawPolyVary(pointsFiltered, maxList, area, executor, storageExecutor, shotExecutor);
+        drawPolyVary(pointsFiltered, maxList, area, step, executor, storageExecutor, shotExecutor);
     }
 
     // Calculates and draws codes at each of the list of points 
-    private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area, final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+    private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area, final Optional<SimpleObjectProperty<Integer>> step, final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
@@ -5626,6 +5641,7 @@ public final class Viewer {
                 startHoles, startHoles - endHoles, endHoles));
             System.out.println("");
             if(PolyVaryLoad.AutoCover) coverWindow.show();
+            if(step.isPresent()) step.get().setValue(step.get().getValue() + 1); // Increment for superPoly
         });
 
         task.setOnCancelled(e -> {

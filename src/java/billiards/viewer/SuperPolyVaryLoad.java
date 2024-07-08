@@ -114,9 +114,9 @@ public class SuperPolyVaryLoad {
     			BoundOSOstep = Integer.parseInt(boundTokens[1]);
     			BoundOSNOstep = Integer.parseInt(boundTokens[2]);
     		} catch (NumberFormatException e) {
-    			BoundCSMax = 0;
-    			BoundOSOMax = 0;
-    			BoundOSNOMax = 0;
+    			BoundCSstep = 0;
+    			BoundOSOstep = 0;
+    			BoundOSNOstep = 0;
     		}
     	}
 
@@ -202,7 +202,8 @@ public class SuperPolyVaryLoad {
 
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox, maxStepHBox);
         loadHBox.getChildren().addAll(loadButton, repBox);
-        controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
+        //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
+        controlVBox.getChildren().addAll(loadHBox, autoCoverBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 

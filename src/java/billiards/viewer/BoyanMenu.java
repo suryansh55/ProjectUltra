@@ -504,8 +504,8 @@ public class BoyanMenu {
         newHBox.setAlignment(Pos.CENTER);
 
         final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText);
-        newHBox.setPadding(new Insets(0, 10, 10, 0));
-        newHBox.setAlignment(Pos.CENTER);
+        superHBox.setPadding(new Insets(0, 10, 10, 0));
+        superHBox.setAlignment(Pos.CENTER);
 
         vary3HBox.setPadding(new Insets(0, 10, 10, 0));
         vary3HBox.setAlignment(Pos.CENTER);
@@ -523,7 +523,7 @@ public class BoyanMenu {
 
        // wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, varyLine3HBox,
          //     varyInfoHBox, codeTypesHBox, codeTypes2HBox, vary3HBox);
-        wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, autoPolyVaryHBox, vary3HBox, codeTypesHBox, newHBox, superHBox);
+        wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, superHBox, autoPolyVaryHBox, vary3HBox, codeTypesHBox, newHBox);
         //wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, varyLine3HBox,
          //                            varyInfoHBox, codeTypes2HBox, vary3HBox, autoHBox);
     }//george june 12,2019 changed codeTypesHBox to codeTypes2HBox
@@ -654,7 +654,7 @@ public class BoyanMenu {
     }
     // Overloading of autoVary for seperate maximums during overrideSS
     public MutableSortedSet<ClassifiedCodeSequence> autoVary(
-                final Vector2 point, final int CSmax, final int OSOmax, final int OSNOmax, final ExecutorService exe) {
+                final Vector2 point, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final ExecutorService exe) {
         int CSmin = Integer.parseInt(minMovesText.getText());
         int CSstep = 0;
         int OSmin = Integer.parseInt(minMovesText.getText());
@@ -662,11 +662,11 @@ public class BoyanMenu {
         final int iterate = Integer.parseInt(autoIterText.getText());
         final int step = Integer.parseInt(autoStepText.getText());
         final int shots = Integer.parseInt(shotsText.getText());
-        final boolean[] types = {OSOmax > 0, CSmax > 0,
-                                 CNScb.isSelected(), ONScb.isSelected(), OSNOmax > 0, OSO2cb.isSelected(), CS2cb.isSelected(),
+        final boolean[] types = {OSOmaxSS > 0, CSmaxSS > 0,
+                                 CNScb.isSelected(), ONScb.isSelected(), OSNOmaxSS > 0, OSO2cb.isSelected(), CS2cb.isSelected(),
                                  CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()};
         
-        final boolean[] csOnly = {false, CSmax > 0,
+        final boolean[] csOnly = {false, CSmaxSS > 0,
             false, false, false, false, false, false, false, false
         };
         //george june 12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
@@ -675,17 +675,17 @@ public class BoyanMenu {
         for (int i = 0; i < iterate + 1; i++) {
             final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
             final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-            if(CSmax > 0) {
-                unfilteredCodesFound.addAll(findCodes3(point.x, point.y, CSmin, CSmax + CSstep, shots, csOnly, exe));
+            if(CSmaxSS > 0) {
+                unfilteredCodesFound.addAll(findCodes3(point.x, point.y, CSmin, CSmaxSS + CSstep, shots, csOnly, exe));
             }
-            unfilteredCodesFound.addAll(findCodes3(point.x, point.y, OSmin, Math.max(OSOmax, OSNOmax) + OSstep, shots, types, exe));
+            unfilteredCodesFound.addAll(findCodes3(point.x, point.y, OSmin, Math.max(OSOmaxSS, OSNOmaxSS) + OSstep, shots, types, exe));
 
             for(final ClassifiedCodeSequence code: unfilteredCodesFound) { // Filter out overly large OSO/OSNO
                 final CodeType type = code.codeType;
-                if(type.equals(CodeType.OSO) && code.codeSum >= OSOmax) {
+                if(type.equals(CodeType.OSO) && code.codeSum >= OSOmaxSS) {
                     continue;
                 }
-                if(type.equals(CodeType.OSNO) && code.codeSum >= OSNOmax) {
+                if(type.equals(CodeType.OSNO) && code.codeSum >= OSNOmaxSS) {
                     continue;
                 }
                 codesFound.add(code);
@@ -693,9 +693,9 @@ public class BoyanMenu {
             printCodes(codesFound, "garbage.txt", printAll, true, Integer.parseInt(maxPrinting.getText()));
 
             if (codesFound.isEmpty()) {
-                CSmin = CSmax;
+                CSmin = CSmaxSS;
                 CSstep += step;
-                OSmin = Math.max(OSOmax, OSNOmax);
+                OSmin = Math.max(OSOmaxSS, OSNOmaxSS);
                 OSstep += OSstep;
             } else {
                 return codesFound;
