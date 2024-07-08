@@ -67,7 +67,7 @@ public class SuperPolyVaryLoad {
     private final TextField CSstepbox = new TextField();
     private final TextField OSOstepbox = new TextField();
     private final TextField OSNOstepbox = new TextField();
-    private final CheckBox overrideBox = new CheckBox();
+    //private final CheckBox overrideBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
     private final TextField repBox = new TextField();
     private final Button loadButton = new Button();
@@ -176,10 +176,12 @@ public class SuperPolyVaryLoad {
         if(Reps != 0) repBox.setText(Reps.toString());
 
 
+        /*
         overrideBox.setIndeterminate(false);
         overrideBox.setAllowIndeterminate(false);
         overrideBox.setSelected(Override);
         overrideBox.setText("Override side sum");
+        */
 
         autoCoverBox.setIndeterminate(false);
         autoCoverBox.setAllowIndeterminate(false);
@@ -216,7 +218,6 @@ public class SuperPolyVaryLoad {
     	loadButton.setText(buttonText);
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
     	loadButton.setOnAction(event -> {
-            Override = overrideBox.isSelected();
             AutoCover = autoCoverBox.isSelected();
     		try {
                 Reps = Integer.parseInt(repBox.getText().trim());

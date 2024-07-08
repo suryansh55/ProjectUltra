@@ -1261,7 +1261,7 @@ public final class Viewer {
         	}
         	else {
         		final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
-        		polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), executor);
+        		polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), false, false, executor);
         	}
         });
 
@@ -1303,7 +1303,7 @@ public final class Viewer {
 	            if (polyOpt.isPresent()) {
                     final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 	                autoVaryArea = Optional.of(polyVals._1);
-	                polyVaryFunction(polyVals, Optional.empty(), executor);
+	                polyVaryFunction(polyVals, Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, executor);
 	                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 	            }
             }
@@ -1554,16 +1554,16 @@ public final class Viewer {
         superPolyVaryBtn.setOnAction(event -> {
             if (compareCheckBox.isSelected()) {
                 final Alert alert = new Alert(AlertType.ERROR);
-                alert.setTitle("PolyVary");
+                alert.setTitle("SuperPolyVary");
                 alert.setHeaderText("MatchV3 is on");
-                alert.setContentText("MatchV3 does not go with PolyVary.");
+                alert.setContentText("MatchV3 does not go with SuperPolyVary.");
                 alert.showAndWait();
                 return;
             }
         	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !PolyVaryLoad.Override) {
+        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
                 final Alert alert = new Alert(AlertType.ERROR);
-                alert.setTitle("PolyVary");
+                alert.setTitle("SuperPolyVary");
                 alert.setHeaderText("No CodeTypes");
                 alert.setContentText("Please Select at least one codetype.");
                 alert.showAndWait();
@@ -5505,17 +5505,16 @@ public final class Viewer {
                     Math.max(0, polyVals._5 + SuperPolyVaryLoad.BoundCSstep * newVal),
                     Math.max(0, polyVals._6 + SuperPolyVaryLoad.BoundOSOstep * newVal),
                     Math.max(0, polyVals._7 + SuperPolyVaryLoad.BoundOSNOstep * newVal));
-            polyVaryFunction(curVals, Optional.of(step), executor);
+            polyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
         });
         step.setValue(0);
     }
     
     // Tries to find coverings for unfilled pixels onscreen
-    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final Optional<SimpleObjectProperty<Integer>> step, final ExecutorService executor) {
+    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final Optional<SimpleObjectProperty<Integer>> step, final boolean overrideSS, final boolean autoCover, final ExecutorService executor) {
         // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
         final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         final ConvexPolygon area = polyVals._1;
-        final boolean overrideSS = PolyVaryLoad.Override || step.isPresent(); // If doing super, we must override
         int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int subdivStep = Integer.parseInt(boyanMenu.cycleStepText.getText());
         if(step.isPresent()) subdivisions = Math.max(0, subdivisions + subdivStep * step.get().getValue());
@@ -5558,21 +5557,23 @@ public final class Viewer {
         // Now that points have been found, pass to drawPolyVary for calculations 
         final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
         final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-        drawPolyVary(pointsFiltered, maxList, area, step, executor, storageExecutor, shotExecutor);
+        drawPolyVary(pointsFiltered, maxList, area, step, overrideSS, autoCover, executor, storageExecutor, shotExecutor);
     }
 
     // Calculates and draws codes at each of the list of points 
-    private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area, final Optional<SimpleObjectProperty<Integer>> step, final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+    private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area,
+            final Optional<SimpleObjectProperty<Integer>> step, final boolean overrideSS, final boolean autoCover, 
+            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, PolyVaryLoad.Override, storageExecutor, shotExecutor, regionsImageView, map);
+    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         // Count the number of holes we start with
         final int startHoles = findHoles(area).size();
-        if(PolyVaryLoad.AutoCover) coverWindow.appendStablesInfo("// Start PolyVary");
+        if(autoCover) coverWindow.appendStablesInfo("// Start PolyVary");
 
         // Update screen when change detected
         task.getPartialProperty().get().addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -5602,7 +5603,7 @@ public final class Viewer {
                         }
                         msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                         System.out.println(msg);
-                        if(PolyVaryLoad.AutoCover) coverWindow.appendStablesInfo(msg);
+                        if(autoCover) coverWindow.appendStablesInfo(msg);
                     }
                 });
             }
@@ -5636,11 +5637,18 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
 
-            System.out.println(String.format(
-                "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
-                startHoles, startHoles - endHoles, endHoles));
-            System.out.println("");
-            if(PolyVaryLoad.AutoCover) coverWindow.show();
+            if(autoCover) {
+                coverWindow.show();
+                System.out.println(String.format(
+                    "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
+                    startHoles, startHoles - endHoles, endHoles));
+                System.out.println("");
+            } else {
+                System.out.println(String.format(
+                    "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
+                    startHoles, startHoles - endHoles, endHoles));
+                System.out.println("");
+            }
             if(step.isPresent()) step.get().setValue(step.get().getValue() + 1); // Increment for superPoly
         });
 
@@ -5664,10 +5672,17 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
 
-            System.out.println(String.format(
-                "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
-                startHoles, startHoles - endHoles, endHoles));
-            if(PolyVaryLoad.AutoCover) coverWindow.show();
+            if(autoCover) {
+                coverWindow.show();
+                System.out.println(String.format(
+                    "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
+                    startHoles, startHoles - endHoles, endHoles));
+            } else {
+                System.out.println(String.format(
+                    "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
+                    startHoles, startHoles - endHoles, endHoles));
+
+            }
         });
 
         task.setOnFailed(e -> {
@@ -5803,9 +5818,14 @@ public final class Viewer {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
-        		System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+                if(autoCover) {
+                    coverWindow.show();
+                    System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                } else {
+                    System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+
+                }
                 overallProgress.close();
-                if(autoCover) coverWindow.show();
             }
         });
 
