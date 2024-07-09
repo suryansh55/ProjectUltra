@@ -69,11 +69,13 @@ public class SuperPolyVaryLoad {
     private final TextField OSNOstepbox = new TextField();
     //private final CheckBox overrideBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
+    private final Label repl = new Label();
     private final TextField repBox = new TextField();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
     private final VBox maxVBox = new VBox(10);
     private final VBox controlVBox = new VBox(20);
+    private final VBox repVBox = new VBox(10);
     private final HBox instructHBox = new HBox();
     private final HBox bottomHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
@@ -171,9 +173,9 @@ public class SuperPolyVaryLoad {
     	OSNOstepbox.setText(BoundOSNOstep.toString());
     	OSNOstepl.setText("OSNO step:");
 
-        repBox.setPrefWidth(75);
-        repBox.setPromptText("Reps");
-        if(Reps != 0) repBox.setText(Reps.toString());
+        repl.setText("Reps");
+        repBox.setPrefWidth(50);
+        repBox.setText(Reps.toString());
 
 
         /*
@@ -203,7 +205,9 @@ public class SuperPolyVaryLoad {
         maxStepHBox.setAlignment(Pos.CENTER);
 
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox, maxStepHBox);
-        loadHBox.getChildren().addAll(loadButton, repBox);
+        repVBox.getChildren().addAll(repl, repBox);
+        loadHBox.getChildren().addAll(loadButton, repVBox);
+        loadHBox.setAlignment(Pos.CENTER);
         //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
         controlVBox.getChildren().addAll(loadHBox, autoCoverBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));

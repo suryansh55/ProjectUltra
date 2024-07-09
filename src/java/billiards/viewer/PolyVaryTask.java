@@ -110,11 +110,11 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             return task.get();
         } catch(InterruptedException e) {
             System.err.println("//Interruption when finding pixel color");
-            return 0;
+            return -1;
         } catch(ExecutionException e) {
             System.err.println("//Failed to find pixel color");
             e.printStackTrace();
-            return 0;
+            return -1;
         }
 
     }
@@ -213,6 +213,9 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 // Submit the runnable for this code
                 futures.add(storageExecutor.submit(() -> {
                         int color = pixelColor(coord);
+                        if(color == -1) {
+                            return Either.left("");
+                        }
                         if(color != 0) {
                             //System.out.println("//Pixel already filled, skipping");
                             this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe

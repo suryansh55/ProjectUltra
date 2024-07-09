@@ -1537,7 +1537,7 @@ public final class Viewer {
             ConvexPolygon area = polyVals._1;
             // Count the number of holes we start with
             final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
-        	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", startIdx+1, endIdx+1);
+        	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         	progress.show();
             final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
@@ -1548,7 +1548,7 @@ public final class Viewer {
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
 
-        superPolyVaryBtn.setText("SuperPolyVary");
+        superPolyVaryBtn.setText("SuperAustinVary");
         superPolyVaryBtn.setTooltip(Utils.toolTip("Repeat PolyVary or AutoPolyVary a set number of times"));
         Utils.colorButton(superPolyVaryBtn, Color.GREEN, Color.GOLD);
         superPolyVaryBtn.setOnAction(event -> {
@@ -5496,17 +5496,21 @@ public final class Viewer {
     // Runs polyVary a set number of times 
     private void superPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
+        final ProgressMultiTask overallProgress = new ProgressMultiTask("PolyVary %d out of %d", false, 0, SuperPolyVaryLoad.Reps);
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
-            if(newVal >= SuperPolyVaryLoad.Reps) {
+            if(newVal >= SuperPolyVaryLoad.Reps || newVal == -1) {
+                overallProgress.close();
                 return;
             }
+            overallProgress.increment(1);
             final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> curVals = Tuple.of(polyVals._1, polyVals._2, polyVals._3, polyVals._4,
                     Math.max(0, polyVals._5 + SuperPolyVaryLoad.BoundCSstep * newVal),
                     Math.max(0, polyVals._6 + SuperPolyVaryLoad.BoundOSOstep * newVal),
                     Math.max(0, polyVals._7 + SuperPolyVaryLoad.BoundOSNOstep * newVal));
             polyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
         });
+        overallProgress.show();
         step.setValue(0);
     }
     
@@ -5683,10 +5687,12 @@ public final class Viewer {
                     startHoles, startHoles - endHoles, endHoles));
 
             }
+            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
         });
 
         task.setOnFailed(e -> {
             progress.close();
+            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
             throw new RuntimeException(task.getException());
         });
 

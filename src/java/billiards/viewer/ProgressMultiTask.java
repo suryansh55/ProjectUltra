@@ -26,13 +26,14 @@ public final class ProgressMultiTask {
     
     
     private Task<?> task; // We don't care what task return type is
+    private boolean boundTask = false;
     private long completed;
     private boolean cancelled = false;
     private final long total;
     private final String formatString;
 
     
-    public ProgressMultiTask(String formatString, long offset, long total) {
+    public ProgressMultiTask(String formatString, boolean allowCancel, long offset, long total) {
     	progressBar.setMaxWidth(Double.MAX_VALUE);
     	progressText.setMaxWidth(Double.MAX_VALUE);
     	leftPane.setSpacing(10);
@@ -41,14 +42,18 @@ public final class ProgressMultiTask {
     	cancelButton.setMaxHeight(Double.MAX_VALUE);
     	Utils.colorButton(cancelButton, Color.TOMATO, Color.SALMON);
         root.setSpacing(10);
-        root.getChildren().addAll(leftPane, cancelButton);
+        if(allowCancel) {
+            root.getChildren().addAll(leftPane, cancelButton);
+        } else {
+            root.getChildren().add(leftPane);
+        }
         root.setPadding(new Insets(10));
 
         stage.setScene(scene);
         // IMPORTANT: This progress must be closed from the enclosing scope, not from here.
         stage.setOnCloseRequest(event -> {
             cancelled = true;
-            this.task.cancel();
+            if(boundTask) this.task.cancel();
             //stage.close();
         });
 
@@ -63,7 +68,7 @@ public final class ProgressMultiTask {
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
             cancelled = true;
-            this.task.cancel();
+            if(boundTask) this.task.cancel();
             //stage.close();
         });
         
@@ -77,6 +82,7 @@ public final class ProgressMultiTask {
     
     public void changeTask(final Task<?> task) {
         this.task = task;
+        this.boundTask = true;
     }
 
     public void increment(final long step) {
