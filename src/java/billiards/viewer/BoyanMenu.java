@@ -118,7 +118,7 @@ public class BoyanMenu {
 
 	public BoyanMenu(final Button autoVaryButton, final Button polyAutoBtn, final Button varyLBtn,
                      final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField, final TextField lineEndField,
-                     final Button superPolyVaryBtn, final double TipOpenDelay, final double TipCloseDelay) {
+                     final Button superPolyVaryBtn, final CheckBox superAutoCb, final double TipOpenDelay, final double TipCloseDelay) {
 
         Utils.setupCustomTooltipBehavior((int) (TipOpenDelay * 1000), (int) (TipCloseDelay * 1000), 200);
 
@@ -503,7 +503,7 @@ public class BoyanMenu {
         newHBox.setPadding(new Insets(0, 10, 10, 0));
         newHBox.setAlignment(Pos.CENTER);
 
-        final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText);
+        final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText, superAutoCb);
         superHBox.setPadding(new Insets(0, 10, 10, 0));
         superHBox.setAlignment(Pos.CENTER);
 

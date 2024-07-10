@@ -92,24 +92,28 @@ public class SuperPolyVaryLoad {
     	fullContent = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
     	String[] stepTokens = Utils.readFromFile(stepFileName).trim().split(" ");
+    	if (boundTokens.length >= 9) {
+    		try {
+    			BoundCSstep = Integer.parseInt(boundTokens[6]);
+    			BoundOSOstep = Integer.parseInt(boundTokens[7]);
+    			BoundOSNOstep = Integer.parseInt(boundTokens[8]);
+    		} catch (NumberFormatException e) {
+    			BoundCSstep = 0;
+    			BoundOSOstep = 0;
+    			BoundOSNOstep = 0;
+    		}
+    	}
     	if (boundTokens.length >= 6) {
     		try {
-    			BoundCSMax = Integer.parseInt(boundTokens[0]);
-    			BoundOSOMax = Integer.parseInt(boundTokens[1]);
-    			BoundOSNOMax = Integer.parseInt(boundTokens[2]);
     			BoundCSMaxSS = Integer.parseInt(boundTokens[3]);
     			BoundOSOMaxSS = Integer.parseInt(boundTokens[4]);
     			BoundOSNOMaxSS = Integer.parseInt(boundTokens[5]);
     		} catch (NumberFormatException e) {
-    			BoundCSMax = 300;
-    			BoundOSOMax = 100;
-    			BoundOSNOMax = 36;
                 BoundCSMaxSS = 222;
                 BoundOSOMaxSS = 222;
                 BoundOSNOMaxSS = 222;
     		}
     	}
-
     	if (stepTokens.length >= 3) {
     		try {
     			BoundCSstep = Integer.parseInt(boundTokens[0]);
@@ -254,7 +258,7 @@ public class SuperPolyVaryLoad {
     		final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
         	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
         	Utils.writeToFile(fileName, fullContent);
-        	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
+        	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, BoundCSstep, BoundOSOstep, BoundOSNOstep));
         	stage.close();
     	});
     }

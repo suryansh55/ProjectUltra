@@ -509,8 +509,9 @@ public final class Viewer {
     final Button autoPolyVaryBtn = new Button();
 
     final Button superPolyVaryBtn = new Button();
+    final CheckBox superAutoCb = new CheckBox();
 
-    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, TipOpenDelay, TipCloseDelay);
+    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
 
 
     final CoverWindow coverWindow;
@@ -1517,6 +1518,7 @@ public final class Viewer {
             final int OSOmaxSS = polyVals._6;
             final int OSNOmaxSS = polyVals._7;
             final boolean autoCover = AutoPolyVaryLoad.AutoCover;
+            final boolean overrideSS = AutoPolyVaryLoad.Override;
         	// Go through all the holes in the specified range
         	final int startIdx = startIdxUser - 1;
             final int stepIdx = stepIdxUser;
@@ -1535,23 +1537,33 @@ public final class Viewer {
                 maxMoves
             ));
             ConvexPolygon area = polyVals._1;
-            // Count the number of holes we start with
             final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
         	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         	progress.show();
             final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
             if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
-            drawAutoPolyVary(maxList, maxSubdivisions, startIdx, endIdx, stepIdx, area, progress, executor, storageExecutor, shotExecutor);
+            drawAutoPolyVary(maxList, maxSubdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, Optional.empty(), executor, storageExecutor, shotExecutor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
-            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+            //renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
+
+        superAutoCb.setText("Use AutoVary");
+        superAutoCb.setSelected(false);
 
         superPolyVaryBtn.setText("SuperAustinVary");
         superPolyVaryBtn.setTooltip(Utils.toolTip("Repeat PolyVary or AutoPolyVary a set number of times"));
         Utils.colorButton(superPolyVaryBtn, Color.GREEN, Color.GOLD);
         superPolyVaryBtn.setOnAction(event -> {
+        	if (fileCodeSequences.size() == 0 && superAutoCb.isSelected()) {
+        		final Alert alert = new Alert(AlertType.ERROR);
+        		alert.setTitle("SuperPolyVary using Auto");
+        		alert.setHeaderText("No OBO File Loaded");
+        		alert.setContentText("Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
+        		alert.showAndWait();
+        		return;
+        	}
             if (compareCheckBox.isSelected()) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("SuperPolyVary");
@@ -5496,7 +5508,7 @@ public final class Viewer {
     // Runs polyVary a set number of times 
     private void superPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
-        final ProgressMultiTask overallProgress = new ProgressMultiTask("PolyVary %d out of %d", false, 0, SuperPolyVaryLoad.Reps);
+        final ProgressMultiTask overallProgress = new ProgressMultiTask(superAutoCb.isSelected() ? "AutoPolyVary %d out of %d" : "PolyVary %d out of %d", false, 0, SuperPolyVaryLoad.Reps);
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
             if(newVal >= SuperPolyVaryLoad.Reps || newVal == -1) {
@@ -5508,10 +5520,91 @@ public final class Viewer {
                     Math.max(0, polyVals._5 + SuperPolyVaryLoad.BoundCSstep * newVal),
                     Math.max(0, polyVals._6 + SuperPolyVaryLoad.BoundOSOstep * newVal),
                     Math.max(0, polyVals._7 + SuperPolyVaryLoad.BoundOSNOstep * newVal));
-            polyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
+            if(superAutoCb.isSelected()) {
+                autoPolyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
+            } else {
+                polyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
+            }
         });
         overallProgress.show();
         step.setValue(0);
+    }
+
+    private void autoPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
+            final Optional<SimpleObjectProperty<Integer>> step, final boolean overrideSS, final boolean autoCover, final ExecutorService executor
+            ) {
+        final String lineStartText = lineStartField.getText();
+        final String lineStepText = lineStepField.getText();
+        final String lineEndText = lineEndField.getText();
+        // The indexes that the user sees (will be converted later)
+        int startIdxUser = 0;
+        int stepIdxUser = 0;
+        int endIdxUser = 0;
+        // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
+        if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
+            startIdxUser = 1;
+            stepIdxUser = 1;
+            endIdxUser = fileCodeSequences.size();
+        } else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
+            showEnterLineNumberErrorAutoVary();
+            return;
+        } else { // All fields filled
+            try {
+                startIdxUser = Integer.parseInt(lineStartText);
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineStartText);
+                return;
+            }
+            try {
+                endIdxUser = Integer.parseInt(lineEndText);
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineEndText);
+                return;
+            }
+            try {
+                stepIdxUser = Math.min(fileCodeSequences.size(), Integer.parseInt(lineStepText)); // Max step is all elements
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineStepText);
+                return;
+            }
+            if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= fileCodeSequences.size())) {
+                showInvalidLineRangeError(fileCodeSequences.size());
+                return;
+            }
+            if(stepIdxUser < 1) {
+                showStepErrorAutoVary();
+                return;
+            }
+        }
+        autoVaryArea = Optional.of(polyVals._1);
+        // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
+        final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
+        ConvexPolygon area = polyVals._1;
+        // Go through all the holes in the specified range
+        final int startIdx = startIdxUser - 1;
+        final int stepIdx = stepIdxUser;
+        final int endIdx = endIdxUser - 1;
+        // Run the AutoPolyVary algorithm parallel to the application so that the screen can be rendered in real time instead
+        // of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
+        // _is_ updating, but the user is unable to see this happen).
+        int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+        final int subdivStep = Integer.parseInt(boyanMenu.cycleStepText.getText());
+        if(step.isPresent()) subdivisions = Math.max(0, subdivisions + subdivStep * step.get().getValue());
+        final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
+        final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
+        System.out.println(String.format(
+            "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
+            endIdx - startIdx + 1,
+            shots,
+            subdivisions,
+            maxMoves
+        ));
+        final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
+        progress.show();
+        final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+        final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+        if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
+        drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, executor, storageExecutor, shotExecutor);
     }
     
     // Tries to find coverings for unfilled pixels onscreen
@@ -5593,10 +5686,7 @@ public final class Viewer {
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
                         // print the code
-                        final String msg;
-                        final CodeType type = storage.codeType();
-
-                        String codeStr = "" + type;
+                        String codeStr = "" + storage.codeType();
                         // String codeStr = "xxx " + type; //george july 26 2017 -
                         // type whatever you want between the quotes in the line above
                         // make sure to add a space after the xxx
@@ -5605,7 +5695,7 @@ public final class Viewer {
                         } else if (!codeStr.equals("OSNO")) {
                             codeStr += " ";
                         }
-                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                        final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                         System.out.println(msg);
                         if(autoCover) coverWindow.appendStablesInfo(msg);
                     }
@@ -5701,8 +5791,10 @@ public final class Viewer {
     }
 
     // Recursively iterate through the list of holes, running polyVary at each hole.
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress, final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
-        final boolean autoCover = AutoPolyVaryLoad.AutoCover;
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS, 
+            final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress, 
+            final Optional<SimpleObjectProperty<Integer>> step,
+            final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // Move the screen
         if(!AutoPolyVaryLoad.Reverse) { // Check if reverse order is selected
             setOBO(currIdx, pool, drawExecutor);
@@ -5733,7 +5825,7 @@ public final class Viewer {
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, AutoPolyVaryLoad.Override, storageExecutor, shotExecutor, regionsImageView, map);
+    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
         final ObservableList<Storage> partials = task.getPartials();
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
@@ -5818,8 +5910,9 @@ public final class Viewer {
                 System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
                 overallProgress.close();
                 if(autoCover) coverWindow.show();
+                if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
             } else if(currIdx + stepIdx <= endIdx) {
-                drawAutoPolyVary(max, maxSubdivisions, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, drawExecutor, storageExecutor, shotExecutor);
+                drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, drawExecutor, storageExecutor, shotExecutor);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
@@ -5832,6 +5925,7 @@ public final class Viewer {
 
                 }
                 overallProgress.close();
+                if(step.isPresent()) step.get().setValue(step.get().getValue() + 1); // Increment for superPoly
             }
         });
 
@@ -5867,6 +5961,7 @@ public final class Viewer {
             System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
             overallProgress.close(); 
             if(autoCover) coverWindow.show();
+            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
         });
 
         task.setOnFailed(e -> {
@@ -5874,6 +5969,7 @@ public final class Viewer {
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
             overallProgress.close();
+            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
             throw new RuntimeException(task.getException());
         });
         drawExecutor.execute(task);
