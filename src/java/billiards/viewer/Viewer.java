@@ -97,8 +97,6 @@ import java.util.stream.Stream;
 
 import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.SimpleIntegerProperty;
-import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener;
 import javafx.concurrent.Task;
@@ -1510,40 +1508,8 @@ public final class Viewer {
         		return;
         	}
         	final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
-        	autoVaryArea = Optional.of(polyVals._1);
-        	final int CSmax = polyVals._2;
-        	final int OSOmax = polyVals._3;
-        	final int OSNOmax = polyVals._4;
-            final int CSmaxSS = polyVals._5;
-            final int OSOmaxSS = polyVals._6;
-            final int OSNOmaxSS = polyVals._7;
-            final boolean autoCover = AutoPolyVaryLoad.AutoCover;
-            final boolean overrideSS = AutoPolyVaryLoad.Override;
-        	// Go through all the holes in the specified range
-        	final int startIdx = startIdxUser - 1;
-            final int stepIdx = stepIdxUser;
-        	final int endIdx = endIdxUser - 1;
-        	// Run the AutoPolyVary algorithm parallel to the application so that the screen can be rendered in real time instead
-        	// of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
-        	// _is_ updating, but the user is unable to see this happen).
-            final int maxSubdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
-            final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
-            final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
-            System.out.println(String.format(
-                "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
-                endIdx - startIdx + 1,
-                shots,
-                maxSubdivisions,
-                maxMoves
-            ));
-            ConvexPolygon area = polyVals._1;
-            final int[] maxList = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
-        	final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
-        	progress.show();
-            final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-            final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-            if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
-            drawAutoPolyVary(maxList, maxSubdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, Optional.empty(), executor, storageExecutor, shotExecutor);
+
+            autoPolyVaryFunction(polyVals, Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, executor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
             //renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5652,8 +5618,8 @@ public final class Viewer {
             }
         }
         // Now that points have been found, pass to drawPolyVary for calculations 
-        final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-        final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+        final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
+        final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
         drawPolyVary(pointsFiltered, maxList, area, step, overrideSS, autoCover, executor, storageExecutor, shotExecutor);
     }
 

@@ -13,6 +13,7 @@ import javaslang.control.Either;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -48,8 +49,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                             new ArrayList<Storage>()
                     )
             );
-
-
     private final Array<Vector2> coordList;
     private final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes;
     private final BoyanMenu boyanMenu;
@@ -65,6 +64,136 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     private final ExecutorService shotExecutor;
     private final ImageView screenImage;
     private final PixelRadianMap screenMap; 
+
+    // Constructor takes a list of points to vary at
+    public PolyVaryTask(
+        final MutableList<Double> points, final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes, final BoyanMenu boyan, 
+        final Array<Integer> max, final ConnectionPool pool, final boolean override, 
+        final ExecutorService eOne, final ExecutorService eTwo, final ImageView screen, final PixelRadianMap map) {
+        this.coordList = toCoords(points);
+        this.onScreenCodes = onScreenCodes;
+        this.boyanMenu = boyan;
+        this.CSmax = max.get(0);
+        this.OSOmax = max.get(1);
+        this.OSNOmax = max.get(2);
+        this.CSmaxSS = max.get(3);
+        this.OSOmaxSS = max.get(4);
+        this.OSNOmaxSS = max.get(5);
+        this.pool = pool;
+        this.overrideSS = override;
+        this.storageExecutor = eOne;
+        this.shotExecutor = eTwo;
+        this.screenImage = screen;
+        this.screenMap = map;
+    }
+
+    @Override
+    protected ObservableList<Storage> call() {
+        // storageExecutor handles the more expensive process of calculating code regions,
+        // while shotExecutor handles the much faster calculation of finding the codes present at a given point
+
+        final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<ClassifiedCodeSequence>();
+        final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
+
+        AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
+        final int todo = this.coordList.size();
+        this.updateProgress(0, todo);
+
+        // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
+        // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
+        for(Vector2 coord: this.coordList) {
+            MutableSortedSet<ClassifiedCodeSequence> localCodes;
+            // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
+            try {
+                localCodes = autoCodesFiltered(coord, shotExecutor);
+            } catch(RuntimeException e) {
+                if(this.isCancelled() || Thread.interrupted()) {
+                    break;
+                } else {
+                    System.err.println("Terminating because of uncaught exception when finding codeSet");
+                    throw e;
+                }
+            }
+            // We want to know if we submitted a task that will update the progress for us.
+            boolean noCodes = true;
+
+            // Take the first code not already drawn, and submit it to the storageExecutor for processing 
+            for(ClassifiedCodeSequence classCodeSeq: localCodes) {
+                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
+                usedCodes.add(classCodeSeq); 
+                noCodes = false;
+                // Submit the runnable for this code
+                futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
+                        @Override
+                        public Either<String, Storage> call() {
+                            int color = pixelColor(coord);
+                            if(color == -1) return Either.left("");
+                            if(color != 0) {
+                                //System.out.println("//Pixel already filled, skipping");
+                                PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
+                                return Either.left("");
+                            }
+                            Either<String, Storage> result = loadStorage(classCodeSeq);
+                            PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
+                            return result;
+                        }
+
+                        @Override
+                        public int getPriority() {
+                            return classCodeSeq.length();
+                        }
+                    })
+                );
+                break;
+            }
+            if(noCodes) { // Still need to update progress even if nothing found
+                this.updateProgress(progress.incrementAndGet(), todo);
+            }
+        }
+
+
+        Optional<ExecutionException> except = Optional.empty();
+
+        // If one of the futures throws an exception (like a failed to
+        // calculate exception), we need to save it, cancel the rest of
+        // the futures, and then throw that exception to bubble up the stack
+        for (final Future<Either<String, Storage>> future : futures) {
+            except = checkStatus(future);
+        }
+
+        if (except.isPresent()) {
+            throw new RuntimeException(except.get());
+        }
+
+        return this.partialResults.get();
+    }
+
+    // Cancel or detect execution errors; This is where we do checking to see if we were cancelled
+    private Optional<ExecutionException> checkStatus(final Future<Either<String, Storage>> future) {
+        Optional<ExecutionException> except = Optional.empty();
+        if (this.isCancelled() || except.isPresent()) {
+            // If the task was cancelled, or one of the futures threw an
+            // exception, we need to cancel the rest of the futures
+            System.out.println("//Cancelling submitted future");
+            future.cancel(true);
+        } else {
+            try {
+                final Either<String, Storage> either = future.get();
+                if (either.isLeft()) { // Print things like empty sets 
+                    if(!either.left().get().equals("")) System.out.println(either.left().get());
+                }
+            } catch (final ExecutionException e) {
+                // One of the futures threw an exception during its calculation,
+                // so we need to cancel the rest of the futures
+                except = Optional.of(e);
+            } catch (final InterruptedException e) {
+                if (!this.isCancelled()) {
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+        return except;
+    }
 
     // Calculates codeSequence set at a specific coordinate 
     private MutableSortedSet<ClassifiedCodeSequence> autoCodesFiltered(final Vector2 coords, final ExecutorService executor) {
@@ -153,123 +282,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     public final ReadOnlyObjectProperty<ObservableList<Storage>> getPartialProperty() {
         return this.partialResults.getReadOnlyProperty();
     }
-    // Constructor takes a list of points to vary at
-    public PolyVaryTask(
-        final MutableList<Double> points, final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes, final BoyanMenu boyan, final Array<Integer> max, final ConnectionPool pool, final boolean override, final ExecutorService eOne, final ExecutorService eTwo, final ImageView screen, final PixelRadianMap map) {
-        this.coordList = toCoords(points);
-        this.onScreenCodes = onScreenCodes;
-        this.boyanMenu = boyan;
-        this.CSmax = max.get(0);
-        this.OSOmax = max.get(1);
-        this.OSNOmax = max.get(2);
-        this.CSmaxSS = max.get(3);
-        this.OSOmaxSS = max.get(4);
-        this.OSNOmaxSS = max.get(5);
-        this.pool = pool;
-        this.overrideSS = override;
-        this.storageExecutor = eOne;
-        this.shotExecutor = eTwo;
-        this.screenImage = screen;
-        this.screenMap = map;
-    }
 
-    @Override
-    protected ObservableList<Storage> call() {
-        // storageExecutor handles the more expensive process of calculating code regions,
-        // while shotExecutor handles the much faster calculation of finding the codes present at a given point
-
-        final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<ClassifiedCodeSequence>();
-        final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
-
-        AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
-        final int todo = this.coordList.size();
-        this.updateProgress(0, todo);
-
-        // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
-        // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
-        for(Vector2 coord: this.coordList) {
-            MutableSortedSet<ClassifiedCodeSequence> localCodes;
-            // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
-            try {
-                localCodes = autoCodesFiltered(coord, shotExecutor);
-            } catch(RuntimeException e) {
-                //System.out.println("Caught interrupt");
-                // Break out of for loop to cancel gracefully
-                if(this.isCancelled() || Thread.interrupted()) {
-                    break;
-                } else {
-                    System.err.println("Terminating because of uncaught exception when finding codeSet");
-                    throw e;
-                }
-            }
-            // We want to know if we submitted a task that will update the progress for us.
-            boolean noCodes = true;
-
-            // Take the first code not already drawn, and submit it to the storageExecutor for processing 
-            for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
-                usedCodes.add(classCodeSeq); 
-                noCodes = false;
-                // Submit the runnable for this code
-                futures.add(storageExecutor.submit(() -> {
-                        int color = pixelColor(coord);
-                        if(color == -1) {
-                            return Either.left("");
-                        }
-                        if(color != 0) {
-                            //System.out.println("//Pixel already filled, skipping");
-                            this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
-                            return Either.left("");
-                        }
-                        Either<String, Storage> result = loadStorage(classCodeSeq);
-                        this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
-                        return result;
-                    })
-                );
-                break;
-            }
-            if(noCodes) { // Still need to update progress even if nothing found
-                this.updateProgress(progress.incrementAndGet(), todo);
-            }
-        }
-
-
-        Optional<ExecutionException> except = Optional.empty();
-
-        // If one of the futures throws an exception (like a failed to
-        // calculate exception), we need to save it, cancel the rest of
-        // the futures, and then throw that exception to bubble up the stack
-
-        //System.out.println("+------------Waiting for futures------------+");
-        // This is where we do checking to see if we were cancelled
-        for (final Future<Either<String, Storage>> future : futures) {
-            if (this.isCancelled() || except.isPresent()) {
-                // If the task was cancelled, or one of the futures threw an
-                // exception, we need to cancel the rest of the futures
-                System.out.println("//Cancelling submitted future");
-                future.cancel(true);
-            } else {
-                try {
-                    final Either<String, Storage> either = future.get();
-                    if (either.isLeft()) { // Print things like empty sets 
-                        if(!either.left().get().equals("")) System.out.println(either.left().get());
-                    }
-                } catch (final ExecutionException e) {
-                    // One of the futures threw an exception during its calculation,
-                    // so we need to cancel the rest of the futures
-                    except = Optional.of(e);
-                } catch (final InterruptedException e) {
-                    if (!this.isCancelled()) {
-                        throw new RuntimeException(e);
-                    }
-                }
-            }
-        }
-
-        if (except.isPresent()) {
-            throw new RuntimeException(except.get());
-        }
-
-        return this.partialResults.get();
-    }
+    
 }

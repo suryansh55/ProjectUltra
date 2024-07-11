@@ -1,8 +1,6 @@
 package billiards.viewer;
 
-import java.util.concurrent.Callable;
-
 // Define the type of task which can be submitted to priorityExecutors
-public interface PriorityRunnable<T> extends Callable<T> {
+public interface PriorityRunnable<T> extends Runnable {
     public int getPriority();
 }

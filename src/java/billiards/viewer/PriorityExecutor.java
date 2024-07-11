@@ -8,6 +8,7 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
+// This is a custom threadPoolExecutor which maintains a priority queue, allowing us to complete tasks in order of size
 public class PriorityExecutor extends ThreadPoolExecutor {
 
     public PriorityExecutor(final int poolSize) {
@@ -27,8 +28,8 @@ public class PriorityExecutor extends ThreadPoolExecutor {
     @Override
     protected <T> RunnableFuture<T> newTaskFor(final Runnable runnable,
             final T value) {
-        if (runnable instanceof Important)
-            return new ComparableFutureTask<T>(((Important) runnable).getPriority(),
+        if (runnable instanceof PriorityRunnable)
+            return new ComparableFutureTask<T>(((PriorityRunnable<?>) runnable).getPriority(),
                     runnable, value);
         else
             return new ComparableFutureTask<T>(0, runnable, value);
