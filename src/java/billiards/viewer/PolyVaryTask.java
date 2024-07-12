@@ -134,7 +134,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                                 return Either.left("");
                             }
                             Either<String, Storage> result = loadStorage(classCodeSeq);
-                            PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
+                            if(!PolyVaryTask.this.isCancelled()) PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
                             return result;
                         }
 
