@@ -54,13 +54,4 @@ public class PriorityExecutor extends ThreadPoolExecutor {
 
         
     }
-
-    /*
-    private static class PriorityTaskComparator implements Comparator<Runnable> {
-        @Override
-        public int compare(final Runnable left, final Runnable right) {
-            return left.compareTo(right);
-        }
-    }
-    */
 }

@@ -70,6 +70,8 @@ public final class CoverWindow {
         stage.setScene(scene);
         stage.setTitle(windowTitle);
 
+        stage.setOnCloseRequest(event -> saveToFile());
+
         base.setOnMouseExited(event -> saveToFile());
 
         topText.setText(polygonString);

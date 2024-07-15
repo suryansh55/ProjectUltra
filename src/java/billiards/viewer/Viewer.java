@@ -207,6 +207,7 @@ public final class Viewer {
     // We might add more colors later, so this abstraction is nice
     final Map<Integer, Color> comboBoxColors = new HashMap<>();
 
+
     final Map<ConvexPolygon, Color> mrrBounds = new HashMap<>();
 
     // No files by default
@@ -1260,7 +1261,7 @@ public final class Viewer {
         	}
         	else {
         		final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
-        		polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), false, false, executor);
+        		polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), Optional.empty(), false, false, executor);
         	}
         });
 
@@ -1302,7 +1303,7 @@ public final class Viewer {
 	            if (polyOpt.isPresent()) {
                     final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 	                autoVaryArea = Optional.of(polyVals._1);
-	                polyVaryFunction(polyVals, Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, executor);
+	                polyVaryFunction(polyVals, Optional.empty(), Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, executor);
 	                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 	            }
             }
@@ -1509,7 +1510,7 @@ public final class Viewer {
         	}
         	final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 
-            autoPolyVaryFunction(polyVals, Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, executor);
+            autoPolyVaryFunction(polyVals, Optional.empty(), Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, executor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
             //renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -5475,8 +5476,18 @@ public final class Viewer {
     private void superPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
         final ProgressMultiTask overallProgress = new ProgressMultiTask(superAutoCb.isSelected() ? "AutoPolyVary %d out of %d" : "PolyVary %d out of %d", false, 0, SuperPolyVaryLoad.Reps);
+        final Array<Color> cycleColors = Array.of(
+            Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.MAGENTA, 
+            Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME, Color.GOLD, 
+            Color.PURPLE, Color.TURQUOISE);
+
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
+            if(oldVal != -1) {
+                final int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+                final int subdivStep = Integer.parseInt(boyanMenu.cycleStepText.getText());
+                boyanMenu.autoCycleText.setText(Integer.toString(Math.max(0, subdivisions + subdivStep)));
+            }
             if(newVal >= SuperPolyVaryLoad.Reps || newVal == -1) {
                 overallProgress.close();
                 return;
@@ -5486,10 +5497,16 @@ public final class Viewer {
                     Math.max(0, polyVals._5 + SuperPolyVaryLoad.BoundCSstep * newVal),
                     Math.max(0, polyVals._6 + SuperPolyVaryLoad.BoundOSOstep * newVal),
                     Math.max(0, polyVals._7 + SuperPolyVaryLoad.BoundOSNOstep * newVal));
-            if(superAutoCb.isSelected()) {
-                autoPolyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
+            final Optional<Color> curCol;
+            if(SuperPolyVaryLoad.ColorCycle) {
+                curCol = Optional.of(cycleColors.get(newVal % cycleColors.length()));
             } else {
-                polyVaryFunction(curVals, Optional.of(step), true, SuperPolyVaryLoad.AutoCover, executor);
+                curCol = Optional.empty();
+            }
+            if(superAutoCb.isSelected()) {
+                autoPolyVaryFunction(curVals, Optional.of(step), curCol, true, SuperPolyVaryLoad.AutoCover, executor);
+            } else {
+                polyVaryFunction(curVals, Optional.of(step), curCol, true, SuperPolyVaryLoad.AutoCover, executor);
             }
         });
         overallProgress.show();
@@ -5497,7 +5514,8 @@ public final class Viewer {
     }
 
     private void autoPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
-            final Optional<SimpleObjectProperty<Integer>> step, final boolean overrideSS, final boolean autoCover, final ExecutorService executor
+            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, 
+            final boolean overrideSS, final boolean autoCover, final ExecutorService executor
             ) {
         final String lineStartText = lineStartField.getText();
         final String lineStepText = lineStepField.getText();
@@ -5553,9 +5571,7 @@ public final class Viewer {
         // Run the AutoPolyVary algorithm parallel to the application so that the screen can be rendered in real time instead
         // of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
         // _is_ updating, but the user is unable to see this happen).
-        int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
-        final int subdivStep = Integer.parseInt(boyanMenu.cycleStepText.getText());
-        if(step.isPresent()) subdivisions = Math.max(0, subdivisions + subdivStep * step.get().getValue());
+        final int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
         System.out.println(String.format(
@@ -5570,17 +5586,17 @@ public final class Viewer {
         final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
         final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
         if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
-        drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, executor, storageExecutor, shotExecutor);
+        drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
     }
     
     // Tries to find coverings for unfilled pixels onscreen
-    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final Optional<SimpleObjectProperty<Integer>> step, final boolean overrideSS, final boolean autoCover, final ExecutorService executor) {
+    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, 
+            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, final boolean overrideSS, 
+            final boolean autoCover, final ExecutorService executor) {
         // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
         final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         final ConvexPolygon area = polyVals._1;
         int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
-        final int subdivStep = Integer.parseInt(boyanMenu.cycleStepText.getText());
-        if(step.isPresent()) subdivisions = Math.max(0, subdivisions + subdivStep * step.get().getValue());
         final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
 
@@ -5620,13 +5636,14 @@ public final class Viewer {
         // Now that points have been found, pass to drawPolyVary for calculations 
         final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
         final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
-        drawPolyVary(pointsFiltered, maxList, area, step, overrideSS, autoCover, executor, storageExecutor, shotExecutor);
+        drawPolyVary(pointsFiltered, maxList, area, step, colorOpt, overrideSS, autoCover, executor, storageExecutor, shotExecutor);
     }
 
     // Calculates and draws codes at each of the list of points 
     private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area,
-            final Optional<SimpleObjectProperty<Integer>> step, final boolean overrideSS, final boolean autoCover, 
-            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, 
+            final boolean overrideSS, final boolean autoCover, final ExecutorService executor, 
+            final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
@@ -5646,8 +5663,12 @@ public final class Viewer {
                 c.getAddedSubList().forEach(storage -> {
                     if(!onScreenSequences.containsKey(storage)) {
                         final Color color;
-                        final int index = cycle.get();
-                        color = comboBoxColors.get(index);
+                        if(colorOpt.isPresent()) {
+                            color = colorOpt.get();
+                        } else {
+                            final int index = cycle.get();
+                            color = comboBoxColors.get(index);
+                        }
                         addToOnScreenSequences(storage, color);
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
@@ -5759,7 +5780,7 @@ public final class Viewer {
     // Recursively iterate through the list of holes, running polyVary at each hole.
     private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS, 
             final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress, 
-            final Optional<SimpleObjectProperty<Integer>> step,
+            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
             final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // Move the screen
         if(!AutoPolyVaryLoad.Reverse) { // Check if reverse order is selected
@@ -5806,8 +5827,12 @@ public final class Viewer {
                 c.getAddedSubList().forEach(storage -> {
                     if(!onScreenSequences.containsKey(storage)) {
                         final Color color;
-                        final int index = cycle.get();
-                        color = comboBoxColors.get(index);
+                        if(colorOpt.isPresent()) {
+                            color = colorOpt.get();
+                        } else {
+                            final int index = cycle.get();
+                            color = comboBoxColors.get(index);
+                        }
                         addToOnScreenSequences(storage, color);
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
@@ -5878,7 +5903,7 @@ public final class Viewer {
                 if(autoCover) coverWindow.show();
                 if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
             } else if(currIdx + stepIdx <= endIdx) {
-                drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, drawExecutor, storageExecutor, shotExecutor);
+                drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);

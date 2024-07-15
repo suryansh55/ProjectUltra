@@ -41,7 +41,7 @@ public class SuperPolyVaryLoad {
     public static Integer BoundOSOstep = 0;
     public static Integer BoundOSNOstep = 0;
     public static Integer Reps = 0;
-    public static Boolean Override = false;
+    public static Boolean ColorCycle = true;
     public static Boolean AutoCover = true;
     // ------------------------------------------------------------
 
@@ -67,7 +67,7 @@ public class SuperPolyVaryLoad {
     private final TextField CSstepbox = new TextField();
     private final TextField OSOstepbox = new TextField();
     private final TextField OSNOstepbox = new TextField();
-    //private final CheckBox overrideBox = new CheckBox();
+    private final CheckBox colorCycleBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
     private final Label repl = new Label();
     private final TextField repBox = new TextField();
@@ -182,12 +182,10 @@ public class SuperPolyVaryLoad {
         repBox.setText(Reps.toString());
 
 
-        /*
-        overrideBox.setIndeterminate(false);
-        overrideBox.setAllowIndeterminate(false);
-        overrideBox.setSelected(Override);
-        overrideBox.setText("Override side sum");
-        */
+        colorCycleBox.setIndeterminate(false);
+        colorCycleBox.setAllowIndeterminate(false);
+        colorCycleBox.setSelected(ColorCycle);
+        colorCycleBox.setText("Cycle colors");
 
         autoCoverBox.setIndeterminate(false);
         autoCoverBox.setAllowIndeterminate(false);
@@ -213,7 +211,7 @@ public class SuperPolyVaryLoad {
         loadHBox.getChildren().addAll(loadButton, repVBox);
         loadHBox.setAlignment(Pos.CENTER);
         //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
-        controlVBox.getChildren().addAll(loadHBox, autoCoverBox);
+        controlVBox.getChildren().addAll(loadHBox, autoCoverBox, colorCycleBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -226,6 +224,7 @@ public class SuperPolyVaryLoad {
     	loadButton.setText(buttonText);
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
     	loadButton.setOnAction(event -> {
+            ColorCycle = colorCycleBox.isSelected();
             AutoCover = autoCoverBox.isSelected();
     		try {
                 Reps = Integer.parseInt(repBox.getText().trim());
@@ -266,9 +265,6 @@ public class SuperPolyVaryLoad {
     public Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> getLoad() {
     	stage.showAndWait();
     	return this.result;
-    }
-    public Boolean getOverride() {
-        return Override;
     }
     
     private static String cleanPolygon(final String polygonString) {
