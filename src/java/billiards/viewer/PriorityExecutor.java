@@ -1,6 +1,5 @@
 package billiards.viewer;
 
-import java.util.Comparator;
 import java.util.concurrent.Callable;
 import java.util.concurrent.FutureTask;
 import java.util.concurrent.PriorityBlockingQueue;
@@ -51,7 +50,5 @@ public class PriorityExecutor extends ThreadPoolExecutor {
         public int compareTo(final ComparableFutureTask<T> o) {
             return Integer.compare(this.priority, o.priority);
         }
-
-        
     }
 }

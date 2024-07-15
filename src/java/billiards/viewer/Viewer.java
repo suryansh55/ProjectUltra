@@ -5583,10 +5583,15 @@ public final class Viewer {
         ));
         final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         progress.show();
-        final ExecutorService storageExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-        final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+        final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
+        final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
+
         if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
-        drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+        if(!AutoPolyVaryLoad.Reverse) {
+            drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+        } else {
+            drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, endIdx, startIdx, -1 * stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+        }
     }
     
     // Tries to find coverings for unfilled pixels onscreen
@@ -5783,11 +5788,9 @@ public final class Viewer {
             final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
             final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // Move the screen
-        if(!AutoPolyVaryLoad.Reverse) { // Check if reverse order is selected
-            setOBO(currIdx, pool, drawExecutor);
-        } else {
-            setOBO(endIdx - currIdx, pool, drawExecutor);
-        }
+        lineNumberTxt.setText(Integer.toString(currIdx + 1));
+        setOBO(currIdx, pool, drawExecutor);
+
         final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
         final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
         final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
@@ -5892,7 +5895,7 @@ public final class Viewer {
                     if(autoCover) coverWindow.appendStablesInfo(msg);
                 }
             });
-            overallProgress.increment(stepIdx);
+            overallProgress.increment(Math.abs(stepIdx));
             // Run at the next hole
             if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
@@ -5902,7 +5905,7 @@ public final class Viewer {
                 overallProgress.close();
                 if(autoCover) coverWindow.show();
                 if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
-            } else if(currIdx + stepIdx <= endIdx) {
+            } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
                 drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
