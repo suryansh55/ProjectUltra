@@ -4,7 +4,8 @@
 (DONE) 4. Change Varyl's draw function to continually update the UI, in the same manner as PolyVary and AutoPolyVary
 (DONE) 5. SuperPolyVary (Repeat PolyVary multiple times)
 (DONE) 6. Experiment with priority queue in executors for polyVary.
-7. Fix the calculate feature for triples, so that all calculated triples go into the cover
-8. Get Super to cycle through colors
-9. Update subdivision textbox while running Super
-10. AutoPolyVary should update the OBO line number
+(SPECIAL -feature already exists) 7. Fix the calculate feature for triples, so that all calculated triples go into the cover
+(DONE) 8. Get Super to cycle through colors
+(DONE) 9. Update subdivision textbox while running Super
+(DONE) 10. AutoPolyVary should update the OBO line number
+11. Restructure varyl into a seperate task, and apply the multithreading technique pioneered in polyVary to find codes while calculating. Shouldresult in a 30-40% speed increase
