@@ -5477,8 +5477,8 @@ public final class Viewer {
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
         final ProgressMultiTask overallProgress = new ProgressMultiTask(superAutoCb.isSelected() ? "AutoPolyVary %d out of %d" : "PolyVary %d out of %d", false, 0, SuperPolyVaryLoad.Reps);
         final Array<Color> cycleColors = Array.of(
-            Color.RED, Color.BLUE, Color.GREEN, Color.YELLOW, Color.MAGENTA, 
-            Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME, Color.GOLD, 
+            Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, 
+            Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME, 
             Color.PURPLE, Color.TURQUOISE);
 
         step.setValue(-1);
