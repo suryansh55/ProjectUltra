@@ -148,6 +148,8 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                 this.updateProgress(progress.incrementAndGet(), todo);
             }
         }
+        // The shot executor is no longer needed
+        shotExecutor.shutdown();
 
 
         Optional<ExecutionException> except = Optional.empty();
