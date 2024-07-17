@@ -594,8 +594,7 @@ public class BoyanMenu {
     }
     public MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(
     				final Vector2 point, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
-        final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-        codesFound.addAll(findCodes(point.x, point.y, 3, executor));
+        final MutableSortedSet<ClassifiedCodeSequence> codesFound = findCodes(point.x, point.y, 3, executor);
     	return codesFound;
     }
 
@@ -604,13 +603,13 @@ public class BoyanMenu {
     				final Vector2 point, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
         final int min = Integer.parseInt(minMovesText.getText());
         final double shots = Integer.parseInt(shotsText.getText());
-        final boolean[] types = {OSOmaxSS > 0, CSmaxSS > 0,
+        final boolean[] noCS = {OSOmaxSS > 0, false,
                                  CNScb.isSelected(), ONScb.isSelected(), OSNOmaxSS > 0};
-        final boolean[] CSonly = {false, CSmaxSS > 0, false, false, false};
+        final boolean[] onlyCS = {false, CSmaxSS > 0, false, false, false};
         final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
         final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-        unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, CSmaxSS, shots, CSonly, executor));
-        unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, Math.max(OSOmaxSS, OSNOmaxSS), shots, types, executor));
+        unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, CSmaxSS, shots, onlyCS, executor));
+        unfilteredCodesFound.addAll(findCodes3(point.x, point.y, min, Math.max(OSOmaxSS, OSNOmaxSS), shots, noCS, executor));
         for(final ClassifiedCodeSequence code: unfilteredCodesFound) { // Filter out overly large OSO/OSNO
             final CodeType type = code.codeType;
             if(type.equals(CodeType.OSO) && code.codeSum >= OSOmaxSS) {
@@ -662,11 +661,11 @@ public class BoyanMenu {
         final int iterate = Integer.parseInt(autoIterText.getText());
         final int step = Integer.parseInt(autoStepText.getText());
         final int shots = Integer.parseInt(shotsText.getText());
-        final boolean[] types = {OSOmaxSS > 0, CSmaxSS > 0,
+        final boolean[] noCS = {OSOmaxSS > 0, false,
                                  CNScb.isSelected(), ONScb.isSelected(), OSNOmaxSS > 0, OSO2cb.isSelected(), CS2cb.isSelected(),
                                  CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()};
         
-        final boolean[] csOnly = {false, CSmaxSS > 0,
+        final boolean[] onlyCS = {false, CSmaxSS > 0,
             false, false, false, false, false, false, false, false
         };
         //george june 12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
@@ -676,9 +675,9 @@ public class BoyanMenu {
             final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
             final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
             if(CSmaxSS > 0) {
-                unfilteredCodesFound.addAll(findCodes3(point.x, point.y, CSmin, CSmaxSS + CSstep, shots, csOnly, exe));
+                unfilteredCodesFound.addAll(findCodes3(point.x, point.y, CSmin, CSmaxSS + CSstep, shots, onlyCS, exe));
             }
-            unfilteredCodesFound.addAll(findCodes3(point.x, point.y, OSmin, Math.max(OSOmaxSS, OSNOmaxSS) + OSstep, shots, types, exe));
+            unfilteredCodesFound.addAll(findCodes3(point.x, point.y, OSmin, Math.max(OSOmaxSS, OSNOmaxSS) + OSstep, shots, noCS, exe));
 
             for(final ClassifiedCodeSequence code: unfilteredCodesFound) { // Filter out overly large OSO/OSNO
                 final CodeType type = code.codeType;
@@ -712,8 +711,6 @@ public class BoyanMenu {
         final double shots = Integer.parseInt(shotsText.getText());
         final boolean[] types = {OSOcb.isSelected(), CScb.isSelected(),
                                  CNScb.isSelected(), ONScb.isSelected(), OSNOcb.isSelected()};
-        final boolean[] CSonly = {false, CScb.isSelected(),
-                                 false, false, false};
         final boolean[] types2 = {OSO2cb.isSelected(), CS2cb.isSelected(),
                 CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()};
 
@@ -724,7 +721,6 @@ public class BoyanMenu {
         	out.addAll(findCodes4(xCoord, yCoord, min, max, shots, types));
         } else if (version == 3) {
         	out.addAll(findCodes3(xCoord, yCoord, min, max, shots, types, exe));
-            out.addAll(findCodes3(xCoord, yCoord, min, max, shots, CSonly, exe));
         } else if (version == 2) {
         	out.addAll(findCodes2(xCoord, yCoord, min, max, shots, types2, exe));
         } else {
@@ -831,9 +827,8 @@ public class BoyanMenu {
 
         final double increment = base / (shots + 1);
 
-        if (types[1] && !types[0] && !types[2] && !types[3] && !types[4]) {
-        	//run the CS-specific code
-
+        //run the CS-specific code
+        if (types[1]) {
         	double xAngle = Double.valueOf(xRad);
         	double yAngle = Double.valueOf(yRad);
 
@@ -852,8 +847,8 @@ public class BoyanMenu {
 	        	yAngle = Double.valueOf(zAngle);
 	        }
         }
-        else {
-        	//run the non-CS-specific code
+        //run the non-CS-specific code
+        if(types[0] || types[2] || types[3] || types[4]) {
 	        for (int count = 1; count <= shots; ++count) {
 
 	            final double pos = count * increment;
