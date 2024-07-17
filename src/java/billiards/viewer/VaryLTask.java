@@ -99,14 +99,13 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
 
         AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
-        final int todo = this.coordList.size();
+        final int todo = this.coordList.size() * maxPrint;
         this.updateProgress(0, todo);
 
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement varyL since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
         int count = 1;
         for(Vector2 coord: this.coordList) {
-            this.updateProgress(progress.incrementAndGet(), todo);
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
 			System.out.println("");
 			System.out.println("//------------- working on point " + count++ + " -------------"); // george added // sept 27,2017
@@ -129,13 +128,17 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                 if(i <= 0) break;
                 --i;
                 System.out.println(Utils.standard(classCodeSeq, codeNum++));
-                if(usedCodes.contains(classCodeSeq) || !this.draw) continue;
+                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
+                    this.updateProgress(progress.incrementAndGet(), todo);
+                    continue;
+                }
                 usedCodes.add(classCodeSeq); 
                 // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
                 futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
                         @Override
                         public Either<String, Storage> call() {
                             Either<String, Storage> result = loadStorage(classCodeSeq);
+                            VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
                             return result;
                         }
 
@@ -145,6 +148,9 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                         }
                     })
                 );
+            }
+            for(int p = 0; p < i; ++p) { // Update in the case of < i codes
+                this.updateProgress(progress.incrementAndGet(), todo);
             }
         }
 
@@ -174,10 +180,13 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
             future.cancel(true);
         } else {
             try {
+                future.get();
+                /*
                 final Either<String, Storage> either = future.get();
                 if (either.isLeft()) { // Print things like empty sets 
                     if(!either.left().get().equals("")) System.out.println(either.left().get());
                 }
+                */
             } catch (final ExecutionException e) {
                 // One of the futures threw an exception during its calculation,
                 // so we need to cancel the rest of the futures
