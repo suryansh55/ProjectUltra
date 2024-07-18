@@ -149,8 +149,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 this.updateProgress(progress.incrementAndGet(), todo);
             }
         }
-        // Close shotExecutor early to reclaim resources
-        shotExecutor.shutdown();
 
 
         Optional<ExecutionException> except = Optional.empty();
