@@ -100,6 +100,8 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement varyL since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
         int count = 1;
+        int totalCodes = 0;
+
         for(Vector2 coord: this.coordList) {
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
 			System.out.println("");
@@ -119,6 +121,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
 			int i = this.maxPrint == 0 ? localCodes.size() : this.maxPrint;
             int codeNum = 1;
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
+            totalCodes += localCodes.size();
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
                 if(i <= 0) break;
                 --i;
@@ -148,9 +151,11 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                 this.updateProgress(progress.incrementAndGet(), todo);
             }
         }
+
+		System.out.println("//~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + totalCodes
+		+ " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
         // The shot executor is no longer needed
         shotExecutor.shutdown();
-
 
         Optional<ExecutionException> except = Optional.empty();
 

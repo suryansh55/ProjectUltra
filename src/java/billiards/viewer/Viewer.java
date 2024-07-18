@@ -1349,9 +1349,9 @@ public final class Viewer {
                     final boolean autoCover =VaryWindowL.AutoCover;
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
 
-                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d", maximums[0], maximums[1], maximums[2]);
+                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
                     if(overrideSS) {
-                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d", maximums[3], maximums[4], maximums[5]);
+                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
                     }
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
@@ -3416,8 +3416,8 @@ public final class Viewer {
             });
 
             // Wait for orderly cancellation of unfinished tasks 
-            Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
+            Utils.safeShutdownExecutor(storageExecutor);
 
             progress.close();
                         // only render the screen after everything has been loaded
