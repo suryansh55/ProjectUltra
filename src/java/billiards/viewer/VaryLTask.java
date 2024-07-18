@@ -173,7 +173,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         if (this.isCancelled() || except.isPresent()) {
             // If the task was cancelled, or one of the futures threw an
             // exception, we need to cancel the rest of the futures
-            System.out.println("//Cancelling submitted future");
+            //System.out.println("//Cancelling submitted future");
             future.cancel(true);
         } else {
             try {

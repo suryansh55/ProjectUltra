@@ -3420,6 +3420,10 @@ public final class Viewer {
                         // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
+            if(draw) {
+                System.out.println("Printing drawn Codes:");
+                codeStrings.forEach(str -> System.out.println(str));
+            }
             if(autoCover) {
                 coverWindow.show();
                 System.out.println("+---- VaryL Cancelled, CODES ARE IN COVER; ----+");
