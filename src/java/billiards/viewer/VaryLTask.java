@@ -11,12 +11,12 @@ import javaslang.collection.Array;
 import javaslang.control.Either;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
-import java.util.concurrent.FutureTask;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -24,9 +24,6 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.concurrent.Task;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
-import javafx.scene.image.PixelReader;
 
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
@@ -38,7 +35,7 @@ Both these processes are multithreaded. Because of this, the task does not perfo
 
 If only the final result is required, you can just call get() on this task after it finishes.
  * */
-public final class PolyVaryTask extends Task<ObservableList<Storage>> {
+public final class VaryLTask extends Task<ObservableList<Storage>> {
     // Expose task property representing partial results
     private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
             new ReadOnlyObjectWrapper<>(
@@ -49,7 +46,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                     )
             );
     private final Array<Vector2> coordList;
-    private final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes;
+    private final MutableSortedSet<String> coverCodes = new TreeSortedSet<>();
     private final BoyanMenu boyanMenu;
     private final ConnectionPool pool;
     private final int CSmax;
@@ -59,18 +56,20 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     private final int OSOmaxSS;
     private final int OSNOmaxSS;
     private final boolean overrideSS;
+    private final boolean draw;
+    private final int maxPrint;
     private final ExecutorService storageExecutor;
     private final ExecutorService shotExecutor;
-    private final ImageView screenImage;
-    private final PixelRadianMap screenMap; 
+    //private final ImageView screenImage;
+    //private final PixelRadianMap screenMap; 
 
     // Constructor takes a list of points to vary at
-    public PolyVaryTask(
-        final MutableList<Double> points, final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes, final BoyanMenu boyan, 
-        final Array<Integer> max, final ConnectionPool pool, final boolean override, 
-        final ExecutorService eOne, final ExecutorService eTwo, final ImageView screen, final PixelRadianMap map) {
-        this.coordList = toCoords(points);
-        this.onScreenCodes = onScreenCodes;
+    public VaryLTask(
+        final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan, 
+        final Array<Integer> max, final ConnectionPool pool, final boolean override, final boolean draw,
+        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo) {
+        this.coordList = points; // Points are in degrees
+        this.coverCodes.addAll(coverCodes);
         this.boyanMenu = boyan;
         this.CSmax = max.get(0);
         this.OSOmax = max.get(1);
@@ -80,10 +79,10 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         this.OSNOmaxSS = max.get(5);
         this.pool = pool;
         this.overrideSS = override;
+        this.draw = draw;
+        this.maxPrint = maxPrint;
         this.storageExecutor = eOne;
         this.shotExecutor = eTwo;
-        this.screenImage = screen;
-        this.screenMap = map;
     }
 
     @Override
@@ -95,14 +94,19 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
 
         AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
-        final int todo = this.coordList.size();
+        final int todo = this.coordList.size() * maxPrint;
         this.updateProgress(0, todo);
 
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
-        // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
+        // This is the most efficient way to implement varyL since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
+        int count = 1;
+        int totalCodes = 0;
+
         for(Vector2 coord: this.coordList) {
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
-            // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
+			System.out.println("");
+			System.out.println("//------------- working on point " + count++ + " -------------"); // george added // sept 27,2017
+            // The BoyanCodes method vary3() called by varyTrianglesL() can throw exceptions. We need to catch them
             try {
                 localCodes = autoCodesFiltered(coord, shotExecutor);
             } catch(RuntimeException e) {
@@ -113,27 +117,26 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                     throw e;
                 }
             }
-            // We want to know if we submitted a task that will update the progress for us.
-            boolean noCodes = true;
-
+            // We draw the first i codes we found
+			int i = this.maxPrint == 0 ? localCodes.size() : this.maxPrint;
+            int codeNum = 1;
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
+            totalCodes += localCodes.size();
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
+                if(i <= 0) break;
+                --i;
+                System.out.println(Utils.standard(classCodeSeq, codeNum++));
+                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
+                    this.updateProgress(progress.incrementAndGet(), todo);
+                    continue;
+                }
                 usedCodes.add(classCodeSeq); 
-                noCodes = false;
-                // Submit the runnable for this code
+                // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
                 futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
                         @Override
                         public Either<String, Storage> call() {
-                            int color = pixelColor(coord);
-                            if(color == -1) return Either.left("");
-                            if(color != 0) {
-                                //System.out.println("//Pixel already filled, skipping");
-                                PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
-                                return Either.left("");
-                            }
                             Either<String, Storage> result = loadStorage(classCodeSeq);
-                            if(!PolyVaryTask.this.isCancelled()) PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
+                            VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
                             return result;
                         }
 
@@ -143,15 +146,16 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                         }
                     })
                 );
-                break;
             }
-            if(noCodes) { // Still need to update progress even if nothing found
+            for(int p = 0; p < i; ++p) { // Update in the case of < i codes
                 this.updateProgress(progress.incrementAndGet(), todo);
             }
         }
-        // Close shotExecutor early to reclaim resources
-        shotExecutor.shutdown();
 
+		System.out.println("//~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + totalCodes
+		+ " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
+        // The shot executor is no longer needed
+        shotExecutor.shutdown();
 
         Optional<ExecutionException> except = Optional.empty();
 
@@ -159,7 +163,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         // calculate exception), we need to save it, cancel the rest of
         // the futures, and then throw that exception to bubble up the stack
         for (final Future<Either<String, Storage>> future : futures) {
-            except = checkStatus(future);
+            checkStatus(future, except);
         }
 
         if (except.isPresent()) {
@@ -170,8 +174,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     }
 
     // Cancel or detect execution errors; This is where we do checking to see if we were cancelled
-    private Optional<ExecutionException> checkStatus(final Future<Either<String, Storage>> future) {
-        Optional<ExecutionException> except = Optional.empty();
+    private void checkStatus(final Future<Either<String, Storage>> future, Optional<ExecutionException> except) {
         if (this.isCancelled() || except.isPresent()) {
             // If the task was cancelled, or one of the futures threw an
             // exception, we need to cancel the rest of the futures
@@ -179,10 +182,13 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             future.cancel(true);
         } else {
             try {
+                future.get();
+                /*
                 final Either<String, Storage> either = future.get();
                 if (either.isLeft()) { // Print things like empty sets 
                     if(!either.left().get().equals("")) System.out.println(either.left().get());
                 }
+                */
             } catch (final ExecutionException e) {
                 // One of the futures threw an exception during its calculation,
                 // so we need to cancel the rest of the futures
@@ -193,61 +199,29 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 }
             }
         }
-        return except;
     }
 
     // Calculates codeSequence set at a specific coordinate 
     private MutableSortedSet<ClassifiedCodeSequence> autoCodesFiltered(final Vector2 coords, final ExecutorService executor) {
         // autoVary requires coordinates to be in degree format
-        final Vector2 degCoords = Vector2.create(Math.toDegrees(coords.x), Math.toDegrees(coords.y));
         final MutableSortedSet<ClassifiedCodeSequence> codes = new TreeSortedSet<>();
-        final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.autoVary(degCoords, this.CSmaxSS, this.OSOmaxSS, this.OSNOmaxSS, executor) : boyanMenu.autoVary(degCoords, executor);
+        final MutableSortedSet<ClassifiedCodeSequence> boyanCodes = overrideSS ? boyanMenu.varyTrianglesL(coords, this.CSmaxSS, this.OSOmaxSS, this.OSNOmaxSS, executor) : boyanMenu.varyTrianglesL(coords, executor);
         // Generate the filtered list
         for (ClassifiedCodeSequence code : boyanCodes) {
-            if (code.codeType.equals(CodeType.CS)) {
-                if (code.codeLength <= this.CSmax) codes.add(code);
-            } else if (code.codeType.equals(CodeType.OSO)) {
-                if (code.codeLength <= this.OSOmax) codes.add(code);
-            } else if (code.codeType.equals(CodeType.OSNO)) {
-                if (code.codeLength <= this.OSNOmax) codes.add(code);
+            if (code.codeType.equals(CodeType.OSO) && code.codeLength > OSOmax) {
+                continue;
+            } else if (code.codeType.equals(CodeType.OSNO) && code.codeLength > OSNOmax) {
+                continue;
+            } else if (code.codeType.equals(CodeType.CS) && code.codeLength > CSmax) {
+                continue;
+            }
+            if(!this.coverCodes.contains(code.codeSequence.toString())) {
+                codes.add(code);
             }
         }
         return codes;
     }
 
-    // Converts list of points into array of coordinate pairs 
-    private Array<Vector2> toCoords(final MutableList<Double> points) {
-        final MutableList<Vector2> out = new FastList<Vector2>();
-        for(int i = 0; i < points.size(); i += 2) {
-            final Vector2 coords = Vector2.create(points.get(i), points.get(i+1));
-            out.add(coords);
-        }
-        return Array.ofAll(out);
-    }
-
-    // Runs a fast application thread task which determines the color of the pixel at a point
-    private int pixelColor(final Vector2 point) {
-        FutureTask<Integer> task = new FutureTask<Integer>(() -> {
-            final Image image = this.screenImage.getImage();
-            final PixelReader reader = image.getPixelReader();
-            final int midX = (int) this.screenMap.pixelX(point.x);
-            final int midY = (int) this.screenMap.pixelY(point.y);
-            return reader.getArgb(midX, midY);
-        });
-        Platform.runLater(task);
-        try {
-            //System.err.println("//Found pixel color");
-            return task.get();
-        } catch(InterruptedException e) {
-            System.err.println("//Interruption when finding pixel color");
-            return -1;
-        } catch(ExecutionException e) {
-            System.err.println("//Failed to find pixel color");
-            e.printStackTrace();
-            return -1;
-        }
-
-    }
 
     // Find the storage associated to a codeSequence if it exists. Return the error if not
     private Either<String, Storage> loadStorage(final ClassifiedCodeSequence classCodeSeq) {
