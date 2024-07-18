@@ -1336,11 +1336,11 @@ public final class Viewer {
 	        	final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
 	        			varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
 	        	if (pointOpt.isPresent()) {
-		            final ExecutorService executor2 = Executors.newFixedThreadPool(Utils.numThreads); // Create thread pool
 
 	        		final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
 	        		System.out.println(
 	        				"//~~~~~~~~~~~~~~~~~~~~~~~ varyL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
+
                     final MutableList<Vector2> pointList = point._1;
                     // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
                     final int[] maximums = {point._2, point._3, point._4, point._5, point._6, point._7};
@@ -1349,11 +1349,14 @@ public final class Viewer {
                     final boolean autoCover =VaryWindowL.AutoCover;
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
 
+                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d", maximums[0], maximums[1], maximums[2]);
+                    if(overrideSS) {
+                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d", maximums[3], maximums[4], maximums[5]);
+                    }
+
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
-                    final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
+                    final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor);
-
-
 	        	}
         	}
         });
@@ -3440,102 +3443,6 @@ public final class Viewer {
 
         executor.execute(task);
         progress.show();
-    }
-
-
-
-    private void drawVaryL(final MutableSortedSet<ClassifiedCodeSequence> codes, final ExecutorService executor) {
-        final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(codes);
-        final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-    	final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, false, false);
-        final Progress progress = new Progress(task);
-
-        if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo("// Start VaryL");
-
-        task.getPartialProperty().get().addListener((ListChangeListener.Change<? extends Storage> c) -> {
-            while (c.next()) {
-                if(!c.wasAdded()) continue;
-                // Draw all new additions
-                c.getAddedSubList().forEach(storage -> {
-                    if(!onScreenSequences.containsKey(storage)) {
-                        final Color color;
-                        final int index = cycle.get();
-                        color = comboBoxColors.get(index);
-                        addToOnScreenSequences(storage, color);
-                        renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
-                        // print the code
-                        final String msg;
-                        final CodeType type = storage.codeType();
-                        String codeStr = "" + type;
-                        // String codeStr = "xxx " + type; //george july 26 2017 -
-                        // type whatever you want between the quotes in the line above
-                        // make sure to add a space after the xxx
-                        if (codeStr.equals("CS")) {
-                            codeStr += "  ";
-                        } else if (!codeStr.equals("OSNO")) {
-                            codeStr += " ";
-                        }
-                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
-                        System.out.println(msg);
-                        if(VaryWindowL.AutoCover) coverWindow.appendStablesInfo(msg);
-                    }
-                });
-            }
-        });
-
-        task.setOnSucceeded(e -> {
-
-            final Array<Storage> storages;
-            try {
-                storages = task.get();
-            } catch (InterruptedException | ExecutionException exception) {
-                throw new RuntimeException(exception);
-            }
-
-            storages.forEach(storage -> {
-                final Color color;
-                final int index = cycle.get();
-                color = comboBoxColors.get(index);
-                addToOnScreenSequences(storage, color);
-            });
-
-            Utils.safeShutdownExecutor(drawExecutor);
-            progress.close();
-
-            // only render the screen after everything has been loaded
-            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-            if(VaryWindowL.AutoCover) coverWindow.show();
-            System.out.println("+-------------- Draw varyL completed --------------+");
-        });
-
-        task.setOnCancelled(e -> {
-            task.getPartialProperty().get().forEach(storage -> {
-                if(!onScreenSequences.containsKey(storage)) {
-                    final Color color;
-                    final int index = cycle.get();
-                    color = comboBoxColors.get(index);
-                    addToOnScreenSequences(storage, color);
-                }
-            });
-
-            Utils.safeShutdownExecutor(drawExecutor);
-            progress.close();
-            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-            if(VaryWindowL.AutoCover) coverWindow.show();
-            System.out.println("+-------------- Draw varyL cancelled --------------+");
-        });
-
-        task.setOnFailed(e -> {
-            Utils.safeShutdownExecutor(drawExecutor);
-            progress.close();
-            System.out.println("+-------------- Draw varyL failed --------------+");
-            throw new RuntimeException(task.getException());
-        });
-
-        executor.execute(task);
-
-        progress.show();
-
     }
 
     private void LoadFileAction(
