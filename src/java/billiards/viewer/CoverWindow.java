@@ -342,7 +342,12 @@ public final class CoverWindow {
             if (liney.split("#")[0].trim().isEmpty()) continue;
             if (liney.split("//")[0].trim().isEmpty()) continue;
 
-            final String line = liney.split("#")[0].split("//")[0];
+            final String line;
+            if(liney.contains("-")) {
+                line = liney.split("#")[0].split("//")[0].split("-")[1].trim(); // Triple may be of form X - XXXX,XXXX,XXXX
+            } else {
+                line = liney.split("#")[0].split("//")[0];
+            }
 
             final String[] split = line.split(",");
 
