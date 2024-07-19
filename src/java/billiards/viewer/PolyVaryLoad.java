@@ -31,7 +31,7 @@ import javaslang.Tuple7;
 public final class PolyVaryLoad {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
-    private static String fullContent = "";
+    private static String polygonString = "";
     public static Integer BoundCSMax = 300;
     public static Integer BoundOSOMax = 50;
     public static Integer BoundOSNOMax = 36;
@@ -43,6 +43,8 @@ public final class PolyVaryLoad {
 
     // ------------------------------------------------------------
 
+    private final String polygonFileName;
+    private final String boundsFileName;
     private final TextArea text = new TextArea();
     private final Button loadButton = new Button();
     private final Label codel = new Label();
@@ -74,28 +76,12 @@ public final class PolyVaryLoad {
 
     private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
-    public PolyVaryLoad(final String windowTitle, final String buttonText, final String fileName,
+    public PolyVaryLoad(final String windowTitle, final String buttonText, final String polyFileName,
                     final String boundsFileName, final Rectangle fullScreen) {
+        this.polygonFileName = polyFileName;
+        this.boundsFileName = boundsFileName;
 
-        fullContent = Utils.readFromFile(fileName);
-    	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
-    	if (boundTokens.length >= 6) {
-    		try {
-    			BoundCSMax = Integer.parseInt(boundTokens[0]);
-    			BoundOSOMax = Integer.parseInt(boundTokens[1]);
-    			BoundOSNOMax = Integer.parseInt(boundTokens[2]);
-    			BoundCSMaxSS = Integer.parseInt(boundTokens[3]);
-    			BoundOSOMaxSS = Integer.parseInt(boundTokens[4]);
-    			BoundOSNOMaxSS = Integer.parseInt(boundTokens[5]);
-    		} catch (NumberFormatException e) {
-    			BoundCSMax = 200;
-    			BoundOSOMax = 100;
-    			BoundOSNOMax = 36;
-                BoundCSMaxSS = 222;
-                BoundOSOMaxSS = 222;
-                BoundOSNOMaxSS = 222;
-    		}
-    	}
+        this.updateBounds();
 
         stage.setScene(scene);
 
@@ -110,7 +96,7 @@ public final class PolyVaryLoad {
         text.setWrapText(true);
         text.setEditable(true);
         text.setFont(Font.font("Monaco", 16));
-        text.setText(fullContent);
+        text.setText(polygonString);
 
         instruct.setText(
             "Enter points on separate lines, with the coordinates separated by a space.");
@@ -201,12 +187,12 @@ public final class PolyVaryLoad {
                 alert.showAndWait();
                 return;
             }
-            fullContent = text.getText();
-            if (fullContent.equals("")) {
+            polygonString = text.getText();
+            if (polygonString.equals("")) {
                 this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
 
             } else {
-                final String[] lines = cleanPolygon(fullContent).split("\n");
+                final String[] lines = cleanPolygon(polygonString).split("\n");
                 final MutableList<Vector2> pointList = new FastList<>();
 
                 for (final String line : lines) {
@@ -218,12 +204,28 @@ public final class PolyVaryLoad {
                 final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
                 this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             }
-            Utils.writeToFile(fileName, fullContent);
+            Utils.writeToFile(polyFileName, polygonString);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
         });
     }
 
+    public void updateBounds() {
+        polygonString = Utils.readFromFile(polygonFileName);
+    	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
+    	if (boundTokens.length >= 6) {
+    		try {
+    			BoundCSMax = Integer.parseInt(boundTokens[0]);
+    			BoundOSOMax = Integer.parseInt(boundTokens[1]);
+    			BoundOSNOMax = Integer.parseInt(boundTokens[2]);
+    			BoundCSMaxSS = Integer.parseInt(boundTokens[3]);
+    			BoundOSOMaxSS = Integer.parseInt(boundTokens[4]);
+    			BoundOSNOMaxSS = Integer.parseInt(boundTokens[5]);
+    		} catch (NumberFormatException e) {
+    		}
+    	}
+
+    }
     private static String cleanPolygon(final String polygonString) {
 
         final String[] lines = polygonString.split("\\R");

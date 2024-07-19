@@ -1299,7 +1299,7 @@ public final class Viewer {
                         || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
 	            final Rectangle screen = map.getViewRectangle();
 	            final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt =
-	                new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
+	                new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
 	            if (polyOpt.isPresent()) {
                     final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 	                autoVaryArea = Optional.of(polyVals._1);
