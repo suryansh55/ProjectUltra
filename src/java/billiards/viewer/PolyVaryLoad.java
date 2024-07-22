@@ -70,7 +70,7 @@ public final class PolyVaryLoad {
     private final HBox bottomHBox = new HBox();
     private final HBox maxHBox = new HBox(10);
     private final HBox maxOptHBox = new HBox(10);
-    private final Stage stage = new Stage();
+    public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
 
@@ -92,14 +92,20 @@ public final class PolyVaryLoad {
         });
 
         text.setPrefColumnCount(40);
-        text.setPrefRowCount(10);
+        text.setPrefRowCount(6);
         text.setWrapText(true);
-        text.setEditable(true);
+        text.setEditable(false);
         text.setFont(Font.font("Monaco", 16));
         text.setText(polygonString);
 
+        // Sync the polygon with the cover polygon
+        CoverWindow.polyStringProperty.addListener((o, oldValue, newValue) -> {
+            polygonString = newValue;
+            text.setText(polygonString);
+        });
+
         instruct.setText(
-            "Enter points on separate lines, with the coordinates separated by a space.");
+            "The following polygon is synced with the current cover");
         instruct.setPadding(new Insets(5, 5, 5, 10));
 
         // We want the text to expand as we make the window bigger
@@ -204,7 +210,7 @@ public final class PolyVaryLoad {
                 final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
                 this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             }
-            Utils.writeToFile(polyFileName, polygonString);
+            //Utils.writeToFile(polyFileName, polygonString);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
         });

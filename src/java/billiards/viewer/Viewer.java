@@ -551,8 +551,8 @@ public final class Viewer {
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover2", executor));
         final VaryWindowL varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt");
-        final AutoPolyVaryLoad autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt");
-        final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "PolyAutoVary.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
+        final AutoPolyVaryLoad autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
+        final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
 
         executorService = executor;
 

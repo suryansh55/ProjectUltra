@@ -30,7 +30,7 @@ import javaslang.Tuple7;
 public class AutoPolyVaryLoad {
 	// WARNING: Global mutable state
     // ------------------------------------------------------------
-    public static String fullContent = "";
+    public static String polygonString = "";
     public static Integer BoundCSMax = 300;
     public static Integer BoundOSOMax = 50;
     public static Integer BoundOSNOMax = 36;
@@ -76,7 +76,7 @@ public class AutoPolyVaryLoad {
     private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
     
     public AutoPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName) {
-    	fullContent = Utils.readFromFile(fileName);
+    	polygonString = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
     	if (boundTokens.length >= 6) {
     		try {
@@ -106,11 +106,17 @@ public class AutoPolyVaryLoad {
     	text.setPrefColumnCount(40);
     	text.setPrefRowCount(10);
     	text.setWrapText(true);
-    	text.setEditable(true);
+    	text.setEditable(false);
     	text.setFont(Font.font("Monaco", 16));
-    	text.setText(fullContent);
+    	text.setText(polygonString);
     	VBox.setVgrow(text, Priority.ALWAYS);
     	
+        // Sync the polygon with the cover polygon
+        CoverWindow.polyStringProperty.addListener((o, oldValue, newValue) -> {
+            polygonString = newValue;
+            text.setText(polygonString);
+        });
+
     	instruct.setText("Enter points on separate lines, with the coordinates separated by a space.");
     	instruct.setPadding(new Insets(5, 5, 5, 10));
     	
@@ -194,8 +200,8 @@ public class AutoPolyVaryLoad {
         		alert.showAndWait();
     			return;
     		}
-    		fullContent = text.getText();
-    		final String[] lines = cleanPolygon(fullContent).split("\n");
+    		polygonString = text.getText();
+    		final String[] lines = cleanPolygon(polygonString).split("\n");
     		final MutableList<Vector2> pointList = new FastList<>();
     		for (final String line : lines) {
     			final String[] coords = line.split(" ");
@@ -205,7 +211,7 @@ public class AutoPolyVaryLoad {
     		}
     		final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
         	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
-        	Utils.writeToFile(fileName, fullContent);
+        	//Utils.writeToFile(fileName, polygonString);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
         	stage.close();
     	});

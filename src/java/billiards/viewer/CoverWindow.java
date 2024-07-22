@@ -19,6 +19,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Optional;//added oct 15,2017 george
 
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -31,7 +32,6 @@ import javafx.stage.Stage;
 
 public final class CoverWindow {
 
-    // WARNING: Global mutable state
     // ------------------------------------------------------------
     private static String polygonString = Utils.readFromFile(Viewer.tmpDir + "/cover_polygon.txt");
     private static String stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
@@ -40,6 +40,10 @@ public final class CoverWindow {
     private static String emptyString = Utils.readFromFile(Viewer.tmpDir + "/cover_empty.txt");
     private static String magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
     //private static String halfTripleString = Utils.readFromFile(Viewer.tmpDir + "/cover_half_triples.txt");
+ 
+    // WARNING: Global mutable state
+    // Other classes which need to synchronize their polygon with the cover should listen to this property
+    public static SimpleObjectProperty<String> polyStringProperty = new SimpleObjectProperty<>(polygonString);
 
     // ------------------------------------------------------------
 
@@ -286,6 +290,7 @@ public final class CoverWindow {
         stablesString = bottomText.getText().trim();
         triplesString = triplesText.getText().trim();
         //halfTripleString = halfTriplesText.getText().trim();
+        polyStringProperty.setValue(polygonString);
 
         digitsString = digitsTextField.getText().trim();
         magnificationsString = magnificationsTextField.getText().trim();
