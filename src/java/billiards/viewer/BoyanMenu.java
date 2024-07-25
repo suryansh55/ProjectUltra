@@ -81,7 +81,6 @@ public class BoyanMenu {
     final TextField line1CutText = new TextField();
     final TextField line2CutText = new TextField();
 
-
     final TextField autoCycleText = new TextField();
     final TextField cycleStepText = new TextField();
     final TextField autoIterText = new TextField();
@@ -560,7 +559,7 @@ public class BoyanMenu {
     }
 
     private MutableSortedSet<ClassifiedCodeSequence> varyTriangles(
-    		final double aX1, final double aY1,final double aX2, final double aY2,
+    		final double aX1, final double aY1, final double aX2, final double aY2,
             final double aX3, final double aY3, final double aCut1, final double aCut2,
             final int version, final ExecutorService exe) {
 

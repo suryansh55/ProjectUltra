@@ -101,6 +101,9 @@ public final class DBGui {
     // one each time we open it up.
 
     public Optional<String> getDbName() {
+        if (!listView.getItems().contains("garbage")) {
+            Admin.newDatabase("garbage");
+        }
         Admin.initDatabaseDirectory();
         final List<String> dbs = Admin.listDatabases();
         listView.getItems().setAll(dbs);
