@@ -37,7 +37,8 @@ public final class Main extends Application {
         // Shows and waits until the window closes
         final Optional<String> databaseName = dbGui.getDbName();
 
-        // Admin.newJavaDB("garbage");
+        // IMPORTANT! Create a new garbage database if it does not already exist
+        Admin.newJavaDB("garbage");
 
         // since we just have two programs for now, this is just a boolean telling if we're
         // using viewer or not.

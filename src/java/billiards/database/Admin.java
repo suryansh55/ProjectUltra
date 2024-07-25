@@ -89,7 +89,7 @@ public final class Admin {
 
         Wrapper.createDatabase(dbPath);
     }
-    //deprecated
+    //Required format for the garbage database
     public static void newJavaDB(final String dbName) {
         final String table = "create table if not exists %s("
                 + "code_sequence text check(typeof(code_sequence) = 'text'),"
