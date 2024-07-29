@@ -117,7 +117,7 @@ public class AutoPolyVaryLoad {
             text.setText(polygonString);
         });
 
-    	instruct.setText("Enter points on separate lines, with the coordinates separated by a space.");
+    	instruct.setText("The following polygon is synced with the current cover");
     	instruct.setPadding(new Insets(5, 5, 5, 10));
     	
         codel.setText("Code length:");

@@ -104,8 +104,7 @@ public final class PolyVaryLoad {
             text.setText(polygonString);
         });
 
-        instruct.setText(
-            "The following polygon is synced with the current cover");
+        instruct.setText("The following polygon is synced with the current cover");
         instruct.setPadding(new Insets(5, 5, 5, 10));
 
         // We want the text to expand as we make the window bigger
