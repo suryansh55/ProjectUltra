@@ -174,6 +174,7 @@ public class SaveV3Window {
                         }
                     }
                     else {
+                        writer.close();
                         throw new IOException("Count is more than number of codes.");
                     }
                 }
@@ -217,6 +218,7 @@ public class SaveV3Window {
                         }
                     }
                     else {
+                        writer.close();
                         throw new IOException("Count is more than number of codes.");
                     }
                 }
