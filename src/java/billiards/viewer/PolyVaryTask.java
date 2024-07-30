@@ -118,7 +118,14 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
+                // If we find that a code in the list is already being processed, we can assume that this pixel is colored
+                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) break;
+                boolean used = false;
+                for(ClassifiedCodeSequence code: usedCodes) {
+                    used = used || localCodes.contains(code);
+                }
+                if(used) break;
+
                 usedCodes.add(classCodeSeq); 
                 noCodes = false;
                 // Submit the runnable for this code
