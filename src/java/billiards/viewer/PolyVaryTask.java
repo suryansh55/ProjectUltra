@@ -103,6 +103,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         for(Vector2 coord: this.coordList) {
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
+            // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
             int color = pixelColor(coord);
             if(color != 0) break; 
             try {
