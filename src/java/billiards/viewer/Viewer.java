@@ -5566,6 +5566,9 @@ public final class Viewer {
             subdivisions,
             maxMoves
         ));
+        if(overrideSS) {
+            System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", maxList[3], maxList[4], maxList[5]));
+        }
         final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         progress.show();
         final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
@@ -5606,6 +5609,9 @@ public final class Viewer {
             headerString += "  (with prover)";
         }
         System.out.println(headerString);
+        if(overrideSS) {
+            System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", maxList[3], maxList[4], maxList[5]));
+        }
 
         // 2024-05-23 complete redesign of PolyVary to support multi-threading
         final MutableList<Double> points = new FastList<>();
@@ -5707,7 +5713,9 @@ public final class Viewer {
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
-
+            if(overrideSS) {
+                System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+            }
             if(autoCover) {
                 coverWindow.show();
                 System.out.println(String.format(
@@ -5743,6 +5751,9 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
 
+            if(overrideSS) {
+                System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+            }
             if(autoCover) {
                 coverWindow.show();
                 System.out.println(String.format(
@@ -5886,6 +5897,9 @@ public final class Viewer {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
+                if(overrideSS) {
+                    System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                }
                 System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
                 overallProgress.close();
                 if(autoCover) coverWindow.show();
@@ -5896,6 +5910,9 @@ public final class Viewer {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
+                if(overrideSS) {
+                    System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                }
                 if(autoCover) {
                     coverWindow.show();
                     System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
@@ -5937,6 +5954,9 @@ public final class Viewer {
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
+            if(overrideSS) {
+                System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+            }
             System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
             overallProgress.close(); 
             if(autoCover) coverWindow.show();
