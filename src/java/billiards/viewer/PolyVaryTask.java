@@ -103,6 +103,9 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         for(Vector2 coord: this.coordList) {
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
+            // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
+            int color = pixelColor(coord);
+            if(color != 0) continue; 
             try {
                 localCodes = autoCodesFiltered(coord, shotExecutor);
             } catch(RuntimeException e) {
@@ -132,6 +135,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
                         @Override
                         public Either<String, Storage> call() {
+                            /* I don't think we need to check anything here anymore, since the combination of the earlier color check and the vary check ensure this pixel stays empty
                             int color = pixelColor(coord);
                             if(color == -1) return Either.left("");
                             if(color != 0) {
@@ -139,6 +143,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                                 PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
                                 return Either.left("");
                             }
+                            */
                             Either<String, Storage> result = loadStorage(classCodeSeq);
                             if(!PolyVaryTask.this.isCancelled()) PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
                             return result;
