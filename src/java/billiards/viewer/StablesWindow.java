@@ -46,7 +46,7 @@ public class StablesWindow {
     private final TextArea middleUnstablesText = new TextArea();
     private final TextArea bottomStablesText = new TextArea();
     private final TextArea fullTriplesText = new TextArea();
-    private final TextField numberOfPairsTextField = new TextField();
+    private final TextField numberOfPairsTextField = new TextField("1");
 
     private final Label topStablesLabel = new Label("Stables");
     private final Label middleUnstablesLabel = new Label("Unstables");

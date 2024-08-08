@@ -15,15 +15,13 @@ public class PriorityExecutor extends ThreadPoolExecutor {
                 new PriorityBlockingQueue<Runnable>(11));
     }
 
-    // newTaskFor is called by the submit method to convert Callable/Runnable into Futures
     @Override
     protected <T> RunnableFuture<T> newTaskFor(final Callable<T> callable) {
-        if (callable instanceof PriorityCallable) {
+        if (callable instanceof PriorityCallable)
             return new ComparableFutureTask<T>(((PriorityCallable<T>) callable).getPriority(),
                     callable);
-        } else { // Still accept regular (incomparable) future tasks
+        else
             return new ComparableFutureTask<T>(0, callable);
-        }
     }
 
     @Override

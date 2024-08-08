@@ -13,6 +13,7 @@ import javaslang.control.Either;
 import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -185,7 +186,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         if (this.isCancelled() || except.isPresent()) {
             // If the task was cancelled, or one of the futures threw an
             // exception, we need to cancel the rest of the futures
-            //System.out.println("//Cancelling submitted future");
+            System.out.println("//Cancelling submitted future");
             future.cancel(true);
         } else {
             try {
