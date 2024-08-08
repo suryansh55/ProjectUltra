@@ -1351,6 +1351,12 @@ public final class Viewer {
                     final int[] maximums = {CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS};
                     final boolean draw = VaryWindowL.Draw;
                     final boolean overrideSS = VaryWindowL.Override;
+                        
+                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
+                    if(overrideSS) {
+                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
+                    }
+
                     final MutableSortedSet<ClassifiedCodeSequence> varyLCodes = new TreeSortedSet<>();
 
 	        		final Task<MutableSortedSet<ClassifiedCodeSequence>> varyLTask = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
@@ -1368,11 +1374,13 @@ public final class Viewer {
                         Utils.safeShutdownExecutor(executor2);
 	            		System.out.println("// VaryL cancelled");
 	            		progress.close();
+                        /*
                         if (draw) {
                             // draw is true
                             System.out.println("// Drawing codes found so far... ");
                             drawVaryL(varyLCodes, executor);
                         }
+                        */
                         if (boyanMenu.varyOnePoint.isSelected()) {
                             BoyanMenu.printCodes(varyLCodes, "VaryOnePoint.txt", false, false,
                                     Integer.parseInt(boyanMenu.maxPrinting.getText()));
