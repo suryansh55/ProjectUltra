@@ -6,7 +6,7 @@ apply plugin: TestingModelBasePlugin
 mainClassName = 'billiards.viewer.Main'
 
 repositories {
-    jcenter()
+    mavenCentral()
 }
 
 dependencies {

@@ -1265,7 +1265,7 @@ public final class Viewer {
         	}
         });
 
-        polyVaryBtn.setText("PolyVary");
+        polyVaryBtn.setText("BoyanVary");
         polyVaryBtn.setTooltip(Utils.toolTip("Search for code sequences which cover points in a "
                                              + "specified polygon. See instructions for details"));
         Utils.colorButton(polyVaryBtn, Color.LIGHTPINK, Color.GOLD);
@@ -1368,7 +1368,8 @@ public final class Viewer {
         lineEndField.setPromptText("End");
         lineEndField.setPrefWidth(60);
         
-        autoPolyVaryBtn.setText("AutoPolyVary");
+        //autoPolyVaryBtn.setText("AutoPolyVary");
+        autoPolyVaryBtn.setText("AustinMaxVary");
         autoPolyVaryBtn.setTooltip(Utils.toolTip("Automatically Call PolyVary on existing holes."));
         Utils.colorButton(autoPolyVaryBtn, Color.GREEN, Color.GOLD);
         autoPolyVaryBtn.setOnAction(event -> {
@@ -1471,7 +1472,7 @@ public final class Viewer {
             //renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
 
-        superAutoCb.setText("Use AutoVary");
+        superAutoCb.setText("Use AustinMaxVary");
         superAutoCb.setSelected(false);
 
         superPolyVaryBtn.setText("SuperAustinVary");
@@ -1707,7 +1708,8 @@ public final class Viewer {
         //Setting the pool for the stables window and button properties
         stablesWindow.setConnectionPool(pool);
 
-        stablesButton.setText("Triples");
+        //stablesButton.setText("Triples");
+        stablesButton.setText("TokarskyTriples");
         stablesButton.setTooltip(Utils.toolTip("Brings up a window to test multiple stables and unstables"));
         Utils.colorButton(stablesButton, Color.MAGENTA, Color.GOLD);
         stablesButton.setOnAction(event -> {stablesWindow.show();});//Opens a new stables window

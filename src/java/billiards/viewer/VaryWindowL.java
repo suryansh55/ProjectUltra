@@ -156,16 +156,18 @@ public final class VaryWindowL {
 
         instructHBox.getChildren().addAll(instruct);
 
+        /*
         typeVBox.getChildren().addAll(codel, ssuml);
         typeVBox.setPadding(new Insets(0, 10, 10, 0));
         typeVBox.setAlignment(Pos.CENTER);
+        */
 
-        maxHBox.getChildren().addAll(CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
+        maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
         maxHBox.setPadding(new Insets(0, 10, 10, 0));
         maxHBox.setAlignment(Pos.CENTER);
 
         
-        maxOptHBox.getChildren().addAll(CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
+        maxOptHBox.getChildren().addAll(ssuml, CSsl, CSsbox, OSOsl, OSOsbox, OSNOsl, OSNOsbox);
         maxOptHBox.setPadding(new Insets(0, 10, 10, 0));
         maxOptHBox.setAlignment(Pos.CENTER);
 
@@ -176,7 +178,7 @@ public final class VaryWindowL {
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
-        bottomHBox.getChildren().addAll(typeVBox, maxVBox, controlVBox);
+        bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
         root.getChildren().addAll(instructHBox, text, bottomHBox);
         root.setSpacing(10);
