@@ -96,7 +96,7 @@ public final class InfoWindow {
             return;
         }
 
-        final Optional<ImmutableIntList> optional = Utils.splitString(codeNumsString);
+        final Optional<ImmutableIntList> optional = Utils.splitString(Utils.trimCodeLine(codeNumsString));
 
         if (!optional.isPresent()) {
             final Alert alert = new Alert(AlertType.ERROR);
@@ -177,6 +177,7 @@ public final class InfoWindow {
             alert.showAndWait();
         }
     }
+
 
     private static String infoString(final ClassifiedCodeSequence codeSeq, final Info info,final String sin,final String cos) {
         final StringBuffer buff = new StringBuffer();
