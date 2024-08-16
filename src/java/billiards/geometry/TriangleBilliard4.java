@@ -204,6 +204,8 @@ public class TriangleBilliard4 {
 	}
 	
 	// the usual %3 wasn't working for some reason, so we do this
+
+    // Cycle through the three sides of a triangle
     private static int mod3(int value) {
         while (value >= 3) {
             value -= 3;

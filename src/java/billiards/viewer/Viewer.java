@@ -1235,7 +1235,7 @@ public final class Viewer {
                     final int index = Integer.parseInt(indexString) - 1;
 
                     if ((index < 0) || (index > fileCodeSequences.size() - 1)) {
-                        showInvaidLineNumberError(fileCodeSequences.size());
+                        showInvalidLineNumberError(fileCodeSequences.size());
                     } else {
                         setOBO(index, pool, executor);
                     }
@@ -1740,7 +1740,7 @@ public final class Viewer {
                     final int index = (Integer.parseInt(indexString) - 1) + stepSize;
 
                     if (index > fileCodeSequences.size() - 1) {
-                        showInvaidLineNumberError(fileCodeSequences.size());
+                        showInvalidLineNumberError(fileCodeSequences.size());
                     } else {
                         final String lineNum = Integer.toString(index + 1);
                         lineNumberTxt.setText(lineNum);
@@ -1802,7 +1802,7 @@ public final class Viewer {
                     final int index = (Integer.parseInt(indexString) - 1) - stepSize;
 
                     if (index < 0) {
-                        showInvaidLineNumberError(fileCodeSequences.size());
+                        showInvalidLineNumberError(fileCodeSequences.size());
                     } else {
                         final String lineNum = Integer.toString(index + 1);
                         lineNumberTxt.setText(lineNum);
@@ -3731,7 +3731,7 @@ public final class Viewer {
         
     }
 
-    private static void showInvaidLineNumberError(final int max) {
+    private static void showInvalidLineNumberError(final int max) {
         final Alert alert = new Alert(AlertType.ERROR);
 
         alert.setTitle("Invalid Line Number");

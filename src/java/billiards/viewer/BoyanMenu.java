@@ -650,6 +650,7 @@ public class BoyanMenu {
         }
         return new TreeSortedSet<>();
     }
+
     // Overloading of autoVary for seperate maximums during overrideSS
     public MutableSortedSet<ClassifiedCodeSequence> autoVary(
                 final Vector2 point, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS, final ExecutorService exe) {

@@ -96,6 +96,7 @@ public final class Utils {
             return false;
         }
     }
+
     // converts a side sequence to a code sequence
     public static Optional<ClassifiedCodeSequence> convert(final IntList codeList) {
 
