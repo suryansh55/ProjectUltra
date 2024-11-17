@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/format.hpp>
+#include <boost/numeric/conversion/cast.hpp>
 #include <chrono>
 
 #include "cover/cover.hpp"

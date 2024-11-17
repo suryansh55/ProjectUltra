@@ -91,4 +91,5 @@ void cover::save_cover(const std::string& dir, const cover::Cover& cover,
     boost::apply_visitor(visitor, cover);
 
     file << '\n';
+    file.close();
 }
