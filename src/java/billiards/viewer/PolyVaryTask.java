@@ -11,6 +11,7 @@ import javaslang.collection.Array;
 import javaslang.control.Either;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ExecutionException;
@@ -98,6 +99,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         final int todo = this.coordList.size();
         this.updateProgress(0, todo);
 
+        int emptyMax = 8; // Max number of empty pixels. Hardcoded for now
+        int empty = 0; // Number of empty pixels
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
         for(Vector2 coord: this.coordList) {
@@ -105,6 +108,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
             // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
             int color = pixelColor(coord);
+            this.updateProgress(progress.incrementAndGet(), todo);
             if(color != 0) continue; 
             try {
                 localCodes = autoCodesFiltered(coord, shotExecutor);
@@ -118,16 +122,32 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             }
             // We want to know if we submitted a task that will update the progress for us.
             boolean noCodes = true;
+            if(localCodes.size() == 0) {
+                ++empty;
+                if(empty >= emptyMax) {
+                    System.out.println("Finish Vary due to too many empty pixels");
+                    break;
+                }
+                this.updateProgress(progress.incrementAndGet(), todo);
+                continue;
+            }
 
+            // Check if any of the codes found were previously used
+            boolean used = false;
+            for(ClassifiedCodeSequence code: usedCodes) {
+                used = used || localCodes.contains(code);
+            }
+            for(ClassifiedCodeSequence code: this.onScreenCodes) {
+                used = used || localCodes.contains(code);
+            }
+            if(used) {
+                this.updateProgress(progress.incrementAndGet(), todo);
+                continue;
+            }
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
                 // If we find that a code in the list is already being processed, we can assume that this pixel is colored
                 if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) break;
-                boolean used = false;
-                for(ClassifiedCodeSequence code: usedCodes) {
-                    used = used || localCodes.contains(code);
-                }
-                if(used) break;
 
                 usedCodes.add(classCodeSeq); 
                 noCodes = false;
@@ -135,15 +155,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
                         @Override
                         public Either<String, Storage> call() {
-                            /* I don't think we need to check anything here anymore, since the combination of the earlier color check and the vary check ensure this pixel stays empty
-                            int color = pixelColor(coord);
-                            if(color == -1) return Either.left("");
-                            if(color != 0) {
-                                //System.out.println("//Pixel already filled, skipping");
-                                PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
-                                return Either.left("");
-                            }
-                            */
                             Either<String, Storage> result = loadStorage(classCodeSeq);
                             if(!PolyVaryTask.this.isCancelled()) PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
                             return result;
@@ -232,6 +243,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             final Vector2 coords = Vector2.create(points.get(i), points.get(i+1));
             out.add(coords);
         }
+        Collections.shuffle(out); // Randomize as an optimization
         return Array.ofAll(out);
     }
 
