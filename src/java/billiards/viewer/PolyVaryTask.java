@@ -99,7 +99,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         final int todo = this.coordList.size();
         this.updateProgress(0, todo);
 
-        int emptyMax = 8; // Max number of empty pixels. Hardcoded for now
+        int emptyMax = 8; // Max number of empty pixels. Hardcoded for now//george jan3,2025 you can change the 8 to whatever
         int empty = 0; // Number of empty pixels
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.

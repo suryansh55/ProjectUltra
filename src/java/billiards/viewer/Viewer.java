@@ -252,8 +252,8 @@ public final class Viewer {
     final Button stablesButton = new Button();
 
     final TextField box3 = new TextField();
-    final Button increaseBox3 = new Button();
-    final Button decreaseBox3 = new Button();
+    final Button addSubtractBox3 = new Button();
+    final Button addSubtractReverseBox3 = new Button();
 
     final HBox manualIncrementHBox = new HBox();
 
@@ -293,6 +293,15 @@ public final class Viewer {
     final TextField fourthPatternIterationsTextField = new TextField();
     final Label fourthPatternIncrementLabel = new Label();
     final TextField fourthPatternIncrementTextField = new TextField();
+
+    // Add/Subtract Pattern
+    final Label addSubtractPatternLabel = new Label();
+    final TextField addSubtractPatternTextField = new TextField();
+    final Label addSubtractPatternIterationsLabel = new Label();
+    final TextField addSubtractPatternIterationsTextField = new TextField();
+    final Label addSubtractPatternIncrementLabel = new Label();
+    final TextField addSubtractPatternIncrementTextField = new TextField();
+    final Button addSubtractIterationsButton = new Button();
 
     final Label leftrightsLabel= new Label();
     final Label leftrightsLabel2= new Label();
@@ -604,17 +613,17 @@ public final class Viewer {
         Utils.colorButton(decreaseBox2, Color.SKYBLUE, clickColor);
         decreaseBox2.setOnAction(event -> decrease(box2, pool));
 
-        increaseBox3.setText("Add 2");
-        Utils.colorButton(increaseBox3, Color.SKYBLUE, clickColor);
-        increaseBox3.setOnAction(event -> increase(box3, pool));
+        addSubtractBox3.setText("Add/Subtract 2");
+        Utils.colorButton(addSubtractBox3, Color.SKYBLUE, clickColor);
+        addSubtractBox3.setOnAction(event -> addSubtract(box3, pool));
 
-        decreaseBox3.setText("Subtract 2");
-        Utils.colorButton(decreaseBox3, Color.SKYBLUE, clickColor);
-        decreaseBox3.setOnAction(event -> decrease(box3, pool));
+        addSubtractReverseBox3.setText("Add/Subtract -2");
+        Utils.colorButton(addSubtractReverseBox3, Color.SKYBLUE, clickColor);
+        addSubtractReverseBox3.setOnAction(event -> addSubtractReverse(box3, pool));
 
         manualIncrementHBox.getChildren().addAll(box1, increaseBox1, decreaseBox1, box2,
-                                                 increaseBox2, decreaseBox2, box3, increaseBox3,
-                                                 decreaseBox3);
+                                                 increaseBox2, decreaseBox2, box3, addSubtractBox3,
+                                                 addSubtractReverseBox3);
         manualIncrementHBox.setSpacing(10);
 
         // First Pattern
@@ -707,6 +716,67 @@ public final class Viewer {
         fourthPatternIncrementTextField.setText("2");
         fourthPatternIncrementTextField.setPrefColumnCount(6);
 
+        // Add/Subtract Iteration Pattern
+        addSubtractPatternLabel.setText("Add/Subtract Pattern:");
+        addSubtractPatternTextField.setPrefColumnCount(24);
+
+        addSubtractPatternIterationsLabel.setText("Iterations:");
+        addSubtractPatternIterationsTextField.setText("0");
+        addSubtractPatternIterationsTextField.setPrefColumnCount(6);
+
+        addSubtractPatternIncrementLabel.setText("Increment:");
+        addSubtractPatternIncrementTextField.setText("2");
+        addSubtractPatternIncrementTextField.setPrefColumnCount(6);
+
+        // Zhao Yu Li, May 01, 2025
+        // Add/Subtract in iterations
+        // Positve index means adding the increment; negative index means subtracting the increment
+        addSubtractIterationsButton.setText("Calculate Add/Subtract Iterations");
+        Utils.colorButton(addSubtractIterationsButton, Color.SKYBLUE, clickColor);
+        addSubtractIterationsButton.setOnAction(event -> {
+            int size = 0;
+            for (MutableIntList list : currentCodeNumbers) {
+                if (!list.isEmpty()) {
+                    size += 1;
+                }
+            }
+
+            final int size1 = addSubtractPatternTextField.getText().trim().split(",").length;
+            final int size_lr = leftrightsTextArea.getText().length();
+
+            // the 1st box should have input of the correct size, else what's the point of running it?
+            if ((size1 != size) && (size_lr == 0)) {
+                final Alert alert = new Alert(AlertType.ERROR);
+
+                alert.setTitle("Iteration");
+                alert.setHeaderText("Invalid Input");
+                alert.setContentText("Please check the input");
+                alert.showAndWait();
+                return;
+            }
+
+            for (int i = 0; i < size; i++) {
+                final MutableIntList workingNumbers =
+                        IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
+                final String[] pat1 = addSubtractPatternTextField.getText().trim().split(",");
+
+                final String[] vectors = {Utils.ifGet(pat1, i)};
+
+                final int[] starts = new int[4];
+                Arrays.fill(starts, 0);
+
+                final int[] ends = {Integer.parseInt(addSubtractPatternIterationsTextField.getText().trim())};
+
+                final int[] steps = {Integer.parseInt(addSubtractPatternIncrementTextField.getText().trim())};
+
+                long start = System.currentTimeMillis();
+                iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor);
+                long end = System.currentTimeMillis();
+
+                System.out.println("Total time: " + Long.toString(end - start) + "ms");
+            }
+        });
+
         //LeftRights
         leftrightsLabel.setText("Left rights:");
         leftrightsLabel1.setText("Left rights 1:");
@@ -774,10 +844,17 @@ public final class Viewer {
                                   secondPatternIterationsLabel, secondPatternIterationsTextField,
                                   secondPatternIncrementLabel, secondPatternIncrementTextField);
 
+        // Zhao Yu Li, May 01, 2025.
+        // Add/Subtract Pattern
+        iterationsGridPane.addRow(2, addSubtractPatternLabel, addSubtractPatternTextField,
+                addSubtractPatternIterationsLabel, addSubtractPatternIterationsTextField,
+                addSubtractPatternIncrementLabel, addSubtractPatternIncrementTextField,
+                addSubtractIterationsButton);
+
         // Third Pattern
-        iterationsGridPane.addRow(2, thirdPatternLabel, thirdPatternTextField,
-                                  thirdPatternIterationsLabel, thirdPatternIterationsTextField,
-                                  thirdPatternIncrementLabel, thirdPatternIncrementTextField);
+//        iterationsGridPane.addRow(2, thirdPatternLabel, thirdPatternTextField,
+//                                  thirdPatternIterationsLabel, thirdPatternIterationsTextField,
+//                                  thirdPatternIncrementLabel, thirdPatternIncrementTextField);
 
         // Fourth Pattern
         /*iterationsGridPane.addRow(3, fourthPatternLabel, fourthPatternTextField,
@@ -6011,6 +6088,58 @@ public final class Viewer {
         return;
     }
 
+    /**
+     * Zhao Yu Li
+     * Adds and subtracts two from the code sequence at the same time. A positive index means we add two, whereas a
+     * negative index means we subtract two
+     */
+    private void addSubtract(final TextField textField, final ConnectionPool pool) {
+        // the indices to increment
+        final String[] pats = textField.getText().split(",");
+        String  result = "";
+
+        for (int i = 0; i < pats.length; i++) {
+            final int j = i;
+            final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
+            numbers.forEach(number -> {
+                final int value = number < 0 ? -2 : 2;
+                number = number < 0 ? -number : number;
+                final int currentNumber = currentCodeNumbers[j].get(number - 1);
+                currentCodeNumbers[j].set(number - 1, currentNumber + value);
+            });
+            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+        }
+        result += "~";
+        System.out.println(result.replace(", ~", ""));
+        synchronize();
+    }
+
+    /**
+     * Zhao Yu Li
+     * The reverse operation of addSubtract
+     * Adds and subtracts two from the code sequence at the same time. A negative index means we add two, whereas a
+     * positive index means we subtract two
+     */
+    private void addSubtractReverse(final TextField textField, final ConnectionPool pool) {
+        // the indices to increment
+        final String[] pats = textField.getText().split(",");
+        String  result = "";
+
+        for (int i = 0; i < pats.length; i++) {
+            final int j = i;
+            final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
+            numbers.forEach(number -> {
+                final int value = number < 0 ? -2 : 2;
+                number = number < 0 ? -number : number;
+                final int currentNumber = currentCodeNumbers[j].get(number - 1);
+                currentCodeNumbers[j].set(number - 1, currentNumber - value);
+            });
+            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+        }
+        result += "~";
+        System.out.println(result.replace(", ~", ""));
+        synchronize();
+    }
    
     private void increase(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
@@ -6095,8 +6224,13 @@ public final class Viewer {
         final IntList pattern, final int increment, final int length) {
         final MutableIntList vector = IntArrayList.newWithNValues(length, 0);
         pattern.forEach(index -> {
-            final int sum = Math.addExact(vector.get(index - 1), increment);
-            vector.set(index - 1, sum);
+            // Zhao Yu Li May 01, 2025.
+            // If a negative index is given, its aboslute value becomes the real index, and increment is subtracted from
+            // the code value at index
+            final int idx = index < 0 ? -index : index;
+            final int value = index < 0 ? -increment : increment;
+            final int sum = Math.addExact(vector.get(idx - 1), value);
+            vector.set(idx - 1, sum);
             
             //george aug 26,2019
             //System.out.print("sum " + sum + " ");
