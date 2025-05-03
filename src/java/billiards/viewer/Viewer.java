@@ -4636,7 +4636,9 @@ public final class Viewer {
 					}
 				}
 			} else {
-				result = "empty set " + codeSeq;
+                // Zhao Yu Li, May 02, 2025.
+                // Add '//' before 'empty set' so the cover can ignore it
+				result = "// empty set " + codeSeq;
 			}
 			codeWindow.show();
 		}
