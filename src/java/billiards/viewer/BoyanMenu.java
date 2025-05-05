@@ -124,12 +124,12 @@ public class BoyanMenu {
 
         sideSpacingLbl.setText("Shots");
 
-        movesLbl.setText("Side Sum");
+        movesLbl.setText("SideSum");
         
         maxMovesText.setPrefWidth(55);
         maxMovesText.setTooltip(Utils.toolTip("The maximum side sum to search for"));
         maxMovesText.setText("200");
-        minMovesText.setPrefWidth(55);
+        minMovesText.setPrefWidth(35);
         minMovesText.setTooltip(Utils.toolTip("The minimum side sum to search for"));
         minMovesText.setText("0");
         shotsText.setPrefWidth(35);//george set 40 instead of 60
@@ -230,7 +230,7 @@ public class BoyanMenu {
         allPixCheckBox.setTooltip(Utils.toolTip("For autoVary3, if this is on, no subdivisions are done."
                                                 + " Instead, each individual pixel is considered"));
 
-        vary3Btn.setText("V");
+        vary3Btn.setText("Vary");
         vary3Btn.setTooltip(Utils.toolTip("Search for codes at points specified above. See Instructions"
                                           + " for how to use this"));
         Utils.colorButton(vary3Btn, Color.SKYBLUE, Color.GOLD);
@@ -240,7 +240,7 @@ public class BoyanMenu {
         // A new button that performs the same computations as Vary, but only prints the middle code of each
         // (code type, code length) group.
         middleVaryButton.setText("MV");
-        middleVaryButton.setTooltip(Utils.toolTip("Search for codes at points specified above. But for codes of " +
+        middleVaryButton.setTooltip(Utils.toolTip("Middle Vary. Search for codes at points specified above. But for codes of " +
                 "the same type (i.e. CS, OSO, OSNO, etc.) and the same code length, only print the middle one."));
         Utils.colorButton(middleVaryButton, Color.SKYBLUE, Color.GOLD);
         middleVaryButton.setOnAction(event -> varyAction("Middle Vary", "middleVary3.txt", true));
