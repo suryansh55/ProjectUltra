@@ -755,6 +755,8 @@ public final class Viewer {
                 return;
             }
 
+            ArrayList<Array<ClassifiedCodeSequence>> codes = new ArrayList<>();
+
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
                         IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
@@ -769,11 +771,25 @@ public final class Viewer {
 
                 final int[] steps = {Integer.parseInt(addSubtractPatternIncrementTextField.getText().trim())};
 
-                long start = System.currentTimeMillis();
-                iterateAction(workingNumbers, vectors, starts, ends, steps, i, true, executor);
-                long end = System.currentTimeMillis();
+                Array<ClassifiedCodeSequence> res = iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor);
+                codes.add(res);
+            }
 
-                System.out.println("Total time: " + Long.toString(end - start) + "ms");
+            if (size1 == 3) {
+                for (int i = 0; i < codes.get(0).size(); i++) {
+                    String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
+                    if(printout.contains("empty set")) {
+                        printout = "// " + printout;
+                    }
+                    System.out.println(printout);		        }
+            } else {
+                for (int i = 0; i < codes.get(0).size(); i++) {
+                    String printout = codes.get(0).get(i) + "";
+                    if(printout.contains("empty set")) {
+                        printout = "// " + printout;
+                    }
+                    System.out.println(printout);
+                }
             }
         });
 
@@ -1043,7 +1059,7 @@ public final class Viewer {
             // System.out.println(codes.get(k).codeSequence.toString());
             //}
         });
-        ArrayList<ArrayList<ClassifiedCodeSequence>> codes2 = new ArrayList<>();
+        ArrayList<Array<ClassifiedCodeSequence>> codes2 = new ArrayList<>();
         iterationsCalculateButton.setOnAction(event -> {
             codes2.clear();
             int size = 0;
@@ -1079,6 +1095,8 @@ public final class Viewer {
             //String lr = leftrightsTextArea.getText();
             //System.out.println("asdsadas"+lr+"x");
 
+            ArrayList<Array<ClassifiedCodeSequence>> codes = new ArrayList<>();
+
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
                         IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
@@ -1106,9 +1124,11 @@ public final class Viewer {
                 // Ugly fix
 
                 // Label 8
-                long start = System.currentTimeMillis();
-                codes2.add(iterateAction(workingNumbers, vectors, starts, ends, steps, i, true, executor));
-                long end = System.currentTimeMillis();
+//                long start = System.currentTimeMillis();
+                Array<ClassifiedCodeSequence> res = iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor);
+                codes.add(res);
+                codes2.add(res);
+//                long end = System.currentTimeMillis();
 
 
                 // String[] iterations = Utils.readFromFile("iterations.txt").trim().split("\n");
@@ -1129,7 +1149,7 @@ public final class Viewer {
                     }
                 }*/
 
-                System.out.println("Total time: " + Long.toString(end - start) + "ms");
+//                System.out.println("Total time: " + Long.toString(end - start) + "ms");
                 // Label 9
                 //george aug 26,2019 using 1 3 3
                 //System.out.print("workingNumbers" + workingNumbers + "\n");//workingNumbers[1, 3, 3]
@@ -1137,25 +1157,23 @@ public final class Viewer {
                 //System.out.print("starts" + starts + "\n");//starts[I@39fcfd27
                 //System.out.print("ends" + ends + "\n");//ends[I@137af616
             }
-            /**
-             *         	if (size1 == 3) {
-             * 		        for (int i = 0; i < codes.get(0).size(); i++) {
-             * 		        	String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
-             * 		        	if(printout.contains("empty set")) {
-             * 		        		printout = "// " + printout;
-             *                                        }
-             * 		        	System.out.println(printout);* 		        }
-             *            } else {
-             *         		for (int i = 0; i < codes.get(0).size(); i++) {
-             *         			String printout = codes.get(0).get(i) + "";
-             *         			if(printout.contains("empty set")) {
-             * 		        		printout = "// " + printout;
-             *                    }
-             * 		        	System.out.println(printout);
-             *                }
-             *            }
-             *            */
 
+            if (size1 == 3) {
+                for (int i = 0; i < codes.get(0).size(); i++) {
+                	String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
+                	if(printout.contains("empty set")) {
+                		printout = "// " + printout;
+                                          }
+                	System.out.println(printout);		        }
+            } else {
+                for (int i = 0; i < codes.get(0).size(); i++) {
+                    String printout = codes.get(0).get(i) + "";
+                    if(printout.contains("empty set")) {
+                        printout = "// " + printout;
+                      }
+                    System.out.println(printout);
+                }
+            }
         });
         checkButton.setOnAction(event -> {
             int iter = Integer.parseInt(firstPatternIterationsTextField.getText().trim());
@@ -3265,7 +3283,7 @@ public final class Viewer {
         return expandoCodeSeqs ;*/
     }
 
-    private ArrayList<ClassifiedCodeSequence> iterateAction(final MutableIntList workingNumbers,
+    private Array<ClassifiedCodeSequence> iterateAction(final MutableIntList workingNumbers,
                                                             final String[] vectors, final int[] starts, final int[] ends, final int[] steps,
                                                             final int num, final boolean print, final ExecutorService executor) {
 
@@ -3299,9 +3317,6 @@ public final class Viewer {
             throw new RuntimeException("No selected left right button");
         }
 
-        //final Progress progress = new Progress(task);
-        final ArrayList<ClassifiedCodeSequence> finalClassCodeSeqs = new ArrayList<>();
-
         task.setOnSucceeded(e -> {
 
             final Array<Storage> storages;
@@ -3317,7 +3332,6 @@ public final class Viewer {
                 final int index = cycle.get();
                 final Color color = comboBoxColors.get(index);
                 ClassifiedCodeSequence code= storage.classCodeSeq;
-                finalClassCodeSeqs.add(code);
                 addToOnScreenSequences(storage, color);
             });
 
@@ -3364,7 +3378,7 @@ public final class Viewer {
 
         //progress.show();
 
-        return finalClassCodeSeqs;
+        return classCodeSeqs;
     }
 
     private LinkedHashSet<ClassifiedCodeSequence> iterateThru(
@@ -3404,7 +3418,7 @@ public final class Viewer {
                            final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
                            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
 
-        List <String> codeList = Arrays.asList(Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
+        List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
         codeList.replaceAll(j -> Utils.tripleTrimmer(j));
         // Create the task
         final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor);
@@ -5511,14 +5525,14 @@ public final class Viewer {
             int i = max == 0 ? localCodesFound.size() : max;
             int codeNum = 0;
             final int maxPrint = i;
-            List <String> codeList = Arrays.asList(Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
+            List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
             codeList.replaceAll(j -> Utils.tripleTrimmer(j));
 
             for (ClassifiedCodeSequence code : codes) {
                 if(i == 0) break; // Already printed out the first i codes
                 if (code.codeType.equals(CodeType.OSO) && code.codeLength > OSOmax) {
                     continue;
-                } else if (code.codeType.equals(CodeType.OSNO) && code.codeLength > OSNOmax) {
+                } else if (code.codeType.equals(OSNO) && code.codeLength > OSNOmax) {
                     continue;
                 } else if (code.codeType.equals(CodeType.CS) && code.codeLength > CSmax) {
                     continue;
@@ -5928,7 +5942,7 @@ public final class Viewer {
                         // make sure to add a space after the xxx
                         if (type.equals(CodeType.CS)) {
                             codeStr += "  ";
-                        } else if (!type.equals(CodeType.OSNO)) {
+                        } else if (!type.equals(OSNO)) {
                             codeStr += " ";
                         }
                         msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
@@ -5966,7 +5980,7 @@ public final class Viewer {
                     // make sure to add a space after the xxx
                     if (type.equals(CodeType.CS)) {
                         codeStr += "  ";
-                    } else if (!type.equals(CodeType.OSNO)) {
+                    } else if (!type.equals(OSNO)) {
                         codeStr += " ";
                     }
                     msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
@@ -6026,7 +6040,7 @@ public final class Viewer {
                     // make sure to add a space after the xxx
                     if (type.equals(CodeType.CS)) {
                         codeStr += "  ";
-                    } else if (!type.equals(CodeType.OSNO)) {
+                    } else if (!type.equals(OSNO)) {
                         codeStr += " ";
                     }
                     msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
