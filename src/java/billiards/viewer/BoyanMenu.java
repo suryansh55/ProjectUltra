@@ -59,6 +59,7 @@ public class BoyanMenu {
 
     final VBox wrapper = new VBox();
 
+    final Button middleVaryButton = new Button();
     final Button vary3Btn = new Button();
     final Button vary3BBtn = new Button();
     
@@ -229,80 +230,20 @@ public class BoyanMenu {
         allPixCheckBox.setTooltip(Utils.toolTip("For autoVary3, if this is on, no subdivisions are done."
                                                 + " Instead, each individual pixel is considered"));
 
-        vary3Btn.setText("Vary");
+        vary3Btn.setText("V");
         vary3Btn.setTooltip(Utils.toolTip("Search for codes at points specified above. See Instructions"
                                           + " for how to use this"));
         Utils.colorButton(vary3Btn, Color.SKYBLUE, Color.GOLD);
-        vary3Btn.setOnAction(event -> {
+        vary3Btn.setOnAction(event -> varyAction("Vary", "vary3.txt", false));
 
-        	final long startTime = System.currentTimeMillis();//george june 12,2019 added in !CS2cb.isSelected() && !CNS2cb.isSelected() && !ONS2cb.isSelected() && !OSNO2cb.isSelected() && !OSO2cb.isSelected()
-        	if (!CScb.isSelected() && !CNScb.isSelected() && !ONScb.isSelected() && !OSNOcb.isSelected() && !OSOcb.isSelected()) {
-        		final Alert alert = new Alert(AlertType.ERROR);
-
-                alert.setTitle("Vary");
-                alert.setHeaderText("No CodeTypes");
-                alert.setContentText("Please select at least one codetype.");
-                alert.showAndWait();
-        	} else {
-	            final int shots = Integer.parseInt(shotsText.getText());
-	            final int max = Integer.parseInt(maxMovesText.getText());
-	            final int min = Integer.parseInt(minMovesText.getText());
-
-	            final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-
-	            System.out.println(String.format(
-	                "//------------------------- Vary %d shots at %d to %d moves -------------------------//", shots, min, max));
-
-	            final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
-	            		= new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
-
-					@Override
-					protected MutableSortedSet<ClassifiedCodeSequence> call() throws Exception {
-						return varyTriangles(3, executor);
-					}
-
-	            };
-
-	            //final Progress progress = new Progress(varyTask);
-	            final ProgressWithStatus progress = new ProgressWithStatus(varyTask, "Calling findCodes3 (no status)", 0);
-	            final Thread varyThread = new Thread(varyTask);
-
-	            varyTask.setOnSucceeded(success -> {
-					try {
-						MutableSortedSet<ClassifiedCodeSequence> allCodes = varyTask.get();
-						allCodes.forEach(seq -> Database.saveToDatabase(seq, "garbage"));
-						hitsLabel.setText("" + allCodes.size());
-			            printCodes(allCodes, "vary3.txt", true, true, allCodes.size());
-					} catch (InterruptedException | ExecutionException e) {
-						throw new RuntimeException(e);
-					}
-					final long endTime = System.currentTimeMillis();
-		        	System.out.println("Time: " + (endTime - startTime));
-		        	System.out.println("Time: " + Utils.timeConvert(endTime - startTime));
-		        	executor.shutdown();
-		        	progress.close();
-	            });
-
-	            varyTask.setOnCancelled(cancelled -> {
-	            	System.out.println("// Vary Cancelled");
-	            	varyThread.interrupt();
-	            	executor.shutdownNow();
-	            	progress.close();
-	            });
-	            varyTask.setOnFailed(fail -> {
-	            	System.out.println("// Vary failed");
-		        	executor.shutdown();
-	            	progress.close();
-	            });
-
-	        	varyThread.start();
-
-	            progress.show();
-        	}
-
-        });
-
-
+        // Zhao Yu Li, May 05, 2025.
+        // A new button that performs the same computations as Vary, but only prints the middle code of each
+        // (code type, code length) group.
+        middleVaryButton.setText("MV");
+        middleVaryButton.setTooltip(Utils.toolTip("Search for codes at points specified above. But for codes of " +
+                "the same type (i.e. CS, OSO, OSNO, etc.) and the same code length, only print the middle one."));
+        Utils.colorButton(middleVaryButton, Color.SKYBLUE, Color.GOLD);
+        middleVaryButton.setOnAction(event -> varyAction("Middle Vary", "middleVary3.txt", true));
 
         vary3BBtn.setText("Vary3B");
         vary3BBtn.setTooltip(Utils.toolTip("Search for codes at points specified above. See Instructions"
@@ -498,7 +439,7 @@ public class BoyanMenu {
         //new HBox(10, buildPolyCheckBox, varyLBtn, hitsLabel, autoCycleText, //george june 18,2019 replaced vary3Btn with vary4Btn
             //    maxPrinting); //, autoIterText, autoStepText
 
-        final HBox newHBox= new HBox(10, vary3Btn, hitsLabel, minMovesText, maxMovesText, movesLbl, shotsText, sideSpacingLbl);
+        final HBox newHBox= new HBox(10, middleVaryButton, vary3Btn, hitsLabel, minMovesText, maxMovesText, movesLbl, shotsText, sideSpacingLbl);
         newHBox.setPadding(new Insets(0, 10, 10, 0));
         newHBox.setAlignment(Pos.CENTER);
 
@@ -526,6 +467,76 @@ public class BoyanMenu {
         //wrapper.getChildren().addAll(varyLine1HBox, varyLine2HBox, varyLine3HBox,
          //                            varyInfoHBox, codeTypes2HBox, vary3HBox, autoHBox);
     }//george june 12,2019 changed codeTypesHBox to codeTypes2HBox
+
+    // Zhao Yu Li, May 05, 2025.
+    // Function that performs the Vary computations. This function is only used for Vary and MiddleVary because they
+    // carry out the same computations, but just prints the results differently.
+    private void varyAction(String title, String outFile, boolean printMid) {
+        final long startTime = System.currentTimeMillis();//george june 12,2019 added in !CS2cb.isSelected() && !CNS2cb.isSelected() && !ONS2cb.isSelected() && !OSNO2cb.isSelected() && !OSO2cb.isSelected()
+        if (!CScb.isSelected() && !CNScb.isSelected() && !ONScb.isSelected() && !OSNOcb.isSelected() && !OSOcb.isSelected()) {
+            final Alert alert = new Alert(AlertType.ERROR);
+
+            alert.setTitle(title);
+            alert.setHeaderText("No CodeTypes");
+            alert.setContentText("Please select at least one codetype.");
+            alert.showAndWait();
+        } else {
+            final int shots = Integer.parseInt(shotsText.getText());
+            final int max = Integer.parseInt(maxMovesText.getText());
+            final int min = Integer.parseInt(minMovesText.getText());
+
+            final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
+
+            System.out.println(String.format(
+                    "//------------------------- Vary %d shots at %d to %d moves -------------------------//", shots, min, max));
+
+            final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
+                    = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
+
+                @Override
+                protected MutableSortedSet<ClassifiedCodeSequence> call() throws Exception {
+                    return varyTriangles(3, executor);
+                }
+
+            };
+
+            //final Progress progress = new Progress(varyTask);
+            final ProgressWithStatus progress = new ProgressWithStatus(varyTask, "Calling findCodes3 (no status)", 0);
+            final Thread varyThread = new Thread(varyTask);
+
+            varyTask.setOnSucceeded(success -> {
+                try {
+                    MutableSortedSet<ClassifiedCodeSequence> allCodes = varyTask.get();
+                    allCodes.forEach(seq -> Database.saveToDatabase(seq, "garbage"));
+                    hitsLabel.setText("" + allCodes.size());
+                    printCodes(allCodes, outFile, true, true, allCodes.size(), printMid);
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);
+                }
+                final long endTime = System.currentTimeMillis();
+                System.out.println("Time: " + (endTime - startTime));
+                System.out.println("Time: " + Utils.timeConvert(endTime - startTime));
+                executor.shutdown();
+                progress.close();
+            });
+
+            varyTask.setOnCancelled(cancelled -> {
+                System.out.println("// " + title + " Cancelled");
+                varyThread.interrupt();
+                executor.shutdownNow();
+                progress.close();
+            });
+            varyTask.setOnFailed(fail -> {
+                System.out.println("// " + title + " failed");
+                executor.shutdown();
+                progress.close();
+            });
+
+            varyThread.start();
+
+            progress.show();
+        }
+    }
 
     public void click(final double xDeg, final double yDeg) {
 
@@ -949,11 +960,8 @@ public class BoyanMenu {
 
     // a method for printing a set of codes. Can set print to false, which makes this function just write
     // to the file.
-
-    // a method for printing a set of codes. Can set print to false, which makes this function just write
-    // to the file.
     public static void printCodes(final MutableSortedSet<ClassifiedCodeSequence> allCodes, final String file,
-    		                      final boolean print, final boolean erase, final int Number) {
+    		                      final boolean print, final boolean erase, final int Number, final boolean printMid) {
 
     	final Path path = Paths.get(file);
 
@@ -975,23 +983,62 @@ public class BoyanMenu {
         	pw.close();
         }
 
-        final ArrayList<ClassifiedCodeSequence> organizedCodes = new ArrayList<>();
+        final ArrayList<ClassifiedCodeSequence> splitCodes;
+        final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
         if (splitUp) {
-            final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
             for (final CodeType type : codeTypes) {
                 for (final ClassifiedCodeSequence code : allCodes) {
                     if (code.codeType.equals(type)) {
-                        organizedCodes.add(code);
+                        splitCodes.add(code);
                     }
                 }
             }
         } else {
-            organizedCodes.addAll(allCodes);
+            splitCodes = new ArrayList<>(allCodes);
         }
+
+        final ArrayList<ClassifiedCodeSequence> organizedCodes = new ArrayList<>(splitCodes);
+
+        // Zhao Yu Li, May 05, 2025.
+        // Prints only the middle code of the list of codes with the same type (i.e. CS, OSNO, OSO, etc.)
+        // and code length.
+        if (printMid) {
+            organizedCodes.clear();
+            for (final CodeType type : codeTypes) {
+                int lengthCount = 0;
+                long currentLength = -1;
+                final ArrayList<ClassifiedCodeSequence> tempCodes = new ArrayList<>();
+
+                for (final ClassifiedCodeSequence code : splitCodes) {
+                    if (code.codeType.equals(type)) {
+                        if (currentLength == -1) {
+                            currentLength = code.codeLength;
+                        }
+
+                        if (code.codeLength == currentLength) {
+                            lengthCount++;
+                            tempCodes.add(code);
+                        } else {
+                            // Only add the middle one
+                            organizedCodes.add(tempCodes.get(lengthCount / 2));
+
+                            tempCodes.clear();
+                            tempCodes.add(code);
+                            currentLength = code.codeLength;
+                            lengthCount = 1;
+                        }
+                    }
+                }
+
+                // We reached the end of the iteration, add the middle of last (code type, code length) group
+                if (!tempCodes.isEmpty()) organizedCodes.add(tempCodes.get(lengthCount / 2));
+            }
+
+        }
+
         int count = 0;
         ArrayList<String> codes = new ArrayList<>();
         for (final ClassifiedCodeSequence code : organizedCodes) {
-
         	count += 1;
     		final String codeString = Utils.standard(code, count);
         	if (count <= Number && print) {
@@ -1046,6 +1093,13 @@ public class BoyanMenu {
             }
 
         }
+    }
+
+    // a method for printing a set of codes. Can set print to false, which makes this function just write
+    // to the file.
+    public static void printCodes(final MutableSortedSet<ClassifiedCodeSequence> allCodes, final String file,
+                                  final boolean print, final boolean erase, final int Number) {
+        printCodes(allCodes, file, print, erase, Number, false);
     }
 
     public String typeString() {
