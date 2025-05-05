@@ -775,6 +775,7 @@ public final class Viewer {
                 codes.add(res);
             }
 
+            // Prints each triple in one line
             if (size1 == 3) {
                 for (int i = 0; i < codes.get(0).size(); i++) {
                     String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
@@ -1158,6 +1159,7 @@ public final class Viewer {
                 //System.out.print("ends" + ends + "\n");//ends[I@137af616
             }
 
+            // Prints each triple in one line
             if (size1 == 3) {
                 for (int i = 0; i < codes.get(0).size(); i++) {
                 	String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
@@ -5408,6 +5410,8 @@ public final class Viewer {
                 count += 1;
                 line = Utils.trimCodeLine(line);
 
+                // Zhao Yu Li, May 05, 2025.
+                // Prints code from file
                 if (print) System.out.println(line);
 
                 if (!line.isEmpty() && !line.contains("s") && !line.contains("S") &&
