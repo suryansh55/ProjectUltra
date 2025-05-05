@@ -168,7 +168,7 @@ public final class PolyTrimmer {
 
         if (file != null) {
             final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup = Viewer.parseFile(file.toPath());
+                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup = Viewer.parseFile(file.toPath(), false);
 
             final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
 

@@ -195,7 +195,7 @@ public final class Viewer {
 
     // The map has the default viewing rectangle, and that is the beginning place to go
     final BackwardForward<Rectangle> viewRectangleBF =
-        BackwardForward.create(map.getViewRectangle());
+            BackwardForward.create(map.getViewRectangle());
 
     // these are the code sequences that are currently on screen
     // we want to remember the ordering everything gets
@@ -248,7 +248,7 @@ public final class Viewer {
     final TextField box2 = new TextField();
     final Button increaseBox2 = new Button();
     final Button decreaseBox2 = new Button();
-    
+
     final Button stablesButton = new Button();
 
     final TextField box3 = new TextField();
@@ -321,7 +321,7 @@ public final class Viewer {
     final TextField expandoIterations=new TextField();
     final Label expandoElementsLabel = new Label();
     final TextField expandoElements=new TextField();
-   //caculate expando button
+    //caculate expando button
     final Button expandoCalculateButton= new Button();
 
 
@@ -547,9 +547,9 @@ public final class Viewer {
         coverWindow = new CoverWindow(
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover", executor));
-                
+
         final StablesWindow stablesWindow = new StablesWindow(coverWindow);
-        
+
         final CoverWindow2 coverWindow2 = new CoverWindow2(
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover2", executor));
@@ -568,12 +568,12 @@ public final class Viewer {
         Utils.setupCustomTooltipBehavior((int) (TipOpenDelay * 1000), (int) (TipCloseDelay * 1000), 200);
 
         for (int i=0; i < 3; i++) {
-	        plusButtons[i].setSpacing(10);
-	        minusButtons[i].setSpacing(10);
-	        plusButtons[i].setAlignment(Pos.CENTER);
-	        minusButtons[i].setAlignment(Pos.CENTER);
-	        btnsVBox.getChildren().add(plusButtons[i]);
-	        btnsVBox.getChildren().add(minusButtons[i]);
+            plusButtons[i].setSpacing(10);
+            minusButtons[i].setSpacing(10);
+            plusButtons[i].setAlignment(Pos.CENTER);
+            minusButtons[i].setAlignment(Pos.CENTER);
+            btnsVBox.getChildren().add(plusButtons[i]);
+            btnsVBox.getChildren().add(minusButtons[i]);
         }
         btnsVBox.setPrefHeight(228);
         btnsVBox.setPadding(new Insets(10, 0, 10, 10));
@@ -585,14 +585,14 @@ public final class Viewer {
 
         iterationStart.setPrefColumnCount(8);
         iterationStart.setTooltip(Utils.toolTip("See instructions for how to use 'Load File'. This is"
-                                                + " the iteration start when you load a file containing iterations"));
+                + " the iteration start when you load a file containing iterations"));
         iterationStart.setText("0");
         iterationStart.setPrefWidth(30);
         iterationStart.setStyle(textBoxColor);
 
         iterationEnd.setPrefColumnCount(8);
         iterationEnd.setTooltip(Utils.toolTip("See instructions for how to use 'Load File'. This is"
-                                              + " the iteration end when you load a file containing iterations"));
+                + " the iteration end when you load a file containing iterations"));
         iterationEnd.setText("0");
         iterationEnd.setPrefWidth(40);
         iterationEnd.setStyle(textBoxColor);
@@ -622,8 +622,8 @@ public final class Viewer {
         addSubtractReverseBox3.setOnAction(event -> addSubtractReverse(box3, pool));
 
         manualIncrementHBox.getChildren().addAll(box1, increaseBox1, decreaseBox1, box2,
-                                                 increaseBox2, decreaseBox2, box3, addSubtractBox3,
-                                                 addSubtractReverseBox3);
+                increaseBox2, decreaseBox2, box3, addSubtractBox3,
+                addSubtractReverseBox3);
         manualIncrementHBox.setSpacing(10);
 
         // First Pattern
@@ -770,7 +770,7 @@ public final class Viewer {
                 final int[] steps = {Integer.parseInt(addSubtractPatternIncrementTextField.getText().trim())};
 
                 long start = System.currentTimeMillis();
-                iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor);
+                iterateAction(workingNumbers, vectors, starts, ends, steps, i, true, executor);
                 long end = System.currentTimeMillis();
 
                 System.out.println("Total time: " + Long.toString(end - start) + "ms");
@@ -836,13 +836,13 @@ public final class Viewer {
 
         // First Pattern
         iterationsGridPane.addRow(0, firstPatternLabel, firstPatternTextField,
-                                  firstPatternIterationsLabel, firstPatternIterationsTextField,
-                                  firstPatternIncrementLabel, firstPatternIncrementTextField);
+                firstPatternIterationsLabel, firstPatternIterationsTextField,
+                firstPatternIncrementLabel, firstPatternIncrementTextField);
 
         // Second Pattern
         iterationsGridPane.addRow(1, secondPatternLabel, secondPatternTextField,
-                                  secondPatternIterationsLabel, secondPatternIterationsTextField,
-                                  secondPatternIncrementLabel, secondPatternIncrementTextField);
+                secondPatternIterationsLabel, secondPatternIterationsTextField,
+                secondPatternIncrementLabel, secondPatternIncrementTextField);
 
         // Zhao Yu Li, May 01, 2025.
         // Add/Subtract Pattern
@@ -976,15 +976,15 @@ public final class Viewer {
             }
             else if (uselrTestBtn.isSelected()){
                 for(int i = 0; i < codes.length();++i)
-                    {
-                        Optional<Info> opt_info = Wrapper.loadInfo(codes.get(i), pool);
-                        if (opt_info.isPresent()) {
-                            System.out.println(codes.get(i) + " using the normal way to calculate");
-                        }
-                        else {
-                            System.out.println(codes.get(i) + " empty set");
-                        }
+                {
+                    Optional<Info> opt_info = Wrapper.loadInfo(codes.get(i), pool);
+                    if (opt_info.isPresent()) {
+                        System.out.println(codes.get(i) + " using the normal way to calculate");
                     }
+                    else {
+                        System.out.println(codes.get(i) + " empty set");
+                    }
+                }
             }
             else{
                 is_alert=true;
@@ -1040,39 +1040,39 @@ public final class Viewer {
             // uncommment below to print
             //for(int k = 0;k < codes.size();k++)
             //{
-              // System.out.println(codes.get(k).codeSequence.toString());
+            // System.out.println(codes.get(k).codeSequence.toString());
             //}
         });
         ArrayList<ArrayList<ClassifiedCodeSequence>> codes2 = new ArrayList<>();
         iterationsCalculateButton.setOnAction(event -> {
             codes2.clear();
-        	int size = 0;
-        	for (MutableIntList list : currentCodeNumbers) {
-        		if (!list.isEmpty()) {
-        			size += 1;
-        		}
-        	}
+            int size = 0;
+            for (MutableIntList list : currentCodeNumbers) {
+                if (!list.isEmpty()) {
+                    size += 1;
+                }
+            }
 
-        	final int size1 = firstPatternTextField.getText().trim().split(",").length;
-        	final int size2 = secondPatternTextField.getText().trim().split(",").length;
-        	final int size3 = thirdPatternTextField.getText().trim().split(",").length;
-        	final int size4 = fourthPatternTextField.getText().trim().split(",").length;
+            final int size1 = firstPatternTextField.getText().trim().split(",").length;
+            final int size2 = secondPatternTextField.getText().trim().split(",").length;
+            final int size3 = thirdPatternTextField.getText().trim().split(",").length;
+            final int size4 = fourthPatternTextField.getText().trim().split(",").length;
             final int size_lr = leftrightsTextArea.getText().length();
 
-        	// the 1st box should have input of the correct size, else what's the point of running it?
-        	// the 2nd, 3rd and 4th boxes should be correct size or empty
-        	if (((size1 != size) || (size2 != size && !secondPatternTextField.getText().trim().isEmpty())
+            // the 1st box should have input of the correct size, else what's the point of running it?
+            // the 2nd, 3rd and 4th boxes should be correct size or empty
+            if (((size1 != size) || (size2 != size && !secondPatternTextField.getText().trim().isEmpty())
                     || (size3 != size && !thirdPatternTextField.getText().trim().isEmpty())
                     || (size4 != size && !fourthPatternTextField.getText().trim().isEmpty())
                     || (size != 1 && size != 3)) && (size_lr == 0)) {
-        		final Alert alert = new Alert(AlertType.ERROR);
+                final Alert alert = new Alert(AlertType.ERROR);
 
                 alert.setTitle("Iteration");
                 alert.setHeaderText("Invalid Input");
                 alert.setContentText("Please check the input");
                 alert.showAndWait();
                 return;
-        	}
+            }
             //System.out.println(size+"\n");
             // Shiyu, get left right string
 
@@ -1080,38 +1080,38 @@ public final class Viewer {
             //System.out.println("asdsadas"+lr+"x");
 
             for (int i = 0; i < size; i++) {
-        		final MutableIntList workingNumbers =
-                    IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
-        		final String[] pat1 = firstPatternTextField.getText().trim().split(",");
-        		final String[] pat2 = secondPatternTextField.getText().trim().split(",");
-        		final String[] pat3 = thirdPatternTextField.getText().trim().split(",");
-        		final String[] pat4 = fourthPatternTextField.getText().trim().split(",");
+                final MutableIntList workingNumbers =
+                        IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
+                final String[] pat1 = firstPatternTextField.getText().trim().split(",");
+                final String[] pat2 = secondPatternTextField.getText().trim().split(",");
+                final String[] pat3 = thirdPatternTextField.getText().trim().split(",");
+                final String[] pat4 = fourthPatternTextField.getText().trim().split(",");
 
                 final String[] vectors = {Utils.ifGet(pat1, i), Utils.ifGet(pat2, i),
-                						  Utils.ifGet(pat3, i), Utils.ifGet(pat4, i)};
+                        Utils.ifGet(pat3, i), Utils.ifGet(pat4, i)};
 
                 final int[] starts = new int[4];
                 Arrays.fill(starts, 0);
 
                 final int[] ends = {Integer.parseInt(firstPatternIterationsTextField.getText().trim()),
-                                    Integer.parseInt(secondPatternIterationsTextField.getText().trim()),
-                                    Integer.parseInt(thirdPatternIterationsTextField.getText().trim()),
-                                    Integer.parseInt(fourthPatternIterationsTextField.getText().trim())};
+                        Integer.parseInt(secondPatternIterationsTextField.getText().trim()),
+                        Integer.parseInt(thirdPatternIterationsTextField.getText().trim()),
+                        Integer.parseInt(fourthPatternIterationsTextField.getText().trim())};
 
                 final int[] steps = {Integer.parseInt(firstPatternIncrementTextField.getText().trim()),
-                                     Integer.parseInt(secondPatternIncrementTextField.getText().trim()),
-                                     Integer.parseInt(thirdPatternIncrementTextField.getText().trim()),
-                                     Integer.parseInt(fourthPatternIncrementTextField.getText().trim())};
+                        Integer.parseInt(secondPatternIncrementTextField.getText().trim()),
+                        Integer.parseInt(thirdPatternIncrementTextField.getText().trim()),
+                        Integer.parseInt(fourthPatternIncrementTextField.getText().trim())};
                 //System.out.print("workingNumbers1" + workingNumbers + "\n");//workingNumbers[0, 0, 0]
                 // Ugly fix
 
                 // Label 8
                 long start = System.currentTimeMillis();
-                codes2.add(iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor));
+                codes2.add(iterateAction(workingNumbers, vectors, starts, ends, steps, i, true, executor));
                 long end = System.currentTimeMillis();
 
 
-               // String[] iterations = Utils.readFromFile("iterations.txt").trim().split("\n");
+                // String[] iterations = Utils.readFromFile("iterations.txt").trim().split("\n");
                 /*ConnectionPool newPool = Admin.getConnectionPool(dbName, Utils.numThreads);
 
                 for (ClassifiedCodeSequence code : codes.get(0)){
@@ -1211,13 +1211,13 @@ public final class Viewer {
 
         codeWindowVBox.setPadding(new Insets(10));
         codeWindowVBox.getChildren().addAll(btnsVBox, manualIncrementHBox,
-                                            iterationsGridPane, calculateIterationsHBox);
+                iterationsGridPane, calculateIterationsHBox);
         codeWindowVBox.setSpacing(10);
 
 
         calculateIterationsHBox.getChildren().addAll(txtCodeSequence2, btnCalculate2,
-                                                     labelCodeWindow, iterationsCalculateButton,
-                                                     nolrRdoBtn, showlrRdoBtn, uselrRdoBtn, uselrTestBtn);
+                labelCodeWindow, iterationsCalculateButton,
+                nolrRdoBtn, showlrRdoBtn, uselrRdoBtn, uselrTestBtn);
         calculateIterationsHBox.setSpacing(10);
 
         zoomScaleLabel.setText("Zoom Scale:");
@@ -1324,27 +1324,27 @@ public final class Viewer {
 
         autoVaryBtn.setText("Auto Vary3");
         autoVaryBtn.setTooltip(Utils.toolTip("Search for code sequences which cover points on this "
-                                             + "whole screen. See instructions for details"));
+                + "whole screen. See instructions for details"));
         Utils.colorButton(autoVaryBtn, Color.SKYBLUE, Color.GOLD);
         autoVaryBtn.setOnAction(event -> {
-        	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
-        		final Alert alert = new Alert(AlertType.ERROR);
+            if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
+                final Alert alert = new Alert(AlertType.ERROR);
 
                 alert.setTitle("Vary");
                 alert.setHeaderText("No CodeTypes");
                 alert.setContentText("Please Select at least one codetype.");
                 alert.showAndWait();
-        	}
-        	else {
-        		final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
-        		polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), Optional.empty(), false, false, executor);
-        	}
+            }
+            else {
+                final ConvexPolygon screen = map.getViewRectangle().toConvexPolygon();
+                polyVaryFunction(Tuple.of(screen, 800, 300, 150, 800, 100, 100), Optional.empty(), Optional.empty(), false, false, executor);
+            }
         });
 
         polyVaryBtn.setText("BoyanVary");
         polyVaryBtn.setTooltip(Utils.toolTip("Search for code sequences which cover points in a "
-                                             + "specified polygon. See instructions for details"));
+                + "specified polygon. See instructions for details"));
         Utils.colorButton(polyVaryBtn, Color.LIGHTPINK, Color.GOLD);
         polyVaryBtn.setOnAction(event -> {
             if (compareCheckBox.isSelected()) {
@@ -1355,34 +1355,34 @@ public final class Viewer {
                 alert.showAndWait();
                 return;
             }
-        	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !PolyVaryLoad.Override) {
+            if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !PolyVaryLoad.Override) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("PolyVary");
                 alert.setHeaderText("No CodeTypes");
                 alert.setContentText("Please Select at least one codetype.");
                 alert.showAndWait();
                 return;
-        	}
+            }
             if (boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
                     || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
                 final Alert alert = new Alert(AlertType.WARNING);
                 alert.setHeaderText("CodeTypes other than CS are chosen");
                 alert.setContentText("Make sure you have the correct CodeTypes chosen.");
                 alert.showAndWait();
-                // return;  <-- Don't exit from this call, because PolyVary can still run with 
+                // return;  <-- Don't exit from this call, because PolyVary can still run with
             }
             if (boyanMenu.CScb.isSelected() || boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
-                        || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
-	            final Rectangle screen = map.getViewRectangle();
-	            final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt =
-	                new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
-	            if (polyOpt.isPresent()) {
+                    || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
+                final Rectangle screen = map.getViewRectangle();
+                final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt =
+                        new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
+                if (polyOpt.isPresent()) {
                     final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
-	                autoVaryArea = Optional.of(polyVals._1);
-	                polyVaryFunction(polyVals, Optional.empty(), Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, executor);
-	                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-	            }
+                    autoVaryArea = Optional.of(polyVals._1);
+                    polyVaryFunction(polyVals, Optional.empty(), Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, executor);
+                    renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                }
             }
         });
 
@@ -1390,33 +1390,33 @@ public final class Viewer {
         varyLBtn.setTooltip(Utils.toolTip("Search for codes at a list of points"));
         Utils.colorButton(varyLBtn, Color.LIGHTPINK, Color.GOLD);
         varyLBtn.setOnAction(event -> {
-        	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !VaryWindowL.Override) {
-        		final Alert alert = new Alert(AlertType.ERROR);
+            if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !VaryWindowL.Override) {
+                final Alert alert = new Alert(AlertType.ERROR);
 
                 alert.setTitle("Vary");
                 alert.setHeaderText("No CodeTypes");
                 alert.setContentText("Please select at least one codetype.");
                 alert.showAndWait();
-        	}
-        	else {
-	        	final String x = textXLockField.getText();
-	        	final String y = textYLockField.getText();
+            }
+            else {
+                final String x = textXLockField.getText();
+                final String y = textYLockField.getText();
 
-	        	if (varyWindow.stage.isShowing()) {
-	    			varyWindow.stage.toFront();
-	        		if (!boyanMenu.varyOnePoint.isSelected()) {
-	        			return;
-	        		}
-	        	}
+                if (varyWindow.stage.isShowing()) {
+                    varyWindow.stage.toFront();
+                    if (!boyanMenu.varyOnePoint.isSelected()) {
+                        return;
+                    }
+                }
 
-	        	final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
-	        			varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
-	        	if (pointOpt.isPresent()) {
+                final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
+                        varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
+                if (pointOpt.isPresent()) {
 
-	        		final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
-	        		System.out.println(
-	        				"//~~~~~~~~~~~~~~~~~~~~~~~ varyL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
+                    final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
+                    System.out.println(
+                            "//~~~~~~~~~~~~~~~~~~~~~~~ varyL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
 
                     final MutableList<Vector2> pointList = point._1;
                     // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
@@ -1434,114 +1434,114 @@ public final class Viewer {
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor);
-	        	}
-        	}
+                }
+            }
         });
-        
+
         lineStartField.setPromptText("Start");
         lineStartField.setPrefWidth(60);
         lineStepField.setPromptText("Step");
         lineStepField.setPrefWidth(60);
         lineEndField.setPromptText("End");
         lineEndField.setPrefWidth(60);
-        
+
         //autoPolyVaryBtn.setText("AutoPolyVary");
         autoPolyVaryBtn.setText("AustinMaxVary");
         autoPolyVaryBtn.setTooltip(Utils.toolTip("Automatically Call PolyVary on existing holes."));
         Utils.colorButton(autoPolyVaryBtn, Color.GREEN, Color.GOLD);
         autoPolyVaryBtn.setOnAction(event -> {
-        	if (fileCodeSequences.size() == 0) {
-        		final Alert alert = new Alert(AlertType.ERROR);
-        		alert.setTitle("AutoPolyVary");
-        		alert.setHeaderText("No OBO File Loaded");
-        		alert.setContentText("Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
-        		alert.showAndWait();
-        		return;
-        	}
-        	if (compareCheckBox.isSelected()) {
-        		final Alert alert = new Alert(AlertType.ERROR);
-        		alert.setTitle("AutoPolyVary");
-        		alert.setHeaderText("MatchV3 Selected");
-        		alert.setContentText("MatchV3 and AutoPolyVary are incompatible.");
-        		alert.showAndWait();
-        		return;
-        	}
-        	final String lineStartText = lineStartField.getText();
+            if (fileCodeSequences.size() == 0) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("AutoPolyVary");
+                alert.setHeaderText("No OBO File Loaded");
+                alert.setContentText("Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
+                alert.showAndWait();
+                return;
+            }
+            if (compareCheckBox.isSelected()) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("AutoPolyVary");
+                alert.setHeaderText("MatchV3 Selected");
+                alert.setContentText("MatchV3 and AutoPolyVary are incompatible.");
+                alert.showAndWait();
+                return;
+            }
+            final String lineStartText = lineStartField.getText();
             final String lineStepText = lineStepField.getText();
-        	final String lineEndText = lineEndField.getText();
-        	// The indexes that the user sees (will be converted later)
-        	int startIdxUser = 0;
+            final String lineEndText = lineEndField.getText();
+            // The indexes that the user sees (will be converted later)
+            int startIdxUser = 0;
             int stepIdxUser = 0;
-        	int endIdxUser = 0;
+            int endIdxUser = 0;
             // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
-        	if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
-        		startIdxUser = 1;
+            if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
+                startIdxUser = 1;
                 stepIdxUser = 1;
-        		endIdxUser = fileCodeSequences.size();
-        	} else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
-        		showEnterLineNumberErrorAutoVary();
-        		return;
-        	} else { // All fields filled
-	        	try {
-	        		startIdxUser = Integer.parseInt(lineStartText);
-	        	} catch (final NumberFormatException e) {
-	        		showInvalidNumberError(lineStartText);
-	        		return;
-	        	}
-	        	try {
-	        		endIdxUser = Integer.parseInt(lineEndText);
-	        	} catch (final NumberFormatException e) {
-	        		showInvalidNumberError(lineEndText);
-	        		return;
-	        	}
-	        	try {
-	        		stepIdxUser = Math.min(fileCodeSequences.size(), Integer.parseInt(lineStepText)); // Max step is all elements
-	        	} catch (final NumberFormatException e) {
-	        		showInvalidNumberError(lineStepText);
-	        		return;
-	        	}
-	        	if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= fileCodeSequences.size())) {
-	        		showInvalidLineRangeError(fileCodeSequences.size());
-	        		return;
-	        	}
+                endIdxUser = fileCodeSequences.size();
+            } else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
+                showEnterLineNumberErrorAutoVary();
+                return;
+            } else { // All fields filled
+                try {
+                    startIdxUser = Integer.parseInt(lineStartText);
+                } catch (final NumberFormatException e) {
+                    showInvalidNumberError(lineStartText);
+                    return;
+                }
+                try {
+                    endIdxUser = Integer.parseInt(lineEndText);
+                } catch (final NumberFormatException e) {
+                    showInvalidNumberError(lineEndText);
+                    return;
+                }
+                try {
+                    stepIdxUser = Math.min(fileCodeSequences.size(), Integer.parseInt(lineStepText)); // Max step is all elements
+                } catch (final NumberFormatException e) {
+                    showInvalidNumberError(lineStepText);
+                    return;
+                }
+                if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= fileCodeSequences.size())) {
+                    showInvalidLineRangeError(fileCodeSequences.size());
+                    return;
+                }
                 if(stepIdxUser < 1) {
                     showStepErrorAutoVary();
                     return;
                 }
-        	}
-        	// The following block was ripped from the polyAutoBtn's action event.
-        	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        		&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !AutoPolyVaryLoad.Override) {
-        		final Alert alert = new Alert(AlertType.ERROR);
-        		alert.setTitle("AutoPolyVary");
-        		alert.setHeaderText("No CodeTypes");
-        		alert.setContentText("Please Select at least one codetype.");
-        		alert.showAndWait();
-        		return;
-        	}
-        	if (boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
+            }
+            // The following block was ripped from the polyAutoBtn's action event.
+            if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !AutoPolyVaryLoad.Override) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("AutoPolyVary");
+                alert.setHeaderText("No CodeTypes");
+                alert.setContentText("Please Select at least one codetype.");
+                alert.showAndWait();
+                return;
+            }
+            if (boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
                     || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
                 final Alert alert = new Alert(AlertType.WARNING);
                 alert.setHeaderText("CodeTypes other than CS are chosen");
                 alert.setContentText("Make sure you have the correct CodeTypes chosen.");
                 alert.showAndWait();
-                // return;  <-- Don't exit from this call, because PolyVary can still run with 
+                // return;  <-- Don't exit from this call, because PolyVary can still run with
             }
-        	// Ask the user to input a polygon, similar to PolyVary:
-        	//final Optional<ConvexPolygon> polyOpt = new PolyLoad("AutoPolyVary", "AutoVary", tmpDir + "PolyAutoVary.txt", screen).getPolyLoad();
-        	if (autoPolyVaryWindow.stage.isShowing()) {
-        		autoPolyVaryWindow.stage.toFront();
-        	}
-        	final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = autoPolyVaryWindow.getLoad();
-        	if (!polyOpt.isPresent()) {
+            // Ask the user to input a polygon, similar to PolyVary:
+            //final Optional<ConvexPolygon> polyOpt = new PolyLoad("AutoPolyVary", "AutoVary", tmpDir + "PolyAutoVary.txt", screen).getPolyLoad();
+            if (autoPolyVaryWindow.stage.isShowing()) {
+                autoPolyVaryWindow.stage.toFront();
+            }
+            final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = autoPolyVaryWindow.getLoad();
+            if (!polyOpt.isPresent()) {
 //        		final Alert alert = new Alert(AlertType.ERROR);
 //        		alert.setTitle("AutoPolyVary");
 //        		alert.setHeaderText("Operation Aborted");
 //        		alert.setContentText("AutoPolyVary was aborted because the polygon selection window was closed.");
 //        		alert.showAndWait();
-        		return;
-        	}
-        	final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
+                return;
+            }
+            final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 
             autoPolyVaryFunction(polyVals, Optional.empty(), Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, executor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
@@ -1556,14 +1556,14 @@ public final class Viewer {
         superPolyVaryBtn.setTooltip(Utils.toolTip("Repeat PolyVary or AutoPolyVary a set number of times"));
         Utils.colorButton(superPolyVaryBtn, Color.GREEN, Color.GOLD);
         superPolyVaryBtn.setOnAction(event -> {
-        	if (fileCodeSequences.size() == 0 && superAutoCb.isSelected()) {
-        		final Alert alert = new Alert(AlertType.ERROR);
-        		alert.setTitle("SuperPolyVary using Auto");
-        		alert.setHeaderText("No OBO File Loaded");
-        		alert.setContentText("Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
-        		alert.showAndWait();
-        		return;
-        	}
+            if (fileCodeSequences.size() == 0 && superAutoCb.isSelected()) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("SuperPolyVary using Auto");
+                alert.setHeaderText("No OBO File Loaded");
+                alert.setContentText("Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
+                alert.showAndWait();
+                return;
+            }
             if (compareCheckBox.isSelected()) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("SuperPolyVary");
@@ -1572,35 +1572,35 @@ public final class Viewer {
                 alert.showAndWait();
                 return;
             }
-        	if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
-        			&& !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
+            if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected()) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("SuperPolyVary");
                 alert.setHeaderText("No CodeTypes");
                 alert.setContentText("Please Select at least one codetype.");
                 alert.showAndWait();
                 return;
-        	}
+            }
             if (boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
                     || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
                 final Alert alert = new Alert(AlertType.WARNING);
                 alert.setHeaderText("CodeTypes other than CS are chosen");
                 alert.setContentText("Make sure you have the correct CodeTypes chosen.");
                 alert.showAndWait();
-                // return;  <-- Don't exit from this call, because PolyVary can still run with 
+                // return;  <-- Don't exit from this call, because PolyVary can still run with
             }
-        	if (superPolyVaryWindow.stage.isShowing()) {
-        		superPolyVaryWindow.stage.toFront();
-        	}
-        	final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = superPolyVaryWindow.getLoad();
-        	if (!polyOpt.isPresent()) {
+            if (superPolyVaryWindow.stage.isShowing()) {
+                superPolyVaryWindow.stage.toFront();
+            }
+            final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = superPolyVaryWindow.getLoad();
+            if (!polyOpt.isPresent()) {
 //        		final Alert alert = new Alert(AlertType.ERROR);
 //        		alert.setTitle("AutoPolyVary");
 //        		alert.setHeaderText("Operation Aborted");
 //        		alert.setContentText("AutoPolyVary was aborted because the polygon selection window was closed.");
 //        		alert.showAndWait();
-        		return;
-        	}
+                return;
+            }
             superPolyVaryFunction(polyOpt.get(), executor);
 
         });
@@ -1633,7 +1633,7 @@ public final class Viewer {
                 alert.setTitle("Fill Screen");
                 alert.setHeaderText("Fill Screen");
                 alert.setContentText(
-                    "This area contains holes. Are you sure you want to fill the screen?");
+                        "This area contains holes. Are you sure you want to fill the screen?");
                 final Optional<ButtonType> response = alert.showAndWait();
 
                 if (response.isPresent() && response.get() == ButtonType.OK) {
@@ -1702,9 +1702,9 @@ public final class Viewer {
                     final String[] corners = line.split("\\s");
 
                     screenFills.add(Rectangle.create(Double.parseDouble(corners[0]),
-                                                     Double.parseDouble(corners[1]),
-                                                     Double.parseDouble(corners[2]),
-                                                     Double.parseDouble(corners[3])));
+                            Double.parseDouble(corners[1]),
+                            Double.parseDouble(corners[2]),
+                            Double.parseDouble(corners[3])));
                     line = br.readLine();
                 }
 
@@ -1717,8 +1717,8 @@ public final class Viewer {
 
         calculateChooser.getItems().addAll("Region", "MRR", "Bound", "All");
         calculateChooser.setTooltip(Utils.toolTip("Set this to the feature that you want to be drawn. "
-                                                  + "'Region' draws the region, 'MRR' draws the MRR polygon of the region, and "
-                                                  + "'Bound' draws the bounding polygon of that region."));
+                + "'Region' draws the region, 'MRR' draws the MRR polygon of the region, and "
+                + "'Bound' draws the bounding polygon of that region."));
         calculateChooser.setValue("Region");
         calculateChooser.setStyle(textBoxColor);
         calculateChooser.setPrefWidth(93);
@@ -1728,27 +1728,27 @@ public final class Viewer {
         Utils.colorButton(btnOBOForward, Color.SKYBLUE, clickColor);
 
         btnOBOForward.setOnAction(event -> {
-        	// Ensure that the user has told us to take a positive integer step size
-        	int stepSize;
-        	try {
-        		stepSize = Integer.parseInt(fieldOBOStep.getText());
-        		if (stepSize <= 0) {
-        			final Alert alert = new Alert(AlertType.ERROR);
-        			alert.setTitle("OBO Forward");
-        			alert.setHeaderText("Positive Integer Step Size Required");
-        			alert.setContentText("Enter a positive integer into the step size field between the OBO Forward and OBO Backward buttons");
-        			alert.showAndWait();
-        			return;
-        		}
-        	} catch (NumberFormatException e) {
-        		final Alert alert = new Alert(AlertType.ERROR);
+            // Ensure that the user has told us to take a positive integer step size
+            int stepSize;
+            try {
+                stepSize = Integer.parseInt(fieldOBOStep.getText());
+                if (stepSize <= 0) {
+                    final Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("OBO Forward");
+                    alert.setHeaderText("Positive Integer Step Size Required");
+                    alert.setContentText("Enter a positive integer into the step size field between the OBO Forward and OBO Backward buttons");
+                    alert.showAndWait();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("OBO Forward");
                 alert.setHeaderText("Positive Integer Step Size Required");
                 alert.setContentText("Enter a positive integer into the step size field between the OBO Forward and OBO Backward buttons");
                 alert.showAndWait();
-        		return;
-        	}
-        	
+                return;
+            }
+
             // The TextField has a setOnAction method that is called
             // when the user presses enter, but the problem is that
             // users don't expect to press enter after entering text
@@ -1776,12 +1776,12 @@ public final class Viewer {
                 }
             }
         });
-        
+
         //fieldOBOStep.setAlignment(Pos.CENTER);
         fieldOBOStep.setText("1");
         fieldOBOStep.setPromptText("Step");
         fieldOBOStep.setPrefWidth(50);
-        
+
         //Setting the pool for the stables window and button properties
         stablesWindow.setConnectionPool(pool);
 
@@ -1796,26 +1796,26 @@ public final class Viewer {
         Utils.colorButton(btnOBOBackward, Color.SKYBLUE, clickColor);
 
         btnOBOBackward.setOnAction(event -> {
-        	// Ensure that the user has told us to take a positive integer step size
-        	int stepSize;
-        	try {
-        		stepSize = Integer.parseInt(fieldOBOStep.getText());
-        		if (stepSize <= 0) {
-        			final Alert alert = new Alert(AlertType.ERROR);
-        			alert.setTitle("OBO Forward");
-        			alert.setHeaderText("Positive Integer Step Size Required");
-        			alert.setContentText("Enter a positive integer into the step size field between the OBO Forward and OBO Backward buttons");
-        			alert.showAndWait();
-        			return;
-        		}
-        	} catch (NumberFormatException e) {
-        		final Alert alert = new Alert(AlertType.ERROR);
+            // Ensure that the user has told us to take a positive integer step size
+            int stepSize;
+            try {
+                stepSize = Integer.parseInt(fieldOBOStep.getText());
+                if (stepSize <= 0) {
+                    final Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("OBO Forward");
+                    alert.setHeaderText("Positive Integer Step Size Required");
+                    alert.setContentText("Enter a positive integer into the step size field between the OBO Forward and OBO Backward buttons");
+                    alert.showAndWait();
+                    return;
+                }
+            } catch (NumberFormatException e) {
+                final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("OBO Forward");
                 alert.setHeaderText("Positive Integer Step Size Required");
                 alert.setContentText("Enter a positive integer into the step size field between the OBO Forward and OBO Backward buttons");
                 alert.showAndWait();
-        		return;
-        	}
+                return;
+            }
 
             final String indexString = lineNumberTxt.getText();
 
@@ -1852,13 +1852,13 @@ public final class Viewer {
 
             if (file != null) {
                 final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                             Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
-                    parseFile(file.toPath());
+                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
+                        parseFile(file.toPath(), false);
 
                 final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
 
                 final MutableSortedSet<ClassifiedCodeSequence> classCodeSeqs =
-                    new TreeSortedSet<>(map.keySet());
+                        new TreeSortedSet<>(map.keySet());
 
                 final ArrayList<ClassifiedCodeSequence> organizedCodes = new ArrayList<>();
                 if (splitUp) {
@@ -1879,7 +1879,7 @@ public final class Viewer {
 
                 for (final ClassifiedCodeSequence line : organizedCodes) {
                     final String toPad =
-                        line.codeType + " (" + line.codeLength + ", " + line.codeSum + ") ";
+                            line.codeType + " (" + line.codeLength + ", " + line.codeSum + ") ";
                     final String evenOdd = CodeSequence.evenOddSequence(line.codeSequence.codeNumbers);
 
                     final String lineStr = String.format("%1$-16s", toPad) + line + " " + evenOdd;
@@ -1892,7 +1892,7 @@ public final class Viewer {
 
         btnLoadFile.setText("Load File");
         btnLoadFile.setTooltip(Utils.toolTip("Loads and draws code sequences from a file. See"
-                                             + " instructions for how to properly format files to use with this button"));
+                + " instructions for how to properly format files to use with this button"));
         Utils.colorButton(btnLoadFile, Color.LIGHTPINK, clickColor);
 
         btnLoadFile.setOnAction(event -> {
@@ -1901,8 +1901,8 @@ public final class Viewer {
             fileChooser.setTitle("Load File");
             final File file = fileChooser.showOpenDialog(mainWindow);
             if (file != null) {
-            	System.out.println("\n// loading file: " + iterationStart.getText()
-            	+ " to " + iterationEnd.getText() + " in "+ file);
+                System.out.println("\n// loading file: " + iterationStart.getText()
+                        + " to " + iterationEnd.getText() + " in "+ file);
             }
             LoadFileAction(screen, true, file, executor);
         });
@@ -1911,15 +1911,15 @@ public final class Viewer {
         loadLRCheckBox.selectedProperty().bindBidirectional(uselrRdoBtn.selectedProperty());
         loadLRCheckBox.setTooltip(Utils.toolTip("Use left rights when loading iterations"));
         loadLRCheckBox.setOnAction(event -> {
-        	if (!loadLRCheckBox.isSelected()) {
-        		nolrRdoBtn.setSelected(true);
-        	}
+            if (!loadLRCheckBox.isSelected()) {
+                nolrRdoBtn.setSelected(true);
+            }
         });
 
         // Create a new info window and show it
         infoButton.setText("Info");
         infoButton.setTooltip(Utils.toolTip("Brings up a window that will show you information about"
-                                            + " a code sequence"));
+                + " a code sequence"));
         Utils.colorButton(infoButton, Color.LIGHTPINK, clickColor);
 
         infoButton.setOnAction(event -> new InfoWindow(windowTitle, pool).show());
@@ -1939,7 +1939,7 @@ public final class Viewer {
 
         coverBtn.setText("Cover");
         coverBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
-                                          + " sequences cover a specified polygon. See instructions for details"));
+                + " sequences cover a specified polygon. See instructions for details"));
         Utils.colorButton(coverBtn, Color.LIGHTPINK, clickColor);
         coverBtn.setOnAction(e -> coverWindow.show());
 
@@ -1972,42 +1972,42 @@ public final class Viewer {
 
         txtCodeSequence.setPromptText("Code Sequence");
         txtCodeSequence.setTooltip(Utils.toolTip("here you put in a code sequence that you want to"
-                                                 + " calculate"));
+                + " calculate"));
         txtCodeSequence.setStyle(textBoxColor);
         txtCodeSequence.textProperty().bindBidirectional(
-        	new SimpleObjectProperty<MutableIntList[]>(currentCodeNumbers),
-        	new StringConverter<MutableIntList[]>() {
-				@Override
-				public MutableIntList[] fromString(String str) {
-					final String[] strs = str.split(",");
-					final MutableIntList[] result = new MutableIntList[strs.length];
-					for (int i = 0; i < strs.length; i++) {
-						final Optional<ImmutableIntList> opt = Utils.splitString(strs[i]);
-						if (opt.isPresent()) {
-							final MutableIntList list = new IntArrayList();
-							list.addAll(opt.get());
-							result[i] = list;
-						} else {
-							result[i] = new IntArrayList();
-						}
-					}
-					return result;
-				}
-	
-				@Override
-				public String toString(MutableIntList[] codes) {
-					final StringBuilder builder = new StringBuilder();
-					for (int i = 0; i < codes.length; i++) {
-						if (!codes[i].isEmpty()) {
-							if (i != 1) {
-								builder.append(", ");
-							}
-							builder.append(codes[i].toString());
-						}
-					}
-					return builder.toString();
-				}
-        	}
+                new SimpleObjectProperty<MutableIntList[]>(currentCodeNumbers),
+                new StringConverter<MutableIntList[]>() {
+                    @Override
+                    public MutableIntList[] fromString(String str) {
+                        final String[] strs = str.split(",");
+                        final MutableIntList[] result = new MutableIntList[strs.length];
+                        for (int i = 0; i < strs.length; i++) {
+                            final Optional<ImmutableIntList> opt = Utils.splitString(strs[i]);
+                            if (opt.isPresent()) {
+                                final MutableIntList list = new IntArrayList();
+                                list.addAll(opt.get());
+                                result[i] = list;
+                            } else {
+                                result[i] = new IntArrayList();
+                            }
+                        }
+                        return result;
+                    }
+
+                    @Override
+                    public String toString(MutableIntList[] codes) {
+                        final StringBuilder builder = new StringBuilder();
+                        for (int i = 0; i < codes.length; i++) {
+                            if (!codes[i].isEmpty()) {
+                                if (i != 1) {
+                                    builder.append(", ");
+                                }
+                                builder.append(codes[i].toString());
+                            }
+                        }
+                        return builder.toString();
+                    }
+                }
         );
 
         txtCodeSequence2.setPromptText("Code Sequence");
@@ -2016,7 +2016,7 @@ public final class Viewer {
 
         proverCheckBox.setText("Prover");
         proverCheckBox.setTooltip(Utils.toolTip("pixels on screen that are filled in while this is "
-                                                + "selected have been proven to completely fill that pixel"));
+                + "selected have been proven to completely fill that pixel"));
         proverCheckBox.setStyle(textBoxColor);
         proverCheckBox.setOnAction(event -> {
             // Redraw the regions when you check and uncheck the box
@@ -2042,7 +2042,7 @@ public final class Viewer {
 
         holeFinderButton.setText("Find Holes");
         holeFinderButton.setTooltip(Utils.toolTip(
-            "Finds how many uncovered pixels are on screen and reports them"));
+                "Finds how many uncovered pixels are on screen and reports them"));
         Utils.colorButton(holeFinderButton, Color.SKYBLUE, clickColor);
 
         holeFinderButton.setOnAction(event -> {
@@ -2069,7 +2069,7 @@ public final class Viewer {
         labelCodeWindow.textProperty().bindBidirectional(labelMainWindow.textProperty());
 
         imageStack.getChildren().addAll(backgroundImageView, regionsImageView, guideLinesImageView,
-                                        boundsImageView, oboImageView, topImageView);
+                boundsImageView, oboImageView, topImageView);
 
         reflectCheckBox.setText("Reflect");
         reflectCheckBox.setTooltip(Utils.toolTip("Reflects the map into usual cartesian coordinates"));
@@ -2096,22 +2096,22 @@ public final class Viewer {
 
         allCheckBox.setText("All");
         allCheckBox.setTooltip(Utils.toolTip(
-            "Show all regions covered by a code sequence, instead of just the basic one. See "
-            + "instructions for more explanation."));
+                "Show all regions covered by a code sequence, instead of just the basic one. See "
+                        + "instructions for more explanation."));
         allCheckBox.setStyle(textBoxColor);
         allCheckBox.setOnAction(event
-                                -> renderRegions(
-                                    onScreenSequences, guideLinesImageView, regionsImageView, executor));
+                -> renderRegions(
+                onScreenSequences, guideLinesImageView, regionsImageView, executor));
 
         boundsCheckBox.setText("Bounds");
         boundsCheckBox.setStyle(textBoxColor);
         boundsCheckBox.setOnAction(event
-                                   -> renderRegions(
-                                       onScreenSequences, guideLinesImageView, regionsImageView, executor));
+                -> renderRegions(
+                onScreenSequences, guideLinesImageView, regionsImageView, executor));
 
         queryButton.setText("Search");
         queryButton.setTooltip(Utils.toolTip(
-            "Search for a code sequence that has some specified characteristics"));
+                "Search for a code sequence that has some specified characteristics"));
         Utils.colorButton(queryButton, Color.LIGHTPINK, clickColor);
 
         queryButton.setOnAction(event -> queryStage.show());
@@ -2138,7 +2138,7 @@ public final class Viewer {
 
         resetBtn.setText("Reset");
         resetBtn.setTooltip(Utils.toolTip("Change the zoom level back to the default, like it was"
-                                          + " when you first opened the program."));
+                + " when you first opened the program."));
         Utils.colorButton(resetBtn, Color.SKYBLUE, clickColor);
 
         resetBtn.setOnAction(event -> {
@@ -2174,8 +2174,8 @@ public final class Viewer {
 
         saveRegionsCheckBox.setText("Save Regions");
         saveRegionsCheckBox.setTooltip(Utils.toolTip("If this is not selected, each time you load a "
-                                                     + "code it will get rid of the other ones on screen. So, this is used when you want "
-                                                     + "to look at one code at a time."));
+                + "code it will get rid of the other ones on screen. So, this is used when you want "
+                + "to look at one code at a time."));
         saveRegionsCheckBox.setSelected(true);
         saveRegionsCheckBox.setStyle(textBoxColor);
         // When the user deselects this box, we show a confirmation box
@@ -2199,7 +2199,7 @@ public final class Viewer {
 
         drawPictureCheckBox.setText("Draw Picture");
         drawPictureCheckBox.setTooltip(Utils.toolTip("if this is not selected, the pictures will "
-                                                     + "not be drawn when you press calculate or load file"));
+                + "not be drawn when you press calculate or load file"));
         drawPictureCheckBox.setSelected(true);
         drawPictureCheckBox.setStyle(textBoxColor);
         drawPictureCheckBox.setOnAction(event -> {
@@ -2230,7 +2230,7 @@ public final class Viewer {
 
         autoFillerCheckBox.setText("AutoFill");
         autoFillerCheckBox.setTooltip(Utils.toolTip("If this is selected, whenever there are no holes"
-                                                    + " on screen, a screen fill will be made there"));
+                + " on screen, a screen fill will be made there"));
         autoFillerCheckBox.setSelected(false);
         autoFillerCheckBox.setStyle(textBoxColor);
 
@@ -2256,18 +2256,18 @@ public final class Viewer {
 
         saveColors.setText("Save Colors");
         saveColors.setTooltip(Utils.toolTip("When using PolySave, you can save the colors the regions"
-                                            + " were at the time of saving"));
+                + " were at the time of saving"));
         saveColors.setSelected(true);
         saveColors.setStyle(textBoxColor);
 
         polyLoadButton.setText("Polygon");
         polyLoadButton.setTooltip(Utils.toolTip("Load code sequences from a file, but only draw them"
-                                                + " if they intersect a specified polygon"));
+                + " if they intersect a specified polygon"));
         Utils.colorButton(polyLoadButton, Color.LIGHTPINK, clickColor);
 
         parallelogramButton.setText("Para");
         parallelogramButton.setTooltip(Utils.toolTip("Load code sequences from a file, but only draw"
-                                                     + " them if they intersect a specified parallelogram"));
+                + " them if they intersect a specified parallelogram"));
         Utils.colorButton(parallelogramButton, Color.LIGHTPINK, clickColor);
 
         parallelogramButton.setOnAction(event -> {
@@ -2326,7 +2326,7 @@ public final class Viewer {
         Utils.colorButton(newPolyTrimBtn, Color.LIGHTPINK, clickColor);
         newPolyTrimBtn.setOnAction(event -> {
 
-        	final Rectangle screen = map.getViewRectangle();
+            final Rectangle screen = map.getViewRectangle();
             new PolyTrimmer(screen, pool, onScreenSequences, saveColors.isSelected());
         });
 
@@ -2335,8 +2335,8 @@ public final class Viewer {
         polyLoadButton.setOnAction(event -> {
             final Rectangle screen = map.getViewRectangle();
             final Optional<ConvexPolygon> polyOpt = new PolyLoad(
-                                                        "Polygonal Load", "Load", tmpDir + "PolyLoad.txt", screen)
-                                                        .getPolyLoad();
+                    "Polygonal Load", "Load", tmpDir + "PolyLoad.txt", screen)
+                    .getPolyLoad();
 
             if (!polyOpt.isPresent()) {
                 return;
@@ -2365,7 +2365,7 @@ public final class Viewer {
 
         zoomRegionButton.setText("Zoom To");
         zoomRegionButton.setTooltip(Utils.toolTip(
-            "Zoom to fit the last region loaded, and changs that region's color to highlight it"));
+                "Zoom to fit the last region loaded, and changs that region's color to highlight it"));
         Utils.colorButton(zoomRegionButton, Color.SKYBLUE, clickColor);
 
         zoomRegionButton.setOnAction(event -> {
@@ -2374,7 +2374,7 @@ public final class Viewer {
             // find the min/max x and y for each of the things in there, and
             // then set
             final ClassifiedCodeSequence codeSeq =
-                ClassifiedCodeSequence.create(currentCodeNumbers[0]).get();
+                    ClassifiedCodeSequence.create(currentCodeNumbers[0]).get();
 
             try {
                 final Storage storage = Database.loadStorage(codeSeq, pool).get();
@@ -2382,7 +2382,7 @@ public final class Viewer {
                     if (calculateChooser.getValue().equals("Region")) {
                         addToOnScreenSequences(storage, zoomColor);
                         renderRegion(
-                            storage, (WritableImage) regionsImageView.getImage(), zoomColor);
+                                storage, (WritableImage) regionsImageView.getImage(), zoomColor);
                     }
                 } else {
                     addToOnScreenSequences(storage, zoomColor);
@@ -2423,9 +2423,9 @@ public final class Viewer {
 
         zoomButton.setText("Zoom");
         zoomButton.setTooltip(Utils.toolTip(
-            "Zoom to the interval specified. Note, if the interval is not a square, it will zoom"
-            + " to the best fitting square of that interval. You may set the minX, maxX equal and"
-            + " minY, maxY equal. If so, the program just centers those coordinates"));
+                "Zoom to the interval specified. Note, if the interval is not a square, it will zoom"
+                        + " to the best fitting square of that interval. You may set the minX, maxX equal and"
+                        + " minY, maxY equal. If so, the program just centers those coordinates"));
         Utils.colorButton(zoomButton, Color.SKYBLUE, clickColor);
         //zoomButton.setOnAction(event -> boyanRdoBtn.setSelected(true));
         zoomButton.setOnAction(event -> {
@@ -2438,7 +2438,7 @@ public final class Viewer {
         keepPolys.setStyle(textBoxColor);
 
         keepPolys.setTooltip(Utils.toolTip("When using the cover, you can have more than "
-                                           + "one polygon bound shown."));
+                + "one polygon bound shown."));
         keepPolys.setValue("Any");
 
 
@@ -2471,7 +2471,7 @@ public final class Viewer {
 
         coverColorCycle.setText("Cycle");
         coverColorCycle.setTooltip(Utils.toolTip("Cycle throug the top row of colors when clicking "
-                                                 + "on the cover rectangles"));
+                + "on the cover rectangles"));
         coverColorCycle.setStyle(textBoxColor);
 
         selectRdoBtn.setText("Select");
@@ -2484,7 +2484,7 @@ public final class Viewer {
         demagnifyRdoBtn.setStyle(textBoxColor);
         centerBtn.setStyle(textBoxColor);
         centerBtn.setTooltip(Utils.toolTip("If you click the screen while this is selected, it will "
-                                           + "pan so that the point you clicked is the new center of the screen"));
+                + "pan so that the point you clicked is the new center of the screen"));
 
         selectRdoBtn.setToggleGroup(magnifyGroup);
         magnifyRdoBtn.setToggleGroup(magnifyGroup);
@@ -2621,7 +2621,7 @@ public final class Viewer {
         final HBox backForthHBox = new HBox();
         backForthHBox.setSpacing(10);
         backForthHBox.getChildren().addAll(
-            zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
+                zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
         backForthHBox.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
         backForthHBox.setAlignment(Pos.CENTER);
 
@@ -2641,11 +2641,11 @@ public final class Viewer {
         final HBox zeroHBox = new HBox();
         zeroHBox.setSpacing(10);
         //zeroHBox.getChildren().addAll(
-            //infoButton,lookAtMeButton, classifyBtn, btnLoadFile, loadLRCheckBox, iterationStart, iterationEnd);
+        //infoButton,lookAtMeButton, classifyBtn, btnLoadFile, loadLRCheckBox, iterationStart, iterationEnd);
         //zeroHBox.getChildren().addAll(
-          //      infoButton,lookAtMeButton, classifyBtn, btnLoadFile, iterationStart, iterationEnd);
+        //      infoButton,lookAtMeButton, classifyBtn, btnLoadFile, iterationStart, iterationEnd);
         //zeroHBox.getChildren().addAll(
-                // lookAtMeButton, classifyBtn, btnLoadFile, iterationStart, iterationEnd); // george july 13th remove the row part1 /3
+        // lookAtMeButton, classifyBtn, btnLoadFile, iterationStart, iterationEnd); // george july 13th remove the row part1 /3
         zeroHBox.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
         zeroHBox.setAlignment(Pos.CENTER);
 
@@ -2658,20 +2658,20 @@ public final class Viewer {
         final HBox checkHBox = new HBox();
         checkHBox.setSpacing(10);
         //checkHBox.getChildren().addAll(
-          //  reflectCheckBox, allCheckBox, polyLoadButton, parallelogramButton, mergeButton);
+        //  reflectCheckBox, allCheckBox, polyLoadButton, parallelogramButton, mergeButton);
         //checkHBox.getChildren().addAll(
-          // polyLoadButton, parallelogramButton, mergeButton);
+        // polyLoadButton, parallelogramButton, mergeButton);
         checkHBox.getChildren().addAll(
-          mergeButton);// george july13th get rid of two button
+                mergeButton);// george july13th get rid of two button
         checkHBox.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
         checkHBox.setAlignment(Pos.CENTER);
 
         final HBox zoomRegionHBox = new HBox();
         zoomRegionHBox.setSpacing(10);
         //zoomRegionHBox.getChildren().addAll(
-        		//newPolyTrimBtn, zoomRegionButton, zoomColorButton, autoFillerCheckBox);
+        //newPolyTrimBtn, zoomRegionButton, zoomColorButton, autoFillerCheckBox);
         //zoomRegionHBox.getChildren().addAll(
-         //   newPolyTrimBtn, zoomRegionButton, zoomColorButton);
+        //   newPolyTrimBtn, zoomRegionButton, zoomColorButton);
         final Button info2Button= new Button();
         info2Button.setText("Info2");
         Utils.colorButton(info2Button, Color.LIGHTPINK, clickColor);
@@ -2697,7 +2697,7 @@ public final class Viewer {
 
         // final HBox backForOBOHBox = new HBox(10, btnOBOBackward, fieldOBOStep, btnOBOForward);
         final HBox backForOBOHBox = new HBox(10, stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
-        
+
         backForOBOHBox.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
         backForOBOHBox.setAlignment(Pos.CENTER);
 
@@ -2777,17 +2777,17 @@ public final class Viewer {
         final VBox marinovMenuVBox = new VBox();
         marinovMenuVBox.setSpacing(8);
         //marinovMenuVBox.getChildren().addAll(zeroHBox, oneHBox, checkHBox,
-         //                                   zoomRegionHBox, fillsHBox, proverHBox, labelMainWindowHBox);
-       // marinovMenuVBox.getChildren().addAll(zeroHBox, oneHBox, checkHBox,
-         //       zoomRegionHBox, proverHBox, labelMainWindowHBox);// george july 13th remove the row part2/3
+        //                                   zoomRegionHBox, fillsHBox, proverHBox, labelMainWindowHBox);
+        // marinovMenuVBox.getChildren().addAll(zeroHBox, oneHBox, checkHBox,
+        //       zoomRegionHBox, proverHBox, labelMainWindowHBox);// george july 13th remove the row part2/3
         //marinovMenuVBox.getChildren().addAll(oneHBox, checkHBox,
-          //      zoomRegionHBox, proverHBox, labelMainWindowHBox);
+        //      zoomRegionHBox, proverHBox, labelMainWindowHBox);
         //marinovMenuVBox.getChildren().addAll(oneHBox,
-          //           zoomRegionHBox, proverHBox, labelMainWindowHBox);
-       // marinovMenuVBox.getChildren().addAll(oneHBox,
-          //                  proverHBox, labelMainWindowHBox);
+        //           zoomRegionHBox, proverHBox, labelMainWindowHBox);
+        // marinovMenuVBox.getChildren().addAll(oneHBox,
+        //                  proverHBox, labelMainWindowHBox);
         marinovMenuVBox.getChildren().addAll(oneHBox,
-                 labelMainWindowHBox);
+                labelMainWindowHBox);
 
         final HBox varyMenuPane = new HBox();
         varyMenuPane.setAlignment(Pos.CENTER);
@@ -2796,13 +2796,13 @@ public final class Viewer {
         varyMenuPane.getChildren().add(marinovMenuVBox);
 
         //final VBox leftVBox = new VBox(10, whatMenuHBox, twoHBox, colorsHBox1, varyMenuPane, oboHBox,
-                                      // backForOBOHBox, zoomHBox, clickActionHBox, backForthHBox);
+        // backForOBOHBox, zoomHBox, clickActionHBox, backForthHBox);
         //final VBox leftVBox = new VBox(10, whatMenuHBox, twoHBox, colorsHBox1, varyMenuPane, oboHBox,
-          //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
+        //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
         hbox2.getChildren().addAll(reflectCheckBox, allCheckBox,infoButton);
 
         final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
-                  backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
+                backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
         colorsHBox1.getChildren().clear();
         backForOBOHBox.getChildren().clear();
         clickActionHBox.getChildren().clear();
@@ -2838,8 +2838,8 @@ public final class Viewer {
         seqScroll.setPrefSize(170, 465);
         seqScroll.setContent(codeSequencesGPane);
         final VBox rightVBox = new VBox(10, mouseCoordinatesLabel, textXHBox, textYHBox,
-                                        textXLockHBox, textYLockHBox, textXRadianHBox,
-                                        textYRadianHBox, seqScroll);
+                textXLockHBox, textYLockHBox, textXRadianHBox,
+                textYRadianHBox, seqScroll);
         rightVBox.setMinWidth(200);
 
         // There are sort of two layers. There are all the gui elements that the
@@ -2930,9 +2930,9 @@ public final class Viewer {
         zoomRegionHBox.getChildren().clear();
         hbox1.getChildren().addAll(keepPolys, covRectsColorBox, coverColorCycle);
         //zoomRegionHBox.getChildren().addAll(
-               // mergeButton,loadCoverButton,newPolyTrimBtn, zoomRegionButton, zoomColorButton);
+        // mergeButton,loadCoverButton,newPolyTrimBtn, zoomRegionButton, zoomColorButton);
         //zoomRegionHBox.getChildren().addAll(
-          //      mergeButton,loadCoverButton, zoomRegionButton, zoomColorButton);//george july15th hide the trimmer button
+        //      mergeButton,loadCoverButton, zoomRegionButton, zoomColorButton);//george july15th hide the trimmer button
         zoomRegionHBox.getChildren().addAll(
                 mergeButton,loadCoverButton,calculateChooser);//george july15th hide the trimmer button and red button
         backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
@@ -2961,7 +2961,7 @@ public final class Viewer {
 
         cboxRegionColor0.setText("Black");
         cboxRegionColor0.setTooltip(Utils.toolTip("Which color you want the regions to be drawn in. "
-                                                  + "The color of the regions drawn will alternate between the two colors chosen."));
+                + "The color of the regions drawn will alternate between the two colors chosen."));
         cboxRegionColor0.setPrefWidth(110);
         cboxRegionColor0.setOnAction(event -> {
             final int mouseY = MouseInfo.getPointerInfo().getLocation().y + 20;
@@ -2976,7 +2976,7 @@ public final class Viewer {
 
         cboxRegionColor1.setText("Black");
         cboxRegionColor1.setTooltip(Utils.toolTip("Which color you want the regions to be drawn in. "
-                                                  + "The color of the regions drawn will alternate between the two colors chosen."));
+                + "The color of the regions drawn will alternate between the two colors chosen."));
         cboxRegionColor1.setPrefWidth(110);
         cboxRegionColor1.setOnAction(event -> {
             final int mouseY = MouseInfo.getPointerInfo().getLocation().y + 20;
@@ -3061,41 +3061,41 @@ public final class Viewer {
         final LinkedHashSet<ClassifiedCodeSequence> todo = new LinkedHashSet<>();
 
         for (int i = 0; i < iteration; ++i){
-                for (int j = 0; j < position.length; ++j) {
-                    int k=position[j];
-                    for (String single_element : repeated_elements) {
-                        workingNumbers.addAtIndex(k, Integer.parseInt(single_element));
-                        k++;
-                    }
-                    for (int q = j+1; q < position.length; ++q){
-                        position[q]=position[q]+repeated_elements.length;
-                    }
+            for (int j = 0; j < position.length; ++j) {
+                int k=position[j];
+                for (String single_element : repeated_elements) {
+                    workingNumbers.addAtIndex(k, Integer.parseInt(single_element));
+                    k++;
                 }
-                //increment whole position array by the length of the repeated_elements each iterations
-                for (int f = 0; f < position.length; f++) {
-                    position[f]=position[f]+repeated_elements.length;
+                for (int q = j+1; q < position.length; ++q){
+                    position[q]=position[q]+repeated_elements.length;
                 }
-                //increment whole position array by the length of the repeated_elements each iterations
-                for (int f = 0; f < position.length; f++) {
-                    position[f]=position[f]+repeated_elements.length;
-                }
-                final Either<InvalidCodeSequence, ClassifiedCodeSequence> either =
-                        ClassifiedCodeSequence.create(workingNumbers);
-
-                if (either.isLeft()) {
-                    final InvalidCodeSequence errorCode = either.getLeft();
-                    if (errorCode != InvalidCodeSequence.NEGATIVE_OR_ZERO_NUMBERS) {
-                        throw new RuntimeException("error code " + errorCode + " in iterations");
-                    }
-                } else {
-                    final ClassifiedCodeSequence classCodeSeq = either.get();
-                    todo.add(classCodeSeq);
-                }
-
             }
-            //get the final codesequences Array and return it
-            expandoCodeSeqs = Array.ofAll(todo);
-            return expandoCodeSeqs ;
+            //increment whole position array by the length of the repeated_elements each iterations
+            for (int f = 0; f < position.length; f++) {
+                position[f]=position[f]+repeated_elements.length;
+            }
+            //increment whole position array by the length of the repeated_elements each iterations
+            for (int f = 0; f < position.length; f++) {
+                position[f]=position[f]+repeated_elements.length;
+            }
+            final Either<InvalidCodeSequence, ClassifiedCodeSequence> either =
+                    ClassifiedCodeSequence.create(workingNumbers);
+
+            if (either.isLeft()) {
+                final InvalidCodeSequence errorCode = either.getLeft();
+                if (errorCode != InvalidCodeSequence.NEGATIVE_OR_ZERO_NUMBERS) {
+                    throw new RuntimeException("error code " + errorCode + " in iterations");
+                }
+            } else {
+                final ClassifiedCodeSequence classCodeSeq = either.get();
+                todo.add(classCodeSeq);
+            }
+
+        }
+        //get the final codesequences Array and return it
+        expandoCodeSeqs = Array.ofAll(todo);
+        return expandoCodeSeqs ;
     }
 
     public String subtractLeftRight(String lr1,String lr2) {
@@ -3198,7 +3198,7 @@ public final class Viewer {
             String currentCodeSeqStr = position;
 
             for (int i = 0; i < elements.length; i++) {
-                 toBeReplaced = Character.toString(((char) ('A' + i)));
+                toBeReplaced = Character.toString(((char) ('A' + i)));
 
                 String element = elements[i];
                 String elementContinue = element + " " + toBeReplaced;
@@ -3265,26 +3265,26 @@ public final class Viewer {
         return expandoCodeSeqs ;*/
     }
 
-       private ArrayList<ClassifiedCodeSequence> iterateAction(final MutableIntList workingNumbers,
-    		final String[] vectors, final int[] starts, final int[] ends, final int[] steps,
-            final int num, final boolean print, final ExecutorService executor) {
+    private ArrayList<ClassifiedCodeSequence> iterateAction(final MutableIntList workingNumbers,
+                                                            final String[] vectors, final int[] starts, final int[] ends, final int[] steps,
+                                                            final int num, final boolean print, final ExecutorService executor) {
 
         Utils.copyInto(workingNumbers, currentCodeNumbers[num]);
 
         final LinkedHashSet<ClassifiedCodeSequence> todo =
-            iterateThru(workingNumbers, vectors, starts, ends, steps, 0, num);
+                iterateThru(workingNumbers, vectors, starts, ends, steps, 0, num);
         final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(todo);
         //for (int i=0;i<classCodeSeqs.size();++i){
-            //codeSequence.codeSequence.getClass();
-            //insertRepeatedElement(workingNumbers.addAtIndex(i,););
-            //System.out.println("xiuxiu"+classCodeSeqs.get(i).codeSequence);
+        //codeSequence.codeSequence.getClass();
+        //insertRepeatedElement(workingNumbers.addAtIndex(i,););
+        //System.out.println("xiuxiu"+classCodeSeqs.get(i).codeSequence);
 
         //}
         final Task<Array<Storage>> task;
         final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
 
         if (nolrRdoBtn.isSelected()) {
-            task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, true, false);
+            task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, print, false);
 
         } else if (showlrRdoBtn.isSelected()) {
             task = new DrawPictureTaskShowLR(classCodeSeqs, pool);
@@ -3368,13 +3368,13 @@ public final class Viewer {
     }
 
     private LinkedHashSet<ClassifiedCodeSequence> iterateThru(
-        final MutableIntList workingNumbers, final String[] vectors, final int[] starts,
-        final int[] ends, final int[] steps, final int depth, final int num) {
+            final MutableIntList workingNumbers, final String[] vectors, final int[] starts,
+            final int[] ends, final int[] steps, final int depth, final int num) {
 
         final LinkedHashSet<ClassifiedCodeSequence> todo = new LinkedHashSet<>();
         if (depth >= vectors.length || vectors[depth].isEmpty()) {
             final Either<InvalidCodeSequence, ClassifiedCodeSequence> either =
-                ClassifiedCodeSequence.create(workingNumbers);
+                    ClassifiedCodeSequence.create(workingNumbers);
 
             if (either.isLeft()) {
                 final InvalidCodeSequence errorCode = either.getLeft();
@@ -3388,8 +3388,8 @@ public final class Viewer {
 
         } else {
             final ImmutableIntList vector =
-                createVector(Utils.splitString(vectors[depth].trim()).get(), steps[depth],
-                             currentCodeNumbers[num].size());
+                    createVector(Utils.splitString(vectors[depth].trim()).get(), steps[depth],
+                            currentCodeNumbers[num].size());
 
             for (int i = starts[depth]; i <= ends[depth]; i++) {
                 addMultiple(workingNumbers, i, vector);
@@ -3401,13 +3401,13 @@ public final class Viewer {
     }
 
     private void drawVaryL(final MutableList<Vector2> points, final int[] max,
-            final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
-            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+                           final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
+                           final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
 
         List <String> codeList = Arrays.asList(Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
         codeList.replaceAll(j -> Utils.tripleTrimmer(j));
         // Create the task
-    	final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor);
+        final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
@@ -3466,7 +3466,7 @@ public final class Viewer {
 
             progress.close();
 
-                        // only render the screen after everything has been loaded
+            // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
 
@@ -3494,12 +3494,12 @@ public final class Viewer {
                 }
             });
 
-            // Wait for orderly cancellation of unfinished tasks 
+            // Wait for orderly cancellation of unfinished tasks
             Utils.safeShutdownExecutor(shotExecutor);
             Utils.safeShutdownExecutor(storageExecutor);
 
             progress.close();
-                        // only render the screen after everything has been loaded
+            // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             if(draw) {
@@ -3525,37 +3525,37 @@ public final class Viewer {
     }
 
     private void LoadFileAction(
-        final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor) {
+            final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor) {
 
         if (file != null) {
             final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
-                parseFile(file.toPath());
+                    Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
+                    parseFile(file.toPath(), true);
             final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
             final Map<ClassifiedCodeSequence, Optional<String[]>> iterMap = tup._3;
             final ArrayList<ClassifiedCodeSequence> allCodes = new ArrayList<>(map.keySet());
 
             for (ClassifiedCodeSequence code : iterMap.keySet()) {
-            	if (iterMap.get(code).isPresent()) {
-	            	final int[] starts = new int[iterMap.get(code).get().length];
-	            	Arrays.fill(starts, Integer.parseInt(iterationStart.getText().trim()));
-	                final int[] ends = new int[iterMap.get(code).get().length];
-	                Arrays.fill(ends, Integer.parseInt(iterationEnd.getText().trim()));
-	                final int[] steps = new int[iterMap.get(code).get().length];
-	                Arrays.fill(steps, 2);
+                if (iterMap.get(code).isPresent()) {
+                    final int[] starts = new int[iterMap.get(code).get().length];
+                    Arrays.fill(starts, Integer.parseInt(iterationStart.getText().trim()));
+                    final int[] ends = new int[iterMap.get(code).get().length];
+                    Arrays.fill(ends, Integer.parseInt(iterationEnd.getText().trim()));
+                    final int[] steps = new int[iterMap.get(code).get().length];
+                    Arrays.fill(steps, 2);
 
-	                currentCodeNumbers[0] = code.codeSequence.codeNumbers.toList();
+                    currentCodeNumbers[0] = code.codeSequence.codeNumbers.toList();
 
-	                iterateAction(code.codeSequence.codeNumbers.toList(),
-	                		iterMap.get(code).get(), starts, ends, steps, 0, true, executor);
-            	}
+                    iterateAction(code.codeSequence.codeNumbers.toList(),
+                            iterMap.get(code).get(), starts, ends, steps, 0, false, executor);
+                }
             }
 
             final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(allCodes);
 
             if (drawPictureCheckBox.isSelected()) {
                 final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, true, false);
+                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, false, false);
                 final Progress progress = new Progress(task);
 
                 task.setOnSucceeded(e -> {
@@ -3570,7 +3570,7 @@ public final class Viewer {
                     storages.forEach(storage -> {
                         if (all || storage.intersects(poly)) {
 
-                        	final Optional<Color> opt = map.get(storage.classCodeSeq);
+                            final Optional<Color> opt = map.get(storage.classCodeSeq);
                             final Color color;
                             if (opt.isPresent()) {
                                 color = opt.get();
@@ -3607,7 +3607,7 @@ public final class Viewer {
                         // There should be a way to do a "diff" so to speak
                         // We render the things we added, which get put on top
                         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView,
-                                      executor);
+                                executor);
                     }
 
                 });
@@ -3629,7 +3629,7 @@ public final class Viewer {
 
             } else {
                 final DontDrawPictureTask task =
-                    new DontDrawPictureTask(classCodeSeqs, pool);
+                        new DontDrawPictureTask(classCodeSeqs, pool);
                 final Progress progress = new Progress(task);
 
                 // task.messageProperty().addListener((property, oldMsg, newMsg) ->
@@ -3658,13 +3658,13 @@ public final class Viewer {
         final double yMin = Math.toRadians(Double.parseDouble(yMinTextField.getText()));
         final double yMax = Math.toRadians(Double.parseDouble(yMaxTextField.getText()));
         if (0 <= xMin && xMin <= xMax && xMax <= Math.PI
-         && 0 <= yMin && yMin <= yMax && yMax <= Math.PI) {
-        	zoom(xMax, xMin, yMax, yMin, executor);
+                && 0 <= yMin && yMin <= yMax && yMax <= Math.PI) {
+            zoom(xMax, xMin, yMax, yMin, executor);
         }
     }
 
     private void zoom(final double xMax, final double xMin, final double yMax,
-    		final double yMin, final ExecutorService executor) {
+                      final double yMin, final ExecutorService executor) {
 
         if (((xMin == xMax) && (yMin == yMax)) || boyanRdoBtn.isSelected()) {
             final double size = map.pixelSize();
@@ -3693,7 +3693,7 @@ public final class Viewer {
     private void btnCalculateAction(final ConnectionPool pool) {
         final String textCodeSeq = Utils.tripleTrimmer(txtCodeSequence.getText());
         if (textCodeSeq.split(",").length != 1 && textCodeSeq.split(",").length != 3) {
-        	final Alert alert = new Alert(AlertType.ERROR);
+            final Alert alert = new Alert(AlertType.ERROR);
 
             alert.setTitle("Calculate");
             alert.setHeaderText("Invalid Input");
@@ -3712,34 +3712,34 @@ public final class Viewer {
             alert.setContentText("Please enter a code sequence.");
             alert.showAndWait();
         } else if (textCodeSeq.contains(",")) {
-        	// it's a triple
+            // it's a triple
 
-        	Utils.runAndWait(() -> {
-        		String print = "";
-        		int i = 0;
-	        	for (String tripCode : textCodeSeq.split(",")) {
-	        		print += buttonCalulator(tripCode, pool, i) + ", ";
-	        		i++;
-	        	}
-	        	print += "~";
-	        	if (print.contains("empty set")) {
-		        	System.out.println("// " + print.replace(", ~", ""));
+            Utils.runAndWait(() -> {
+                String print = "";
+                int i = 0;
+                for (String tripCode : textCodeSeq.split(",")) {
+                    print += buttonCalulator(tripCode, pool, i) + ", ";
+                    i++;
+                }
+                print += "~";
+                if (print.contains("empty set")) {
+                    System.out.println("// " + print.replace(", ~", ""));
 
-	        	} else {
-	        		System.out.println(print.replace(", ~", ""));
-	        	}
-        	});
+                } else {
+                    System.out.println(print.replace(", ~", ""));
+                }
+            });
         } else {
-        	// it's a single code
-    		System.out.println(buttonCalulator(textCodeSeq, pool, 0));
-    		setupButtons(pool, 1);
-    		setupButtons(pool, 2);
+            // it's a single code
+            System.out.println(buttonCalulator(textCodeSeq, pool, 0));
+            setupButtons(pool, 1);
+            setupButtons(pool, 2);
         }
     }
 
     // does the calculating for the btnCalculateAction
     private String buttonCalulator(final String code, final ConnectionPool pool, final int n) {
-    	final Optional<ImmutableIntList> optional = Utils.splitString(code);
+        final Optional<ImmutableIntList> optional = Utils.splitString(code);
         if (optional.isPresent()) {
             currentCodeNumbers[n] = IntArrayList.newList(optional.get());
             setupButtons(pool, n);
@@ -3765,9 +3765,9 @@ public final class Viewer {
         alert.setContentText("Please enter a line number.");
         alert.showAndWait();
     }
-    
+
     private static void showEnterLineNumberErrorAutoVary() {
-    	final Alert alert = new Alert(AlertType.ERROR);
+        final Alert alert = new Alert(AlertType.ERROR);
 
         alert.setTitle("Enter Line Numbers");
         alert.setHeaderText("Enter Line Numbers");
@@ -3776,13 +3776,13 @@ public final class Viewer {
     }
 
     private static void showStepErrorAutoVary() {
-    	final Alert alert = new Alert(AlertType.ERROR);
+        final Alert alert = new Alert(AlertType.ERROR);
 
         alert.setTitle("Bad Step Value");
         alert.setHeaderText("Bad Step Value");
         alert.setContentText("AutoPolyVary step value must be >= 1");
         alert.showAndWait();
-        
+
     }
 
     private static void showInvalidLineNumberError(final int max) {
@@ -3793,13 +3793,13 @@ public final class Viewer {
         alert.setContentText(String.format("Line number must be between 1 and %d.", max));
         alert.showAndWait();
     }
-    
+
     private static void showInvalidLineRangeError(final int max) {
-    	final Alert alert = new Alert(AlertType.ERROR);
-    	alert.setTitle("Invalid Line Range");
-    	alert.setHeaderText("Invalid Line Range");
-    	alert.setContentText(String.format("Must have 1 <= Start <= End <= %d.", max));
-    	alert.showAndWait();
+        final Alert alert = new Alert(AlertType.ERROR);
+        alert.setTitle("Invalid Line Range");
+        alert.setHeaderText("Invalid Line Range");
+        alert.setContentText(String.format("Must have 1 <= Start <= End <= %d.", max));
+        alert.showAndWait();
     }
 
     private static void showInvalidNumberError(final String invalidNumber) {
@@ -3923,15 +3923,15 @@ public final class Viewer {
                     final Storage.Unstable unstable = (Storage.Unstable) storage;
 
                     final MutableList<Vector2> points = new FastList<>();
-                	final Vector2 start = unstable.lineSegment.start;
-                	final Vector2 end = unstable.lineSegment.end;
-                	final Vector2 direct = end.sub(start);
-                	final double size = (unstableDetect / 2) * map.pixelSize();
-                	final Vector2 perp = direct.perp(direct).scale(size);
-                	points.addAll(Arrays.asList(start.add(perp), start.sub(perp), end.sub(perp), end.add(perp)));
-                	final ConvexPolygon unstPoly = ConvexPolygon.create(points.toImmutable());
+                    final Vector2 start = unstable.lineSegment.start;
+                    final Vector2 end = unstable.lineSegment.end;
+                    final Vector2 direct = end.sub(start);
+                    final double size = (unstableDetect / 2) * map.pixelSize();
+                    final Vector2 perp = direct.perp(direct).scale(size);
+                    points.addAll(Arrays.asList(start.add(perp), start.sub(perp), end.sub(perp), end.add(perp)));
+                    final ConvexPolygon unstPoly = ConvexPolygon.create(points.toImmutable());
 
-                	final Location location = unstPoly.location(radianX, radianY);
+                    final Location location = unstPoly.location(radianX, radianY);
                     if (location == Location.INSIDE) {
                         selectedStorages.add(unstable);
                     }
@@ -4139,7 +4139,7 @@ public final class Viewer {
     }
 
     private void makeRightScrollPane(
-        final SortedSet<Storage> selectedStorages, final ExecutorService executor) {
+            final SortedSet<Storage> selectedStorages, final ExecutorService executor) {
         // remove any listings already there
         codeSequencesGPane.getChildren().clear();
         int row = 0;
@@ -4167,7 +4167,7 @@ public final class Viewer {
                 final Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
                 final int mouseY = MouseInfo.getPointerInfo().getLocation().y + 20;
                 final int mouseX = Math.min(MouseInfo.getPointerInfo().getLocation().x,
-                                            (int) screenSize.getWidth() - 270);
+                        (int) screenSize.getWidth() - 270);
                 final ColorPicker picker = new ColorPicker(mouseX, mouseY);
                 final Optional<Color> opt = picker.pickColor();
                 opt.ifPresent(color -> {
@@ -4177,7 +4177,7 @@ public final class Viewer {
                     } else {
                         onScreenSequences.remove(storage);
                         renderRegions(
-                            onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                                onScreenSequences, guideLinesImageView, regionsImageView, executor);
                     }
                     cboxCodeSequence.setText(Colors.colorMap.get(color).get());
                 });
@@ -4215,7 +4215,7 @@ public final class Viewer {
 
     // returns the first location of a hole which is not in the already list
     private Optional<Vector2> findHole(
-        final int x0, final int x1, final int y0, final int y1, final ConvexPolygon area) {
+            final int x0, final int x1, final int y0, final int y1, final ConvexPolygon area) {
         return findHole(x0, x1, y0, y1, area, new FastList<>());
     }
 
@@ -4257,7 +4257,7 @@ public final class Viewer {
                     final double ry = map.radianY(pixelY + 0.5);
                     if (area.location(rx, ry).equals(Location.INSIDE)) {
                         final Vector2 coords =
-                            Vector2.create(Math.toDegrees(rx), Math.toDegrees(ry));
+                                Vector2.create(Math.toDegrees(rx), Math.toDegrees(ry));
                         list.add(coords);
                     }
                 }
@@ -4312,7 +4312,7 @@ public final class Viewer {
     }
 
     private WritableImage redoFromScratch(
-        final LinkedHashMap<Storage, Color> regions, final ExecutorService executor) {
+            final LinkedHashMap<Storage, Color> regions, final ExecutorService executor) {
         // only depends on map
         final Rectangle viewRectangle = map.getViewRectangle();
 
@@ -4360,12 +4360,12 @@ public final class Viewer {
                     final List<Double> subList = Arrays.asList(rx, ry, Math.PI - (rx + ry));
                     Collections.sort(subList);
                     futures[pixelX][pixelY] =
-                        executor.submit(()
-                                            -> color(stableRegions, regions, subList.get(0),
-                                                     subList.get(1), halfWidth, offset));
+                            executor.submit(()
+                                    -> color(stableRegions, regions, subList.get(0),
+                                    subList.get(1), halfWidth, offset));
                 } else {
                     futures[pixelX][pixelY] = executor.submit(
-                        () -> color(stableRegions, regions, rx, ry, halfWidth, offset));
+                            () -> color(stableRegions, regions, rx, ry, halfWidth, offset));
                 }
             }
         }
@@ -4408,7 +4408,7 @@ public final class Viewer {
 
         // Now draw the unstable ones in serial
         unstableRegions.forEach(
-            unstable -> renderUnstable(unstable, writer, viewRectangle, regions.get(unstable)));
+                unstable -> renderUnstable(unstable, writer, viewRectangle, regions.get(unstable)));
 
         return regionImage;
     }
@@ -4443,10 +4443,10 @@ public final class Viewer {
     private void renderRegions(final LinkedHashMap<Storage, Color> regions,
                                final ImageView guideLinesImageView, final ImageView regionsImageView,
                                final ExecutorService executor) {
-    	// Image 1: Guidelines
-    	final WritableImage guideLinesImage = renderGuideLines();
+        // Image 1: Guidelines
+        final WritableImage guideLinesImage = renderGuideLines();
 
-    	// Image 2: Regions
+        // Image 2: Regions
         final WritableImage regionImage = redoFromScratch(regions, executor);
         ArrayList<Rectangle> rectangles = new ArrayList<Rectangle>();
         rectangles.addAll(coverRects.tripleEntrySet());
@@ -4493,13 +4493,13 @@ public final class Viewer {
             }
             renderPolygon(poly.getKey(), boundsImage, color);
         }
-        
+
         // Image 4: One-by-One
         final WritableImage oboImage = new WritableImage(SIDE, SIDE);
         if (currentOBOStorage != null) {
             renderRegion(currentOBOStorage, oboImage, currentOBOColor);
         }
-        
+
         // Update all the images at once to avoid jarring rendering.
         guideLinesImageView.setImage(guideLinesImage);
         regionsImageView.setImage(regionImage);
@@ -4561,14 +4561,14 @@ public final class Viewer {
         for(int i = 0; i < 3; i++) {
 
             // set the text in the code box
-        	if (!currentCodeNumbers[i].isEmpty()) {
-        		string += currentCodeNumbers[i].makeString(" ");
-        		if (i < 2) {
-        			if (!currentCodeNumbers[i + 1].isEmpty()) {
-        				string += ", ";
-        			}
-        		}
-        	}
+            if (!currentCodeNumbers[i].isEmpty()) {
+                string += currentCodeNumbers[i].makeString(" ");
+                if (i < 2) {
+                    if (!currentCodeNumbers[i + 1].isEmpty()) {
+                        string += ", ";
+                    }
+                }
+            }
         }
         txtCodeSequence.setText(string);
 
@@ -4587,7 +4587,7 @@ public final class Viewer {
     // use when you get a new code sequence that you want to get info for
     private String calculateCurrentCodeNumbers(final ConnectionPool pool, final int i) {
 
-    	String result = "";
+        String result = "";
 
         if (!saveRegionsCheckBox.isSelected()) {
             // remove any code sequences
@@ -4595,21 +4595,21 @@ public final class Viewer {
             regionsImageView.setImage(new WritableImage(SIDE, SIDE));
         }
 
-		final Either<InvalidCodeSequence, ClassifiedCodeSequence> either = ClassifiedCodeSequence
-				.create(currentCodeNumbers[i]);
-		if (either.isLeft()) {
-			final InvalidCodeSequence errorCode = either.getLeft();
+        final Either<InvalidCodeSequence, ClassifiedCodeSequence> either = ClassifiedCodeSequence
+                .create(currentCodeNumbers[i]);
+        if (either.isLeft()) {
+            final InvalidCodeSequence errorCode = either.getLeft();
 
-			final Alert alert = new Alert(AlertType.ERROR);
+            final Alert alert = new Alert(AlertType.ERROR);
 
-			alert.setHeaderText("Invalid Code Sequence");
-			alert.setContentText(InvalidCodeSequence.errorMessage(currentCodeNumbers[i], errorCode));
-			alert.showAndWait();
-		} else {
-			// need to get the storage and compile the equations
-			final ClassifiedCodeSequence codeSeq = either.get();
+            alert.setHeaderText("Invalid Code Sequence");
+            alert.setContentText(InvalidCodeSequence.errorMessage(currentCodeNumbers[i], errorCode));
+            alert.showAndWait();
+        } else {
+            // need to get the storage and compile the equations
+            final ClassifiedCodeSequence codeSeq = either.get();
 
-			final Optional<Storage> optional = Database.loadStorage(codeSeq, pool);
+            final Optional<Storage> optional = Database.loadStorage(codeSeq, pool);
 
 			if (optional.isPresent()) {
 				final Storage storage = optional.get();
@@ -4737,76 +4737,76 @@ public final class Viewer {
         // x + y = 90
         drawObliqueLine(x
                         -> Math.PI / 2 - x,
-                        0, Math.PI / 2, y -> Math.PI / 2 - y, 0, Math.PI / 2, pixelWriter, lineColor);
+                0, Math.PI / 2, y -> Math.PI / 2 - y, 0, Math.PI / 2, pixelWriter, lineColor);
 
         // x + y = 180
         drawObliqueLine(
-            x -> Math.PI - x, 0, Math.PI, y -> Math.PI - y, 0, Math.PI, pixelWriter, lineColor);
+                x -> Math.PI - x, 0, Math.PI, y -> Math.PI - y, 0, Math.PI, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 80
         drawObliqueLine(x
                         -> 4 * Math.PI / 9 - x,
-                        0, 4 * Math.PI / 9,
-                        y -> 4 * Math.PI / 9 - y, 0, 4 * Math.PI / 9, pixelWriter, lineColor);
+                0, 4 * Math.PI / 9,
+                y -> 4 * Math.PI / 9 - y, 0, 4 * Math.PI / 9, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 75
         drawObliqueLine(x
                         -> 15 * Math.PI / 36 - x,
-                        0, 15 * Math.PI / 36,
-                        y -> 15 * Math.PI / 36 - y, 0, 15 * Math.PI / 36, pixelWriter, lineColor);
+                0, 15 * Math.PI / 36,
+                y -> 15 * Math.PI / 36 - y, 0, 15 * Math.PI / 36, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 70
         drawObliqueLine(x
                         -> 7 * Math.PI / 18 - x,
-                        0, 7 * Math.PI / 18,
-                        y -> 7 * Math.PI / 18 - y, 0, 7 * Math.PI / 18, pixelWriter, lineColor);
+                0, 7 * Math.PI / 18,
+                y -> 7 * Math.PI / 18 - y, 0, 7 * Math.PI / 18, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 68
         drawObliqueLine(x
                         -> 17 * Math.PI / 45 - x,
-                        0, 17 * Math.PI / 45,
-                        y -> 17 * Math.PI / 45 - y, 0, 17 * Math.PI / 45, pixelWriter, lineColor);
+                0, 17 * Math.PI / 45,
+                y -> 17 * Math.PI / 45 - y, 0, 17 * Math.PI / 45, pixelWriter, lineColor);
 
         // This is the line x + y = 67.7
         drawObliqueLine(x
-                -> 677 * Math.PI / 1800 - x,
+                        -> 677 * Math.PI / 1800 - x,
                 0, 677 * Math.PI / 1800,
                 y -> 677 * Math.PI / 1800 - y, 0, 677 * Math.PI / 1800, pixelWriter, lineColor);
 
         // This is the line x + y = 67.6
         drawObliqueLine(x
-                -> 169 * Math.PI / 450 - x,
+                        -> 169 * Math.PI / 450 - x,
                 0, 169 * Math.PI / 450,
                 y -> 169 * Math.PI / 450 - y, 0, 169 * Math.PI / 450, pixelWriter, lineColor);
 
         // This is the line x + y = 67.55
         drawObliqueLine(x
-                -> 1351 * Math.PI / 3600 - x,
+                        -> 1351 * Math.PI / 3600 - x,
                 0, 1351 * Math.PI / 3600,
                 y -> 1351 * Math.PI / 3600 - y, 0, 1351 * Math.PI / 3600, pixelWriter, lineColor);
 
         // This is the line x + y = 67.5
         drawObliqueLine(x
-                -> 15 * Math.PI / 40 - x,
+                        -> 15 * Math.PI / 40 - x,
                 0, 15 * Math.PI / 40,
                 y -> 15 * Math.PI / 40 - y, 0, 15 * Math.PI / 40, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 66
         drawObliqueLine(x
                         -> 11 * Math.PI / 30 - x,
-                        0, 11 * Math.PI / 30,
-                        y -> 11 * Math.PI / 30 - y, 0, 11 * Math.PI / 30, pixelWriter, lineColor);
+                0, 11 * Math.PI / 30,
+                y -> 11 * Math.PI / 30 - y, 0, 11 * Math.PI / 30, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 45
         drawObliqueLine(x
                         -> Math.PI / 4 - x,
-                        0, Math.PI / 4, y -> Math.PI / 4 - y, 0, Math.PI / 4, pixelWriter, lineColor);
+                0, Math.PI / 4, y -> Math.PI / 4 - y, 0, Math.PI / 4, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x + y = 35
         drawObliqueLine(x
                         -> 35 * Math.PI / 180 - x,
-                        0, 35 * Math.PI / 180,
-                        y -> 35 * Math.PI / 180 - y, 0, 35 * Math.PI / 180, pixelWriter, lineColor);
+                0, 35 * Math.PI / 180,
+                y -> 35 * Math.PI / 180 - y, 0, 35 * Math.PI / 180, pixelWriter, lineColor);
 
         // IMPORTANT: This is the line x = y
         drawObliqueLine(x -> x, 0, Math.PI / 4, y -> y, 0, Math.PI / 4, pixelWriter, lineColor);
@@ -4815,7 +4815,7 @@ public final class Viewer {
     }
 
     private void renderPolygon(
-        final ConvexPolygon poly, final WritableImage image, final Color color) {
+            final ConvexPolygon poly, final WritableImage image, final Color color) {
         final PixelWriter pixelWriter = image.getPixelWriter();
 
         final ImmutableList<Vector2> vertices = poly.vertices;
@@ -4842,7 +4842,7 @@ public final class Viewer {
                 final DoubleUnaryOperator funcX = y -> slopeX * (y - a.y) + a.x; // x(y)
 
                 drawObliqueLine(funcY, Math.min(a.x, b.x), Math.max(a.x, b.x), funcX,
-                                Math.min(a.y, b.y), Math.max(a.y, b.y), pixelWriter, color);
+                        Math.min(a.y, b.y), Math.max(a.y, b.y), pixelWriter, color);
             }
         }
     }
@@ -4910,10 +4910,10 @@ public final class Viewer {
                 codeSequence = null;
             }
         }
-        
+
         // George, August 26, 2021: with the line below, the trim is on now with "//"; It will be off when you remove "//"
-        //codeSequence = null; 
-        
+        //codeSequence = null;
+
         if (codeSequence != null) {
             //System.out.println("4");
             final Optional<Storage> optional = Database.loadStorage(codeSequence, pool);
@@ -4993,7 +4993,7 @@ public final class Viewer {
     }
 
     private void renderRectLoad(final Rectangle rect, final WritableImage image,
-                            final Color colorInside, final Color colorBound) {
+                                final Color colorInside, final Color colorBound) {
 
         final PixelWriter pixelWriter = image.getPixelWriter();
         final PixelReader pixelReader = image.getPixelReader();
@@ -5138,10 +5138,10 @@ public final class Viewer {
             // oblique line
             // we can solve for x and y
             final DoubleUnaryOperator x = radY
-                -> - (double) yCoeff / xCoeff * radY - (double) piCoeff / (double) xCoeff * Math.PI;
+                    -> - (double) yCoeff / xCoeff * radY - (double) piCoeff / (double) xCoeff * Math.PI;
 
             final DoubleUnaryOperator y = radX
-                -> - (double) xCoeff / yCoeff * radX - (double) piCoeff / (double) yCoeff * Math.PI;
+                    -> - (double) xCoeff / yCoeff * radX - (double) piCoeff / (double) yCoeff * Math.PI;
 
             for (int i = startPixelX; i < endPixelX; i += 1) {
                 final double radX = map.radianX(i);
@@ -5254,10 +5254,10 @@ public final class Viewer {
             if (allCheckBox.isSelected()) {
                 final double rz = Math.PI - (rx + ry);
                 final double[][] coords = {
-                    {rx, rz}, {ry, rz}, {rz, rx}, {rz, ry}, {ry, rx}, {rx, ry}};
+                        {rx, rz}, {ry, rz}, {rz, rx}, {rz, ry}, {ry, rx}, {rx, ry}};
                 for (final double[] coord : coords) {
                     if ((boundingRectangle.contains(rx, ry) && unstable.isPositive(rx, ry) &&
-                         map.getViewRectangle().contains(coord[0], coord[1]))) {
+                            map.getViewRectangle().contains(coord[0], coord[1]))) {
                         if (coord[0] > 0 && coord[1] > 0 && (Math.PI - (coord[0] + coord[1])) > 0) {
                             final int px = (int) map.pixelX(coord[0]);
                             final int py = (int) map.pixelY(coord[1]);
@@ -5293,17 +5293,17 @@ public final class Viewer {
                             // if the point is inside the bounding rectangle and is positive
                             if (allCheckBox.isSelected()) { // all feature part 1/3
                                 final List<Double> subList =
-                                    Arrays.asList(rx, ry, Math.PI - (rx + ry));
+                                        Arrays.asList(rx, ry, Math.PI - (rx + ry));
                                 Collections.sort(subList);
                                 final Location location =
-                                    stable.polygon.location(subList.get(0), subList.get(1));
+                                        stable.polygon.location(subList.get(0), subList.get(1));
                                 if (location == Location.INSIDE) {
                                     if (boundsCheckBox.isSelected()) {
                                         pixelWriter.setColor(readX, readY, fillBoundColor);
                                     }
                                     if (proverCheckBox.isSelected()) {
                                         if (stable.isPositiveProver(subList.get(0), subList.get(1),
-                                                                    halfWidth, offset)) {
+                                                halfWidth, offset)) {
                                             pixelWriter.setColor(readX, readY, color);
                                         }
                                     } else {
@@ -5347,11 +5347,11 @@ public final class Viewer {
                 line = Utils.trimCodeLine(line);
 
                 if (Utils.isCoords(line)) {
-                	list.add(line);
+                    list.add(line);
                 }
 
                 else if (!line.isEmpty() && !line.contains("s") && !line.contains("S")
-                		&& !line.contains("rectangle")) {
+                        && !line.contains("rectangle")) {
                     final Optional<ImmutableIntList> optional = Utils.splitString(line);
                     if (optional.isPresent()) {
                         final ImmutableIntList codeNumbers = optional.get();
@@ -5359,7 +5359,7 @@ public final class Viewer {
                         // it likely means there is a typo in the file
                         // that is why we use an unchecked get
                         final ClassifiedCodeSequence codeSeq =
-                            ClassifiedCodeSequence.create(codeNumbers).get();
+                                ClassifiedCodeSequence.create(codeNumbers).get();
                         list.add(codeSeq.toString());
                     } else {
                         throw new RuntimeException("Invalid line in file: " + line);
@@ -5374,8 +5374,8 @@ public final class Viewer {
     }
 
     public static Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                          Map<ClassifiedCodeSequence, Optional<String[]>>>
-    parseFile(final Path path) {
+            Map<ClassifiedCodeSequence, Optional<String[]>>>
+    parseFile(final Path path, boolean print) {
         // we want to load the code sequences in the order they are given in the file
         // we also do not want duplicates
         // Use mutable JDK collection here
@@ -5383,7 +5383,7 @@ public final class Viewer {
         Optional<Rectangle> optRect = Optional.empty();
         final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
         final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
-            new LinkedHashMap<>();
+                new LinkedHashMap<>();
         int count = 0;
 
         // Inside the file, we allow comments starting with //
@@ -5394,17 +5394,19 @@ public final class Viewer {
                 count += 1;
                 line = Utils.trimCodeLine(line);
 
+                if (print) System.out.println(line);
+
                 if (!line.isEmpty() && !line.contains("s") && !line.contains("S") &&
-                    !line.contains("rectangle") && !line.contains("+")) {
+                        !line.contains("rectangle") && !line.contains("+")) {
                     final String[] sections = line.split(",");
                     if (sections.length == 3) {
-                    	// triple
-                    	for (int i = 0; i < 3; i++) {
-                    		final String sequenceString = sections[i].trim();
+                        // triple
+                        for (int i = 0; i < 3; i++) {
+                            final String sequenceString = sections[i].trim();
                             final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
 
                             final ClassifiedCodeSequence codeSeq =
-                                ClassifiedCodeSequence.create(sequence).get();
+                                    ClassifiedCodeSequence.create(sequence).get();
 
                             final Optional<Color> optColor = Optional.empty();
 
@@ -5412,28 +5414,28 @@ public final class Viewer {
 
                             final Optional<String[]> lineOptIter = Optional.empty();
                             optIter.put(codeSeq, lineOptIter);
-                    	}
+                        }
                     } else {
-                    	// single
-	                    final String sequenceString = sections[0].trim();
-	                    final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
+                        // single
+                        final String sequenceString = sections[0].trim();
+                        final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
 
-	                    final ClassifiedCodeSequence codeSeq =
-	                        ClassifiedCodeSequence.create(sequence).get();
+                        final ClassifiedCodeSequence codeSeq =
+                                ClassifiedCodeSequence.create(sequence).get();
 
-	                    final Optional<Color> optColor;
-	                    if (sections.length == 2) {
-	                        final String colorString = sections[1].trim();
-	                        final Color color = Color.web(colorString);
-	                        optColor = Optional.of(color);
-	                    } else {
-	                        optColor = Optional.empty();
-	                    }
+                        final Optional<Color> optColor;
+                        if (sections.length == 2) {
+                            final String colorString = sections[1].trim();
+                            final Color color = Color.web(colorString);
+                            optColor = Optional.of(color);
+                        } else {
+                            optColor = Optional.empty();
+                        }
 
-	                    map.put(codeSeq, optColor);
+                        map.put(codeSeq, optColor);
 
-	                    final Optional<String[]> lineOptIter = Optional.empty();
-	                    optIter.put(codeSeq, lineOptIter);
+                        final Optional<String[]> lineOptIter = Optional.empty();
+                        optIter.put(codeSeq, lineOptIter);
                     }
                 } else if (line.contains("rectangle")) {
                     final String[] sections = line.split(" ");
@@ -5449,23 +5451,23 @@ public final class Viewer {
                     line = line.replace("+", "");
                     final String[] sections = line.split("#");
                     for (int i = 0; i < sections[0].trim().split(",").length; i++) {
-						final String sequenceString = sections[0].trim().split(",")[i];
-						final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
-						final ClassifiedCodeSequence codeSeq = ClassifiedCodeSequence.create(sequence).get();
-						final Optional<Color> optColor = Optional.empty();
-						map.put(codeSeq, optColor);
-						final ArrayList<String> intermediate = new ArrayList<>();
-						for (final String position : sections) {
-							intermediate.add(position);
-						}
-						intermediate.remove(0);
-						final String[] sectionsCut = new String[intermediate.size()];
-						for (int j = 0; j < sectionsCut.length; j++) {
-							sectionsCut[j] = intermediate.get(j).split(",")[i];
-						}
-						final Optional<String[]> lineOptIter = Optional.of(sectionsCut);
-						optIter.put(codeSeq, lineOptIter);
-					}
+                        final String sequenceString = sections[0].trim().split(",")[i];
+                        final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
+                        final ClassifiedCodeSequence codeSeq = ClassifiedCodeSequence.create(sequence).get();
+                        final Optional<Color> optColor = Optional.empty();
+                        map.put(codeSeq, optColor);
+                        final ArrayList<String> intermediate = new ArrayList<>();
+                        for (final String position : sections) {
+                            intermediate.add(position);
+                        }
+                        intermediate.remove(0);
+                        final String[] sectionsCut = new String[intermediate.size()];
+                        for (int j = 0; j < sectionsCut.length; j++) {
+                            sectionsCut[j] = intermediate.get(j).split(",")[i];
+                        }
+                        final Optional<String[]> lineOptIter = Optional.of(sectionsCut);
+                        optIter.put(codeSeq, lineOptIter);
+                    }
                 } else if (!line.isEmpty()) {
                     final Alert alert = new Alert(AlertType.INFORMATION);
 
@@ -5485,67 +5487,67 @@ public final class Viewer {
     }
 
     private MutableSortedSet<ClassifiedCodeSequence> varyLFunction(final MutableSortedSet<ClassifiedCodeSequence> codesFound, final MutableList<Vector2> points,
-			  final int[] maximums, final boolean overrideSS, final int max,
-			  final ExecutorService executor2) {
+                                                                   final int[] maximums, final boolean overrideSS, final int max,
+                                                                   final ExecutorService executor2) {
         final int CSmax = maximums[0];
         final int OSOmax = maximums[1];
         final int OSNOmax = maximums[2];
         final int CSmaxSS = maximums[3];
         final int OSOmaxSS = maximums[4];
         final int OSNOmaxSS = maximums[5];
-        
-		int count = 1;
-		int totalCodes = 0;
+
+        int count = 1;
+        int totalCodes = 0;
 
         if(overrideSS) {
             System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d", CSmaxSS, OSOmaxSS, OSNOmaxSS);
         }
-		for (Vector2 point : points) {
-			System.out.println("");
-			System.out.println("//------------- working on point " + count + " -------------"); // george added // sept 27,2017
-			final MutableSortedSet<ClassifiedCodeSequence> codes = overrideSS ? boyanMenu.varyTrianglesL(point, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor2) : boyanMenu.varyTrianglesL(point, executor2);
-			final MutableSortedSet<ClassifiedCodeSequence> localCodesFound = new TreeSortedSet<>();
+        for (Vector2 point : points) {
+            System.out.println("");
+            System.out.println("//------------- working on point " + count + " -------------"); // george added // sept 27,2017
+            final MutableSortedSet<ClassifiedCodeSequence> codes = overrideSS ? boyanMenu.varyTrianglesL(point, CSmaxSS, OSOmaxSS, OSNOmaxSS, executor2) : boyanMenu.varyTrianglesL(point, executor2);
+            final MutableSortedSet<ClassifiedCodeSequence> localCodesFound = new TreeSortedSet<>();
 
-			int i = max == 0 ? localCodesFound.size() : max;
-			int codeNum = 0;
-			final int maxPrint = i;
+            int i = max == 0 ? localCodesFound.size() : max;
+            int codeNum = 0;
+            final int maxPrint = i;
             List <String> codeList = Arrays.asList(Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
             codeList.replaceAll(j -> Utils.tripleTrimmer(j));
 
-			for (ClassifiedCodeSequence code : codes) {
+            for (ClassifiedCodeSequence code : codes) {
                 if(i == 0) break; // Already printed out the first i codes
-				if (code.codeType.equals(CodeType.OSO) && code.codeLength > OSOmax) {
-					continue;
-				} else if (code.codeType.equals(CodeType.OSNO) && code.codeLength > OSNOmax) {
-					continue;
-				} else if (code.codeType.equals(CodeType.CS) && code.codeLength > CSmax) {
-					continue;
-				}
+                if (code.codeType.equals(CodeType.OSO) && code.codeLength > OSOmax) {
+                    continue;
+                } else if (code.codeType.equals(CodeType.OSNO) && code.codeLength > OSNOmax) {
+                    continue;
+                } else if (code.codeType.equals(CodeType.CS) && code.codeLength > CSmax) {
+                    continue;
+                }
                 if (codeNum < maxPrint && !codeList.contains(code.codeSequence.toString()) && i>0) {
                     codeNum += 1;
                     System.out.println(Utils.standard(code, codeNum));
                     Platform.runLater(() -> codesFound.add(code));
                     i -= 1;
                 }
-			}
-			totalCodes += codes.size();
-			count += 1;
-		}
+            }
+            totalCodes += codes.size();
+            count += 1;
+        }
 
-		System.out.println("//~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + totalCodes
-		+ " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
+        System.out.println("//~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + totalCodes
+                + " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
 
-		return codesFound;
-	}
+        return codesFound;
+    }
 
     // Runs polyVary a set number of times 
     private void superPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, final ExecutorService executor) {
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
         final ProgressMultiTask overallProgress = new ProgressMultiTask(superAutoCb.isSelected() ? "AutoPolyVary %d out of %d" : "PolyVary %d out of %d", false, 0, SuperPolyVaryLoad.Reps);
         final Array<Color> cycleColors = Array.of(
-            Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA, 
-            Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME, 
-            Color.PURPLE, Color.TURQUOISE);
+                Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA,
+                Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME,
+                Color.PURPLE, Color.TURQUOISE);
 
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
@@ -5580,9 +5582,9 @@ public final class Viewer {
     }
 
     private void autoPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
-            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, 
-            final boolean overrideSS, final boolean autoCover, final ExecutorService executor
-            ) {
+                                      final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                                      final boolean overrideSS, final boolean autoCover, final ExecutorService executor
+    ) {
         final String lineStartText = lineStartField.getText();
         final String lineStepText = lineStepField.getText();
         final String lineEndText = lineEndField.getText();
@@ -5641,11 +5643,11 @@ public final class Viewer {
         final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
         System.out.println(String.format(
-            "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
-            endIdx - startIdx + 1,
-            shots,
-            subdivisions,
-            maxMoves
+                "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
+                endIdx - startIdx + 1,
+                shots,
+                subdivisions,
+                maxMoves
         ));
         if(overrideSS) {
             System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", maxList[3], maxList[4], maxList[5]));
@@ -5662,11 +5664,11 @@ public final class Viewer {
             drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, endIdx, startIdx, -1 * stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
         }
     }
-    
+
     // Preforms the necessary preprocessing steps to run drawPolyVary 
-    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals, 
-            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, final boolean overrideSS, 
-            final boolean autoCover, final ExecutorService executor) {
+    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
+                                  final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, final boolean overrideSS,
+                                  final boolean autoCover, final ExecutorService executor) {
         // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
         final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         final ConvexPolygon area = polyVals._1;
@@ -5681,11 +5683,11 @@ public final class Viewer {
 
         // shooting at points determined by subdivision
         //george may 3,2019 changed the name to polyvary instead of auto vary3
-        String headerString = !overrideSS ? 
-                                String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, subdivisions) +
-                                " looking for: " + boyanMenu.typeString() + "-----+" :
-                                String.format("+----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, subdivisions) +
-                                " looking for: Overrided -----+" ;
+        String headerString = !overrideSS ?
+                String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, subdivisions) +
+                        " looking for: " + boyanMenu.typeString() + "-----+" :
+                String.format("+----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, subdivisions) +
+                        " looking for: Overrided -----+" ;
         if (proverCheckBox.isSelected()) {
             headerString += "  (with prover)";
         }
@@ -5718,14 +5720,14 @@ public final class Viewer {
 
     // Calculates and draws codes at each of the list of points 
     private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area,
-            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, 
-            final boolean overrideSS, final boolean autoCover, final ExecutorService executor, 
-            final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+                              final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                              final boolean overrideSS, final boolean autoCover, final ExecutorService executor,
+                              final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
-        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
+        final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         // Count the number of holes we start with
@@ -5790,7 +5792,7 @@ public final class Viewer {
 
             progress.close();
 
-                        // only render the screen after everything has been loaded
+            // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
@@ -5800,13 +5802,13 @@ public final class Viewer {
             if(autoCover) {
                 coverWindow.show();
                 System.out.println(String.format(
-                    "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
-                    startHoles, startHoles - endHoles, endHoles));
+                        "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
+                        startHoles, startHoles - endHoles, endHoles));
                 System.out.println("");
             } else {
                 System.out.println(String.format(
-                    "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
-                    startHoles, startHoles - endHoles, endHoles));
+                        "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
+                        startHoles, startHoles - endHoles, endHoles));
                 System.out.println("");
             }
             if(step.isPresent()) step.get().setValue(step.get().getValue() + 1); // Increment for superPoly
@@ -5827,7 +5829,7 @@ public final class Viewer {
             Utils.safeShutdownExecutor(shotExecutor);
 
             progress.close();
-                        // only render the screen after everything has been loaded
+            // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
@@ -5838,12 +5840,12 @@ public final class Viewer {
             if(autoCover) {
                 coverWindow.show();
                 System.out.println(String.format(
-                    "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
-                    startHoles, startHoles - endHoles, endHoles));
+                        "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
+                        startHoles, startHoles - endHoles, endHoles));
             } else {
                 System.out.println(String.format(
-                    "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
-                    startHoles, startHoles - endHoles, endHoles));
+                        "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
+                        startHoles, startHoles - endHoles, endHoles));
 
             }
             if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
@@ -5860,10 +5862,10 @@ public final class Viewer {
     }
 
     // Recursively iterate through the list of holes, running polyVary at each hole.
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS, 
-            final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress, 
-            final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-            final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
+                                 final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
+                                 final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                                 final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // Move the screen
         lineNumberTxt.setText(Integer.toString(currIdx + 1));
         setOBO(currIdx, pool, drawExecutor);
@@ -5872,7 +5874,7 @@ public final class Viewer {
         final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
         final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
         final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
-        
+
         final MutableList<Double> points = new FastList<>();
         final MutableList<Double> pointsFiltered = new FastList<>();
         autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
@@ -5889,10 +5891,10 @@ public final class Viewer {
             }
         }
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
-        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();  
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-    	final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
+        final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
         final ObservableList<Storage> partials = task.getPartials();
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
@@ -5902,7 +5904,7 @@ public final class Viewer {
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
             if(overallProgress.isCancelled()) return; // Don't update after cancel received. This prevents codes being printed after the ending line 
             while (c.next()) {
-                if(!c.wasAdded()) continue; 
+                if(!c.wasAdded()) continue;
                 // Draw all new additions
                 c.getAddedSubList().forEach(storage -> {
                     if(!onScreenSequences.containsKey(storage)) {
@@ -6039,7 +6041,7 @@ public final class Viewer {
                 System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
             }
             System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
-            overallProgress.close(); 
+            overallProgress.close();
             if(autoCover) coverWindow.show();
             if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
         });
@@ -6065,8 +6067,8 @@ public final class Viewer {
             return;
         }
         if (!findHole((int) map.pixelX(xMin), (int) map.pixelX(xMax), (int) map.pixelY(yMin),
-                      (int) map.pixelY(yMax), area)
-                 .isPresent()) {
+                (int) map.pixelY(yMax), area)
+                .isPresent()) {
             return;
         }
 
@@ -6142,88 +6144,88 @@ public final class Viewer {
         System.out.println(result.replace(", ~", ""));
         synchronize();
     }
-   
+
     private void increase(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
-    	final String[] pats = textField.getText().split(",");
-    	String  result = "";
+        final String[] pats = textField.getText().split(",");
+        String  result = "";
 
-    	for (int i = 0; i < pats.length; i++) {
-    		final int j = i;
-	        final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
-	        numbers.forEach(number -> {
-	            final int currentNumber = currentCodeNumbers[j].get(number - 1);
-	            currentCodeNumbers[j].set(number - 1, currentNumber + 2);
-	        });
-	        result += calculateCurrentCodeNumbers(pool, i) + ", ";
-    	}
-    	result += "~";
-    	System.out.println(result.replace(", ~", ""));
+        for (int i = 0; i < pats.length; i++) {
+            final int j = i;
+            final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
+            numbers.forEach(number -> {
+                final int currentNumber = currentCodeNumbers[j].get(number - 1);
+                currentCodeNumbers[j].set(number - 1, currentNumber + 2);
+            });
+            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+        }
+        result += "~";
+        System.out.println(result.replace(", ~", ""));
         synchronize();
     }
 
     private void decrease(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
-    	final String[] pats = textField.getText().split(",");
-    	String  result = "";
+        final String[] pats = textField.getText().split(",");
+        String  result = "";
 
-    	for (int i = 0; i < pats.length; i++) {
-    		final int j = i;
-	        final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
-	        numbers.forEach(number -> {
-	            final int currentNumber = currentCodeNumbers[j].get(number - 1);
-	            currentCodeNumbers[j].set(number - 1, currentNumber - 2);
-	        });
-	        result += calculateCurrentCodeNumbers(pool, i) + ", ";
-    	}
-    	result += "~";
-    	System.out.println(result.replace(", ~", ""));
+        for (int i = 0; i < pats.length; i++) {
+            final int j = i;
+            final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
+            numbers.forEach(number -> {
+                final int currentNumber = currentCodeNumbers[j].get(number - 1);
+                currentCodeNumbers[j].set(number - 1, currentNumber - 2);
+            });
+            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+        }
+        result += "~";
+        System.out.println(result.replace(", ~", ""));
         synchronize();
     }
 
     private void setOBO(
-    		final int index, final ConnectionPool pool, final ExecutorService executor) {
+            final int index, final ConnectionPool pool, final ExecutorService executor) {
 
-    	final String line = fileCodeSequences.get(index);
-    	if (line.contains(".")) {
-    		final String[] coords = line.split(" ");
-    		final double x = Math.toRadians(Double.parseDouble(coords[0]));
-    		final double y = Math.toRadians(Double.parseDouble(coords[1]));
-    		zoom(x, x, y, y, executor);
-     	}
+        final String line = fileCodeSequences.get(index);
+        if (line.contains(".")) {
+            final String[] coords = line.split(" ");
+            final double x = Math.toRadians(Double.parseDouble(coords[0]));
+            final double y = Math.toRadians(Double.parseDouble(coords[1]));
+            zoom(x, x, y, y, executor);
+        }
 
-    	else {
-    		final ClassifiedCodeSequence codeSeq;
-    		final Optional<ImmutableIntList> optionalCode = Utils.splitString(line);
+        else {
+            final ClassifiedCodeSequence codeSeq;
+            final Optional<ImmutableIntList> optionalCode = Utils.splitString(line);
             if (optionalCode.isPresent()) {
                 final ImmutableIntList codeNumbers = optionalCode.get();
                 codeSeq = ClassifiedCodeSequence.create(codeNumbers).get();
 
-			    final Optional<Storage> optional = Database.loadStorage(codeSeq, pool);
+                final Optional<Storage> optional = Database.loadStorage(codeSeq, pool);
 
-			    if (optional.isPresent()) {
-			        currentOBOStorage = optional.get();
-			        System.out.println(currentOBOStorage);
+                if (optional.isPresent()) {
+                    currentOBOStorage = optional.get();
+                    System.out.println(currentOBOStorage);
 
-			        final WritableImage oboImage = new WritableImage(SIDE, SIDE);
-			        renderRegion(currentOBOStorage, oboImage, currentOBOColor);
-			        oboImageView.setImage(oboImage);
+                    final WritableImage oboImage = new WritableImage(SIDE, SIDE);
+                    renderRegion(currentOBOStorage, oboImage, currentOBOColor);
+                    oboImageView.setImage(oboImage);
 
-			    } else {
-			        System.out.println("//empty set " + codeSeq);
-			        // set it to an empty image
-			        currentOBOStorage = null;
-			        final WritableImage oboImage = new WritableImage(SIDE, SIDE);
-			        oboImageView.setImage(oboImage);
-			    }
-		    }
-    	}
+                } else {
+                    System.out.println("//empty set " + codeSeq);
+                    // set it to an empty image
+                    currentOBOStorage = null;
+                    final WritableImage oboImage = new WritableImage(SIDE, SIDE);
+                    oboImageView.setImage(oboImage);
+                }
+            }
+        }
 
     }
 
     // The pattern contains a list of the 1-based indices to add by the increment
     private static ImmutableIntList createVector(
-        final IntList pattern, final int increment, final int length) {
+            final IntList pattern, final int increment, final int length) {
         final MutableIntList vector = IntArrayList.newWithNValues(length, 0);
         pattern.forEach(index -> {
             // Zhao Yu Li May 01, 2025.
@@ -6233,7 +6235,7 @@ public final class Viewer {
             final int value = index < 0 ? -increment : increment;
             final int sum = Math.addExact(vector.get(idx - 1), value);
             vector.set(idx - 1, sum);
-            
+
             //george aug 26,2019
             //System.out.print("sum " + sum + " ");
             //System.out.print("increment " + increment + " ");
@@ -6246,7 +6248,7 @@ public final class Viewer {
     // destination += scale * vector
     // same length, obviously
     private static void addMultiple(
-        final MutableIntList destination, final int scale, final IntList vector) {
+            final MutableIntList destination, final int scale, final IntList vector) {
         for (int i = 0; i < destination.size(); ++i) {
             final int mul = Math.multiplyExact(scale, vector.get(i));
             final int sum = Math.addExact(destination.get(i), mul);
