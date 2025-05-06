@@ -116,7 +116,7 @@ public class BoyanMenu {
 
     final TextField maxPrinting = new TextField();
 
-	public BoyanMenu(final Button autoVaryButton, final Button polyAutoBtn, final Button varyLBtn,
+	public BoyanMenu(final Button middleVaryLButton, final Button polyAutoBtn, final Button varyLBtn,
                      final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField, final TextField lineEndField,
                      final Button superPolyVaryBtn, final CheckBox superAutoCb, final double TipOpenDelay, final double TipCloseDelay) {
 
@@ -429,8 +429,12 @@ public class BoyanMenu {
         /*final HBox vary3HBox =
             new HBox(10, vary3Btn, varyLBtn, hitsLabel, autoVaryButton, autoCycleText, minPrinting,
             		maxPrinting);*/ //, autoIterText, autoStepText //added minPrinting george june6,2019
+
+        // Zhao Yu Li, May 06, 2025.
+        // Moved buildPolyCheckBox from to Viewr.java.
+        // Added new MiddleVaryL button.
         final HBox vary3HBox =
-        		new HBox(10, buildPolyCheckBox, varyLBtn, maxPrinting,polyAutoBtn,autoCycleText);
+        		new HBox(10, middleVaryLButton, varyLBtn, maxPrinting,polyAutoBtn,autoCycleText);
            // new HBox(10, vary4Btn, varyLBtn, hitsLabel, autoVaryButton, autoCycleText, //george june 18,2019 replaced vary3Btn with vary4Btn
             		//maxPrinting); //, autoIterText, autoStepText
 
@@ -604,8 +608,7 @@ public class BoyanMenu {
     }
     public MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(
     				final Vector2 point, final ExecutorService executor) { // Got rid of findCodes since it was unecessary complexity
-        final MutableSortedSet<ClassifiedCodeSequence> codesFound = findCodes(point.x, point.y, 3, executor);
-    	return codesFound;
+        return findCodes(point.x, point.y, 3, executor);
     }
 
     // Overloading for seperate maximums
@@ -1002,12 +1005,15 @@ public class BoyanMenu {
         // Zhao Yu Li, May 05, 2025.
         // Prints only the middle code of the list of codes with the same type (i.e. CS, OSNO, OSO, etc.)
         // and code length.
+        // Zhao Yu Li, May 06, 2025.
+        // Groups are distinguished by (code type, code length, and odd-even pattern)
         if (printMid) {
             organizedCodes.clear();
+
             for (final CodeType type : codeTypes) {
-                int lengthCount = 0;
                 long currentLength = -1;
-                final ArrayList<ClassifiedCodeSequence> tempCodes = new ArrayList<>();
+                Map<StringBuilder, ArrayList<ClassifiedCodeSequence>> processedCodes = new HashMap<>();
+                Map<StringBuilder, Integer> processedCodesLength = new HashMap<>();
 
                 for (final ClassifiedCodeSequence code : splitCodes) {
                     if (code.codeType.equals(type)) {
@@ -1016,24 +1022,38 @@ public class BoyanMenu {
                         }
 
                         if (code.codeLength == currentLength) {
-                            lengthCount++;
-                            tempCodes.add(code);
-                        } else {
-                            // Only add the middle one
-                            organizedCodes.add(tempCodes.get(lengthCount / 2));
+                            processedCodesLength.compute(code.oddEvenPattern,
+                                    (k, lengthCount) -> (lengthCount == null) ? 1 : lengthCount + 1);
 
-                            tempCodes.clear();
-                            tempCodes.add(code);
+                            if (!processedCodes.containsKey(code.oddEvenPattern)) {
+                                processedCodes.put(code.oddEvenPattern, new ArrayList<>());
+                            }
+                            processedCodes.get(code.oddEvenPattern).add(code);
+                        } else {
+                            for (StringBuilder oddEvenPattern : processedCodesLength.keySet()) {
+                                // Only add the middle one
+                                organizedCodes.add(processedCodes.get(oddEvenPattern)
+                                        .get(processedCodesLength.get(oddEvenPattern) / 2));
+                            }
+
+                            // Clear and re-initialize for the next iteration
+                            processedCodes.clear();
+                            processedCodes.put(code.oddEvenPattern, new ArrayList<>());
+                            processedCodes.get(code.oddEvenPattern).add(code);
                             currentLength = code.codeLength;
-                            lengthCount = 1;
+                            processedCodesLength.clear();
+                            processedCodesLength.put(code.oddEvenPattern, 1);
                         }
                     }
                 }
 
-                // We reached the end of the iteration, add the middle of last (code type, code length) group
-                if (!tempCodes.isEmpty()) organizedCodes.add(tempCodes.get(lengthCount / 2));
+                // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
+                for (StringBuilder oddEvenPattern : processedCodesLength.keySet()) {
+                    if (!processedCodes.get(oddEvenPattern).isEmpty())
+                        organizedCodes.add(processedCodes.get(oddEvenPattern)
+                                .get(processedCodesLength.get(oddEvenPattern) / 2));
+                }
             }
-
         }
 
         int count = 0;

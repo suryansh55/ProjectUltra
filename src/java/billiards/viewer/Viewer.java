@@ -510,6 +510,11 @@ public final class Viewer {
     final Button autoVaryBtn = new Button();
     final Button polyVaryBtn = new Button();
     final Button varyLBtn = new Button();
+
+    // Zhao Yu Li, May 06, 2025.
+    // New MiddleVaryL button.
+    final Button middleVaryLBtn = new Button();
+
     // Fields for the AutoPolyVary button
     final TextField lineStartField = new TextField();
     final TextField lineStepField = new TextField(); // 2024-05-06 Step interval for auto
@@ -519,7 +524,7 @@ public final class Viewer {
     final Button superPolyVaryBtn = new Button();
     final CheckBox superAutoCb = new CheckBox();
 
-    final BoyanMenu boyanMenu = new BoyanMenu(autoVaryBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
+    final BoyanMenu boyanMenu = new BoyanMenu(middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
 
 
     final CoverWindow coverWindow;
@@ -1453,7 +1458,60 @@ public final class Viewer {
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
-                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor);
+                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, false);
+                }
+            }
+        });
+
+        middleVaryLBtn.setText("MVL");
+        middleVaryLBtn.setTooltip(Utils.toolTip("Search for codes at a list of points, but only prints the middle one " +
+                "of each (code length, code type, odd-even pattern) group."));
+        Utils.colorButton(middleVaryLBtn, Color.LIGHTPINK, Color.GOLD);
+        middleVaryLBtn.setOnAction(event -> {
+            if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !VaryWindowL.Override) {
+                final Alert alert = new Alert(AlertType.ERROR);
+
+                alert.setTitle("Middle Vary");
+                alert.setHeaderText("No CodeTypes");
+                alert.setContentText("Please select at least one codetype.");
+                alert.showAndWait();
+            }
+            else {
+                final String x = textXLockField.getText();
+                final String y = textYLockField.getText();
+
+                if (varyWindow.stage.isShowing()) {
+                    varyWindow.stage.toFront();
+                    if (!boyanMenu.varyOnePoint.isSelected()) {
+                        return;
+                    }
+                }
+
+                final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
+                        varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
+                if (pointOpt.isPresent()) {
+
+                    final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
+                    System.out.println(
+                            "//~~~~~~~~~~~~~~~~~~~~~~~ middleVaryL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
+
+                    final MutableList<Vector2> pointList = point._1;
+                    // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
+                    final int[] maximums = {point._2, point._3, point._4, point._5, point._6, point._7};
+                    final boolean draw = VaryWindowL.Draw;
+                    final boolean overrideSS = VaryWindowL.Override;
+                    final boolean autoCover = VaryWindowL.AutoCover;
+                    final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
+
+                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
+                    if(overrideSS) {
+                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
+                    }
+
+                    final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
+                    final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
+                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, true);
                 }
             }
         });
@@ -2948,7 +3006,10 @@ public final class Viewer {
         backForOBOHBox.getChildren().clear();
         colorsHBox1.getChildren().clear();
         zoomRegionHBox.getChildren().clear();
-        hbox1.getChildren().addAll(keepPolys, covRectsColorBox, coverColorCycle);
+
+        // Zhao Yu Li, May 06, 2025.
+        // Moved buildPolyCheckBox from BoyanMenu.java to here.
+        hbox1.getChildren().addAll(boyanMenu.buildPolyCheckBox, keepPolys, covRectsColorBox, coverColorCycle);
         //zoomRegionHBox.getChildren().addAll(
         // mergeButton,loadCoverButton,newPolyTrimBtn, zoomRegionButton, zoomColorButton);
         //zoomRegionHBox.getChildren().addAll(
@@ -3418,12 +3479,13 @@ public final class Viewer {
 
     private void drawVaryL(final MutableList<Vector2> points, final int[] max,
                            final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
-                           final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+                           final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
+                           final boolean printMid) {
 
         List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
         codeList.replaceAll(j -> Utils.tripleTrimmer(j));
         // Create the task
-        final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor);
+        final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor, printMid);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
