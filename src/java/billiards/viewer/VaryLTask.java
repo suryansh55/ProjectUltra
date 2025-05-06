@@ -10,9 +10,7 @@ import billiards.wrapper.ConnectionPool;
 import javaslang.collection.Array;
 import javaslang.control.Either;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -60,6 +58,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     private final int maxPrint;
     private final ExecutorService storageExecutor;
     private final ExecutorService shotExecutor;
+    private final boolean printMid;
     //private final ImageView screenImage;
     //private final PixelRadianMap screenMap; 
 
@@ -67,7 +66,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     public VaryLTask(
         final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan, 
         final Array<Integer> max, final ConnectionPool pool, final boolean override, final boolean draw,
-        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo) {
+        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo, final boolean printMid) {
         this.coordList = points; // Points are in degrees
         this.coverCodes.addAll(coverCodes);
         this.boyanMenu = boyan;
@@ -83,6 +82,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         this.maxPrint = maxPrint;
         this.storageExecutor = eOne;
         this.shotExecutor = eTwo;
+        this.printMid = printMid;
     }
 
     @Override
@@ -104,7 +104,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
 
         for(Vector2 coord: this.coordList) {
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
-			System.out.println("");
+			System.out.println();
 			System.out.println("//------------- working on point " + count++ + " -------------"); // george added // sept 27,2017
             // The BoyanCodes method vary3() called by varyTrianglesL() can throw exceptions. We need to catch them
             try {
@@ -122,31 +122,129 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
             int codeNum = 1;
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
             totalCodes += localCodes.size();
-            for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                if(i <= 0) break;
-                --i;
-                System.out.println(Utils.standard(classCodeSeq, codeNum++));
-                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
-                    this.updateProgress(progress.incrementAndGet(), todo);
-                    continue;
+            if (!printMid) {
+                for(ClassifiedCodeSequence classCodeSeq: localCodes) {
+                    if(i <= 0) break;
+                    --i;
+                    System.out.println(Utils.standard(classCodeSeq, codeNum++));
+                    if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
+                        this.updateProgress(progress.incrementAndGet(), todo);
+                        continue;
+                    }
+                    usedCodes.add(classCodeSeq);
+                    // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
+                    futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
+                                @Override
+                                public Either<String, Storage> call() {
+                                    Either<String, Storage> result = loadStorage(classCodeSeq);
+                                    VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
+                                    return result;
+                                }
+
+                                @Override
+                                public int getPriority() {
+                                    return classCodeSeq.length();
+                                }
+                            })
+                    );
                 }
-                usedCodes.add(classCodeSeq); 
-                // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
-                futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
-                        @Override
-                        public Either<String, Storage> call() {
-                            Either<String, Storage> result = loadStorage(classCodeSeq);
-                            VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
-                            return result;
+            } else {
+                // Zhao Yu Li, May 06, 2025.
+                // Prints only the middle code of each (code type, code length, and odd-even pattern) group
+                final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
+
+                long currentLength = -1;
+                Map<CodeType, Map<StringBuilder, ArrayList<ClassifiedCodeSequence>>> processedCodes = new HashMap<>();
+                Map<CodeType, Map<StringBuilder, Integer>> processedCodesLength = new HashMap<>();
+
+                for (CodeType codeType : codeTypes) {
+                    processedCodes.put(codeType, new HashMap<>());
+                    processedCodesLength.put(codeType, new HashMap<>());
+                }
+
+                for(ClassifiedCodeSequence code: localCodes) {
+                    if (i <= 0) break;
+
+                    if (currentLength == -1) {
+                        currentLength = code.length();
+                    }
+
+                    if (code.codeLength == currentLength) {
+                        processedCodesLength.get(code.codeType).compute(code.oddEvenPattern,
+                                (k, lengthCount) -> (lengthCount == null) ? 1 : lengthCount + 1);
+
+                        if (!processedCodes.get(code.codeType).containsKey(code.oddEvenPattern)) {
+                            processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
+                        }
+                        processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
+                    } else {
+                        for (CodeType codeType : codeTypes) {
+                            if (i <= 0) break;
+
+                            for (StringBuilder oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                                if (i <= 0) break;
+
+                                // Only print the middle one
+                                final ClassifiedCodeSequence classCodeSeq = processedCodes.get(codeType)
+                                        .get(oddEvenPattern)
+                                        .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
+
+                                --i;
+                                System.out.println(Utils.standard(classCodeSeq, codeNum++));
+
+                                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
+                                    this.updateProgress(progress.incrementAndGet(), todo);
+                                    continue;
+                                }
+                                usedCodes.add(classCodeSeq);
+                                // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
+                                futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
+                                            @Override
+                                            public Either<String, Storage> call() {
+                                                Either<String, Storage> result = loadStorage(classCodeSeq);
+                                                VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
+                                                return result;
+                                            }
+
+                                            @Override
+                                            public int getPriority() {
+                                                return classCodeSeq.length();
+                                            }
+                                        })
+                                );
+
+                            }
+
+                            // Clear and re-initialize for the next iteration
+                            processedCodes.get(codeType).clear();
+                            processedCodes.get(codeType).put(code.oddEvenPattern, new ArrayList<>());
+                            currentLength = code.codeLength;
+                            processedCodesLength.get(codeType).clear();
                         }
 
-                        @Override
-                        public int getPriority() {
-                            return classCodeSeq.length();
+                        processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
+                        processedCodesLength.get(code.codeType).put(code.oddEvenPattern, 1);
+                    }
+                }
+
+                for (CodeType codeType : codeTypes) {
+                    if (i <= 0) break;
+
+                    // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
+                    for (StringBuilder oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                        if (i <= 0) break;
+
+                        if (!processedCodes.get(codeType).get(oddEvenPattern).isEmpty()) {
+                            ClassifiedCodeSequence codeToPrint = processedCodes.get(codeType)
+                                    .get(oddEvenPattern)
+                                    .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
+                            --i;
+                            System.out.println(Utils.standard(codeToPrint, codeNum++));
                         }
-                    })
-                );
+                    }
+                }
             }
+
             for(int p = 0; p < i; ++p) { // Update in the case of < i codes
                 this.updateProgress(progress.incrementAndGet(), todo);
             }
