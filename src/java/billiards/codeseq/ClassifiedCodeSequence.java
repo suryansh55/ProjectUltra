@@ -21,7 +21,7 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
     public final long codeSum;
     public final CodeType codeType;
     public final boolean stable;
-    public final StringBuilder oddEvenPattern;
+    public final String oddEvenPattern;
 
     private ClassifiedCodeSequence(final CodeSequence codeSequence) {
         this.codeSequence = codeSequence;
@@ -59,7 +59,7 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
      * @param codeNumbers The list of numbers that constitutes the code sequence
      * @return The odd-even pattern
      */
-    private static StringBuilder calculateOddEvenPattern(final IntList codeNumbers) {
+    private static String calculateOddEvenPattern(final IntList codeNumbers) {
         StringBuilder oddEvenPattern = new StringBuilder();
 
         for (int i = 0; i < codeNumbers.size(); i++) {
@@ -70,7 +70,7 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
             }
         }
 
-        return oddEvenPattern;
+        return oddEvenPattern.toString();
     }
 
     private static CodeType calculateCodeType(final IntList codeNumbers) {

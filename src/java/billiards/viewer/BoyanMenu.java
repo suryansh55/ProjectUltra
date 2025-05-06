@@ -1012,8 +1012,8 @@ public class BoyanMenu {
 
             for (final CodeType type : codeTypes) {
                 long currentLength = -1;
-                Map<StringBuilder, ArrayList<ClassifiedCodeSequence>> processedCodes = new HashMap<>();
-                Map<StringBuilder, Integer> processedCodesLength = new HashMap<>();
+                Map<String, ArrayList<ClassifiedCodeSequence>> processedCodes = new HashMap<>();
+                Map<String, Integer> processedCodesLength = new HashMap<>();
 
                 for (final ClassifiedCodeSequence code : splitCodes) {
                     if (code.codeType.equals(type)) {
@@ -1030,7 +1030,7 @@ public class BoyanMenu {
                             }
                             processedCodes.get(code.oddEvenPattern).add(code);
                         } else {
-                            for (StringBuilder oddEvenPattern : processedCodesLength.keySet()) {
+                            for (String oddEvenPattern : processedCodesLength.keySet()) {
                                 // Only add the middle one
                                 organizedCodes.add(processedCodes.get(oddEvenPattern)
                                         .get(processedCodesLength.get(oddEvenPattern) / 2));
@@ -1048,7 +1048,7 @@ public class BoyanMenu {
                 }
 
                 // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
-                for (StringBuilder oddEvenPattern : processedCodesLength.keySet()) {
+                for (String oddEvenPattern : processedCodesLength.keySet()) {
                     if (!processedCodes.get(oddEvenPattern).isEmpty())
                         organizedCodes.add(processedCodes.get(oddEvenPattern)
                                 .get(processedCodesLength.get(oddEvenPattern) / 2));

@@ -154,8 +154,8 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                 final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
 
                 long currentLength = -1;
-                Map<CodeType, Map<StringBuilder, ArrayList<ClassifiedCodeSequence>>> processedCodes = new HashMap<>();
-                Map<CodeType, Map<StringBuilder, Integer>> processedCodesLength = new HashMap<>();
+                Map<CodeType, Map<String, ArrayList<ClassifiedCodeSequence>>> processedCodes = new HashMap<>();
+                Map<CodeType, Map<String, Integer>> processedCodesLength = new HashMap<>();
 
                 for (CodeType codeType : codeTypes) {
                     processedCodes.put(codeType, new HashMap<>());
@@ -181,7 +181,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                         for (CodeType codeType : codeTypes) {
                             if (i <= 0) break;
 
-                            for (StringBuilder oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                            for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
                                 if (i <= 0) break;
 
                                 // Only print the middle one
@@ -231,7 +231,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                     if (i <= 0) break;
 
                     // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
-                    for (StringBuilder oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                    for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
                         if (i <= 0) break;
 
                         if (!processedCodes.get(codeType).get(oddEvenPattern).isEmpty()) {
