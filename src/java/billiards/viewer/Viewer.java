@@ -3554,11 +3554,11 @@ public final class Viewer {
             }
             if(autoCover) {
                 coverWindow.show();
-                System.out.println("+---- VaryL Completed, CODES ARE IN COVER; ----+");
-                System.out.println("");
+                System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN COVER; ----+");
+                System.out.println();
             } else {
-                System.out.println("+-------------- VaryL Completed; --------------+");
-                System.out.println("");
+                System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed; --------------+");
+                System.out.println();
             }
         });
 
