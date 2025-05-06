@@ -21,6 +21,7 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
     public final long codeSum;
     public final CodeType codeType;
     public final boolean stable;
+    public final StringBuilder oddEvenPattern;
 
     private ClassifiedCodeSequence(final CodeSequence codeSequence) {
         this.codeSequence = codeSequence;
@@ -28,6 +29,7 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
         this.codeSum = calculateCodeSum(codeSequence.codeNumbers);
         this.codeType = calculateCodeType(codeSequence.codeNumbers);
         this.stable = isStableCodeType(this.codeType);
+        this.oddEvenPattern = calculateOddEvenPattern(codeSequence.codeNumbers);
     }
 
     public static Either<InvalidCodeSequence, ClassifiedCodeSequence> create(
@@ -43,6 +45,32 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
             final ClassifiedCodeSequence classCodeSeq = new ClassifiedCodeSequence(codeSequence);
             return Either.right(classCodeSeq);
         }
+    }
+
+    /**
+     * Zhao Yu Li, May 06, 2025.
+     * Calculates the odd-even pattern of a code sequence. The odd-even pattern is used to distinguished two code
+     * sequence when they are of the same type and have the same code length. The odd-even pattern is stored as an
+     * array of string, where each character in the string can be either an "O(dd)" or an "E(ven)". It is important to
+     * note that using a String or StringBuilder to store the entire pattern is memory intensive, as each element can
+     * take only two values, and each element is eight bytes. A more efficient way is to use a single bit, but the code
+     * sequence can have up to a thousand numbers, and we don't have a integer type that big.
+     * e.g. 1 1 368 1 1 739 <==> "OOEOOO"
+     * @param codeNumbers The list of numbers that constitutes the code sequence
+     * @return The odd-even pattern
+     */
+    private static StringBuilder calculateOddEvenPattern(final IntList codeNumbers) {
+        StringBuilder oddEvenPattern = new StringBuilder();
+
+        for (int i = 0; i < codeNumbers.size(); i++) {
+            if (codeNumbers.get(i) % 2 == 0) {
+                oddEvenPattern.append("E");
+            } else {
+                oddEvenPattern.append("O");
+            }
+        }
+
+        return oddEvenPattern;
     }
 
     private static CodeType calculateCodeType(final IntList codeNumbers) {
