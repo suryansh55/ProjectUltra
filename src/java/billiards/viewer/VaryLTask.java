@@ -166,7 +166,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                     if (i <= 0) break;
 
                     if (currentLength == -1) {
-                        currentLength = code.length();
+                        currentLength = code.codeLength;
                     }
 
                     if (code.codeLength == currentLength) {
@@ -217,11 +217,11 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
 
                             // Clear and re-initialize for the next iteration
                             processedCodes.get(codeType).clear();
-                            processedCodes.get(codeType).put(code.oddEvenPattern, new ArrayList<>());
-                            currentLength = code.codeLength;
                             processedCodesLength.get(codeType).clear();
                         }
 
+                        currentLength = code.codeLength;
+                        processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
                         processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
                         processedCodesLength.get(code.codeType).put(code.oddEvenPattern, 1);
                     }
