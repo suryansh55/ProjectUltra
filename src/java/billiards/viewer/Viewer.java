@@ -2877,7 +2877,7 @@ public final class Viewer {
         // backForOBOHBox, zoomHBox, clickActionHBox, backForthHBox);
         //final VBox leftVBox = new VBox(10, whatMenuHBox, twoHBox, colorsHBox1, varyMenuPane, oboHBox,
         //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
-        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox,infoButton);
+        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, parallelogramButton);
 
         final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
                 backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
