@@ -3490,7 +3490,7 @@ public final class Viewer {
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
         // Count the number of holes we start with
-        if(autoCover) coverWindow.appendStablesInfo("// Start VaryL");
+        if(autoCover) coverWindow.appendStablesInfo("// Start " + (printMid ? "MiddleVaryL" : "VaryL"));
 
         // Update screen when change detected
         task.getPartialProperty().get().addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -3550,7 +3550,7 @@ public final class Viewer {
 
             if(draw) {
                 System.out.println("Printing drawn Codes:");
-                codeStrings.forEach(str -> System.out.println(str));
+                codeStrings.forEach(System.out::println);
             }
             if(autoCover) {
                 coverWindow.show();
@@ -3582,13 +3582,13 @@ public final class Viewer {
 
             if(draw) {
                 System.out.println("Printing drawn Codes:");
-                codeStrings.forEach(str -> System.out.println(str));
+                codeStrings.forEach(System.out::println);
             }
             if(autoCover) {
                 coverWindow.show();
-                System.out.println("+---- VaryL Cancelled, CODES ARE IN COVER; ----+");
+                System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled, CODES ARE IN COVER; ----+");
             } else {
-                System.out.println("+-------------- VaryL Cancelled; --------------+");
+                System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled; --------------+");
 
             }
         });
