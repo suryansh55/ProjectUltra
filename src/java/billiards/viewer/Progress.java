@@ -9,6 +9,8 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public final class Progress {
     private final HBox root = new HBox();
     private final Button cancelButton = new Button();
@@ -46,5 +48,9 @@ public final class Progress {
 
     public void show() {
         stage.show();
+    }
+
+    public void incrementWindowCount(AtomicInteger count) {
+        stage.setOnCloseRequest(event -> count.incrementAndGet());
     }
 }

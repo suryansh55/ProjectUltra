@@ -93,6 +93,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Stream;
 
@@ -172,6 +173,7 @@ public final class Viewer {
     private static final Color lineColor = Color.MAGENTA;
     private static final Color screenFillsColor = Color.MIDNIGHTBLUE;
 
+    AtomicInteger progressWindows = new AtomicInteger(5);
 
     final Color clickColor = Color.GOLD;
     final String textBoxColor = Utils.hex(Color.MISTYROSE);
@@ -3666,47 +3668,46 @@ public final class Viewer {
                 }
 
                 for (String codeType : codeTypes) {
-                    int section = 0;
-                    int step = 10000;
-                    boolean done = false;
+                    String query = "SELECT code_sequence FROM " + codeType;
 
-                    while (!done) {
+                    try (Connection conn = DriverManager.getConnection(url);
+                         Statement stmt = conn.createStatement();
+                         ResultSet rs = stmt.executeQuery(query)) {
+
                         Optional<Rectangle> optRect = Optional.empty();
-                        final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
-                        final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
-                                new LinkedHashMap<>();
-                        final int start = section * step;
+                        LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
+                        LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter = new LinkedHashMap<>();
                         int count = 0;
 
-                        String query = "SELECT code_sequence FROM " + codeType + " LIMIT " + step + " OFFSET " + start;
+                        while (rs.next()) {
+                            count++;
+                            String line = Utils.trimCodeLine(rs.getString("code_sequence"));
 
-                        try (Connection conn = DriverManager.getConnection(url);
-                             Statement stmt = conn.createStatement();
-                             ResultSet rs = stmt.executeQuery(query)) {
+                            final ImmutableIntList sequence = Utils.splitString(line.trim()).get();
 
-                            while (rs.next()) {
-                                count++;
-                                String line = Utils.trimCodeLine(rs.getString("code_sequence"));
+                            final ClassifiedCodeSequence codeSeq =
+                                    ClassifiedCodeSequence.create(sequence).get();
 
-                                final ImmutableIntList sequence = Utils.splitString(line.trim()).get();
+                            map.put(codeSeq, Optional.empty());
+                            optIter.put(codeSeq, Optional.empty());
 
-                                final ClassifiedCodeSequence codeSeq =
-                                        ClassifiedCodeSequence.create(sequence).get();
-
-                                map.put(codeSeq, Optional.empty());
-                                optIter.put(codeSeq, Optional.empty());
+                            if (count == 10000) {
+                                count = 0;
+                                final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
+                                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup = new Tuple3<>(optRect, map, optIter);
+                                drawCodes(tup, executor, all, poly);
+                                map = new LinkedHashMap<>();
+                                optIter = new LinkedHashMap<>();
                             }
-                        } catch (SQLException ex) {
-                            System.err.println("Error: " + ex.getMessage());
                         }
 
-                        if (count < step) done = true;
-
-                        final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                                Map<ClassifiedCodeSequence, Optional<String[]>>> tup = new Tuple3<>(optRect, map, optIter);
-                        drawCodes(tup, executor, all, poly);
-
-                        section++;
+                        if (!map.isEmpty() && !optIter.isEmpty()) {
+                            final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
+                                    Map<ClassifiedCodeSequence, Optional<String[]>>> tup = new Tuple3<>(optRect, map, optIter);
+                            drawCodes(tup, executor, all, poly);
+                        }
+                    } catch (SQLException ex) {
+                        System.err.println("Error: " + ex.getMessage());
                     }
                 }
             } else {
@@ -3816,8 +3817,8 @@ public final class Viewer {
 
             executor.execute(task);
 
-            progress.show();
-
+            progress.incrementWindowCount(progressWindows);
+            showProgressWindow(progress);
         } else {
             final DontDrawPictureTask task =
                     new DontDrawPictureTask(classCodeSeqs, pool);
@@ -3837,6 +3838,14 @@ public final class Viewer {
             executor.execute(task);
 
             // Imperative
+            progress.incrementWindowCount(progressWindows);
+            showProgressWindow(progress);
+        }
+    }
+
+    private void showProgressWindow(Progress progress) {
+        if (this.progressWindows.get() > 0) {
+            this.progressWindows.decrementAndGet();
             progress.show();
         }
     }
