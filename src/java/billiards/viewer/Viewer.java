@@ -3635,19 +3635,11 @@ public final class Viewer {
             final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor, boolean loadDB) {
 
         if (file != null) {
-            final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                    Map<ClassifiedCodeSequence, Optional<String[]>>> tup;
-
             // Zhao Yu Li, May 08, 2025.
             // Load codes from a SQLite DB. Functionality is similar to that of handling singles in the parseFile
             // function. We only need to handle singles when loading from DB because the DB separates the codes only by
             // codeType (i.e. cs, cns, oso, osno, ons).
             if (loadDB) {
-                Optional<Rectangle> optRect = Optional.empty();
-                final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
-                final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
-                        new LinkedHashMap<>();
-
                 String dbPath = file.getAbsolutePath();
                 System.out.println("Loading from DB: " + dbPath);
 
@@ -3674,151 +3666,178 @@ public final class Viewer {
                 }
 
                 for (String codeType : codeTypes) {
-                    String query = "SELECT code_sequence FROM " + codeType;
+                    int section = 0;
+                    int step = 10000;
+                    boolean done = false;
 
-                    try (Connection conn = DriverManager.getConnection(url);
-                         Statement stmt = conn.createStatement();
-                         ResultSet rs = stmt.executeQuery(query)) {
+                    while (!done) {
+                        Optional<Rectangle> optRect = Optional.empty();
+                        final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
+                        final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
+                                new LinkedHashMap<>();
+                        final int start = section * step;
+                        int count = 0;
 
-                        while (rs.next()) {
-                            String line = Utils.trimCodeLine(rs.getString("code_sequence"));
+                        String query = "SELECT code_sequence FROM " + codeType + " LIMIT " + step + " OFFSET " + start;
 
-                            final ImmutableIntList sequence = Utils.splitString(line.trim()).get();
+                        try (Connection conn = DriverManager.getConnection(url);
+                             Statement stmt = conn.createStatement();
+                             ResultSet rs = stmt.executeQuery(query)) {
 
-                            final ClassifiedCodeSequence codeSeq =
-                                    ClassifiedCodeSequence.create(sequence).get();
+                            while (rs.next()) {
+                                count++;
+                                String line = Utils.trimCodeLine(rs.getString("code_sequence"));
 
-                            map.put(codeSeq, Optional.empty());
-                            optIter.put(codeSeq, Optional.empty());
-                        }
-                    } catch (SQLException ex) {
-                        System.err.println("Error: " + ex.getMessage());
-                    }
-                }
+                                final ImmutableIntList sequence = Utils.splitString(line.trim()).get();
 
-                tup = new Tuple3<>(optRect, map, optIter);
-            } else {
-                tup = parseFile(file.toPath(), true);
-            }
+                                final ClassifiedCodeSequence codeSeq =
+                                        ClassifiedCodeSequence.create(sequence).get();
 
-            final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
-            final Map<ClassifiedCodeSequence, Optional<String[]>> iterMap = tup._3;
-            final ArrayList<ClassifiedCodeSequence> allCodes = new ArrayList<>(map.keySet());
-
-            for (ClassifiedCodeSequence code : iterMap.keySet()) {
-                if (iterMap.get(code).isPresent()) {
-                    final int[] starts = new int[iterMap.get(code).get().length];
-                    Arrays.fill(starts, Integer.parseInt(iterationStart.getText().trim()));
-                    final int[] ends = new int[iterMap.get(code).get().length];
-                    Arrays.fill(ends, Integer.parseInt(iterationEnd.getText().trim()));
-                    final int[] steps = new int[iterMap.get(code).get().length];
-                    Arrays.fill(steps, 2);
-
-                    currentCodeNumbers[0] = code.codeSequence.codeNumbers.toList();
-
-                    iterateAction(code.codeSequence.codeNumbers.toList(),
-                            iterMap.get(code).get(), starts, ends, steps, 0, false, executor);
-                }
-            }
-
-            final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(allCodes);
-
-            if (drawPictureCheckBox.isSelected()) {
-                final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
-                final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, false, false);
-                final Progress progress = new Progress(task);
-
-                task.setOnSucceeded(e -> {
-
-                    final Array<Storage> storages;
-                    try {
-                        storages = task.get();
-                    } catch (InterruptedException | ExecutionException exception) {
-                        throw new RuntimeException(exception);
-                    }
-
-                    storages.forEach(storage -> {
-                        if (all || storage.intersects(poly)) {
-
-                            final Optional<Color> opt = map.get(storage.classCodeSeq);
-                            final Color color;
-                            if (opt.isPresent()) {
-                                color = opt.get();
-                            } else {
-                                final int index = cycle.get();
-                                color = comboBoxColors.get(index);
+                                map.put(codeSeq, Optional.empty());
+                                optIter.put(codeSeq, Optional.empty());
                             }
-
-                            addToOnScreenSequences(storage, color);
-
-                            System.out.println(storage.classCodeSeq);
+                        } catch (SQLException ex) {
+                            System.err.println("Error: " + ex.getMessage());
                         }
-                    });
 
-                    Utils.safeShutdownExecutor(drawExecutor);
-                    progress.close();
+                        if (count < step) done = true;
 
-                    if (tup._1.isPresent()) {
-                        final Rectangle rect = tup._1.get();
+                        final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
+                                Map<ClassifiedCodeSequence, Optional<String[]>>> tup = new Tuple3<>(optRect, map, optIter);
+                        drawCodes(tup, executor, all, poly);
 
-                        final String xMin = String.valueOf(Math.toDegrees(rect.intervalX.min));
-                        final String xMax = String.valueOf(Math.toDegrees(rect.intervalX.max));
-                        final String yMin = String.valueOf(Math.toDegrees(rect.intervalY.min));
-                        final String yMax = String.valueOf(Math.toDegrees(rect.intervalY.max));
-
-                        xMinTextField.setText(xMin);
-                        xMaxTextField.setText(xMax);
-
-                        yMinTextField.setText(yMin);
-                        yMaxTextField.setText(yMax);
-
-                        zoomAction(executor);
-                    } else {
-                        // only render the screen after everything has been loaded
-                        // There should be a way to do a "diff" so to speak
-                        // We render the things we added, which get put on top
-                        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView,
-                                executor);
+                        section++;
                     }
-
-                });
-
-                task.setOnCancelled(e -> {
-                    Utils.safeShutdownExecutor(drawExecutor);
-                    progress.close();
-                });
-
-                task.setOnFailed(e -> {
-                    Utils.safeShutdownExecutor(drawExecutor);
-                    progress.close();
-                    throw new RuntimeException(task.getException());
-                });
-
-                executor.execute(task);
-
-                progress.show();
-
+                }
             } else {
-                final DontDrawPictureTask task =
-                        new DontDrawPictureTask(classCodeSeqs, pool);
-                final Progress progress = new Progress(task);
+                final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
+                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup = parseFile(file.toPath(), true);
+                drawCodes(tup, executor, all, poly);
+            }
+        }
+    }
 
-                // task.messageProperty().addListener((property, oldMsg, newMsg) ->
-                // System.out.println(newMsg));
+    private void drawCodes(final Tuple3<Optional<Rectangle>,
+            Map<ClassifiedCodeSequence, Optional<Color>>,
+            Map<ClassifiedCodeSequence,
+            Optional<String[]>>> tup, final ExecutorService executor, final boolean all, final ConvexPolygon poly) {
+        final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
+        final Map<ClassifiedCodeSequence, Optional<String[]>> iterMap = tup._3;
+        final ArrayList<ClassifiedCodeSequence> allCodes = new ArrayList<>(map.keySet());
 
-                task.setOnSucceeded(e -> progress.close());
+        for (ClassifiedCodeSequence code : iterMap.keySet()) {
+            if (iterMap.get(code).isPresent()) {
+                final int[] starts = new int[iterMap.get(code).get().length];
+                Arrays.fill(starts, Integer.parseInt(iterationStart.getText().trim()));
+                final int[] ends = new int[iterMap.get(code).get().length];
+                Arrays.fill(ends, Integer.parseInt(iterationEnd.getText().trim()));
+                final int[] steps = new int[iterMap.get(code).get().length];
+                Arrays.fill(steps, 2);
 
-                task.setOnFailed(e -> {
-                    progress.close();
-                    throw new RuntimeException(task.getException());
+                currentCodeNumbers[0] = code.codeSequence.codeNumbers.toList();
+
+                iterateAction(code.codeSequence.codeNumbers.toList(),
+                        iterMap.get(code).get(), starts, ends, steps, 0, false, executor);
+            }
+        }
+
+        final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(allCodes);
+
+        if (drawPictureCheckBox.isSelected()) {
+            final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+            final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, false, false);
+            final Progress progress = new Progress(task);
+
+            task.setOnSucceeded(e -> {
+
+                final Array<Storage> storages;
+                try {
+                    storages = task.get();
+                } catch (InterruptedException | ExecutionException exception) {
+                    throw new RuntimeException(exception);
+                }
+
+                storages.forEach(storage -> {
+                    if (all || storage.intersects(poly)) {
+
+                        final Optional<Color> opt = map.get(storage.classCodeSeq);
+                        final Color color;
+                        if (opt.isPresent()) {
+                            color = opt.get();
+                        } else {
+                            final int index = cycle.get();
+                            color = comboBoxColors.get(index);
+                        }
+
+                        addToOnScreenSequences(storage, color);
+
+                        System.out.println(storage.classCodeSeq);
+                    }
                 });
 
-                // Imperative
-                executor.execute(task);
+                Utils.safeShutdownExecutor(drawExecutor);
+                progress.close();
 
-                // Imperative
-                progress.show();
-            }
+                if (tup._1.isPresent()) {
+                    final Rectangle rect = tup._1.get();
+
+                    final String xMin = String.valueOf(Math.toDegrees(rect.intervalX.min));
+                    final String xMax = String.valueOf(Math.toDegrees(rect.intervalX.max));
+                    final String yMin = String.valueOf(Math.toDegrees(rect.intervalY.min));
+                    final String yMax = String.valueOf(Math.toDegrees(rect.intervalY.max));
+
+                    xMinTextField.setText(xMin);
+                    xMaxTextField.setText(xMax);
+
+                    yMinTextField.setText(yMin);
+                    yMaxTextField.setText(yMax);
+
+                    zoomAction(executor);
+                } else {
+                    // only render the screen after everything has been loaded
+                    // There should be a way to do a "diff" so to speak
+                    // We render the things we added, which get put on top
+                    renderRegions(onScreenSequences, guideLinesImageView, regionsImageView,
+                            executor);
+                }
+
+            });
+
+            task.setOnCancelled(e -> {
+                Utils.safeShutdownExecutor(drawExecutor);
+                progress.close();
+            });
+
+            task.setOnFailed(e -> {
+                Utils.safeShutdownExecutor(drawExecutor);
+                progress.close();
+                throw new RuntimeException(task.getException());
+            });
+
+            executor.execute(task);
+
+            progress.show();
+
+        } else {
+            final DontDrawPictureTask task =
+                    new DontDrawPictureTask(classCodeSeqs, pool);
+            final Progress progress = new Progress(task);
+
+            // task.messageProperty().addListener((property, oldMsg, newMsg) ->
+            // System.out.println(newMsg));
+
+            task.setOnSucceeded(e -> progress.close());
+
+            task.setOnFailed(e -> {
+                progress.close();
+                throw new RuntimeException(task.getException());
+            });
+
+            // Imperative
+            executor.execute(task);
+
+            // Imperative
+            progress.show();
         }
     }
 
