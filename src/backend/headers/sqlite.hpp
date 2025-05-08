@@ -6,6 +6,7 @@
 #include <sqlite3.h>
 #include <sstream>
 #include <string>
+#include <condition_variable>
 
 // TODO statement caching would also be helpful here. In fact, very helpful.
 // No, I think it is better to provide the ability to reuse statements, and
@@ -435,10 +436,11 @@ class ConnectionPool final {
     size_t pool_size;
     std::mutex mut;
     std::queue<Database> connections;
+    std::condition_variable cv;
 
     // Take ownership
     Database borrow() {
-        std::lock_guard<std::mutex> lock{mut};
+//        std::lock_guard<std::mutex> lock{mut};
 
         // TODO should we block until a connection becomes available?
         // In this case we should be careful that all existing connections
@@ -447,19 +449,23 @@ class ConnectionPool final {
         // returned if an abort/exit/or segfault is generated, but in that
         // case the entire application will close, so that's not a problem
         // We need to have that connection not returned => process closes
-        if (connections.empty()) {
-            throw std::runtime_error("no more connections in connection pool");
-        } else {
-            auto db = std::move(connections.front());
-            connections.pop();
-            return db;
-        }
+        std::unique_lock<std::mutex> lock(mut);
+
+        // Block until a connection becomes available
+        cv.wait(lock, [this]() {
+            return !connections.empty();
+        });
+
+        auto db = std::move(connections.front());
+        connections.pop();
+        return db;
     }
 
     // Return ownership
     void unborrow(Database db) {
         std::lock_guard<std::mutex> lock{mut};
         connections.push(std::move(db));
+        cv.notify_one();
     }
 
   public:
