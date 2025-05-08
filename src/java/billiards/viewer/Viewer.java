@@ -3652,7 +3652,26 @@ public final class Viewer {
                 System.out.println("Loading from DB: " + dbPath);
 
                 String url = "jdbc:sqlite:" + dbPath;
-                final String[] codeTypes = {"cs", "cns", "ons", "osno", "oso"};
+                final ArrayList<String> codeTypes = new ArrayList<>();
+
+                if (boyanMenu.CScb.isSelected()) codeTypes.add("cs");
+
+                if (boyanMenu.CNScb.isSelected()) codeTypes.add("cns");
+
+                if (boyanMenu.ONScb.isSelected()) codeTypes.add("ons");
+
+                if (boyanMenu.OSOcb.isSelected()) codeTypes.add("oso");
+
+                if (boyanMenu.OSNOcb.isSelected()) codeTypes.add("osno");
+
+                if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
+                    && !boyanMenu.OSOcb.isSelected() && !boyanMenu.OSNOcb.isSelected()) {
+                    final Alert alert = new Alert(AlertType.INFORMATION);
+                    alert.setHeaderText("Polygon DB");
+                    alert.setContentText("Please select at least one code type");
+                    alert.showAndWait();
+                    return;
+                }
 
                 for (String codeType : codeTypes) {
                     String query = "SELECT code_sequence FROM " + codeType;
