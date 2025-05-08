@@ -51,6 +51,7 @@ import javaslang.Tuple7;
 import javaslang.collection.Array;
 import javaslang.control.Either;
 
+import java.sql.*;
 
 import org.eclipse.collections.api.bimap.MutableBiMap;
 import org.eclipse.collections.api.list.ImmutableList;
@@ -451,6 +452,7 @@ public final class Viewer {
     final CheckBox allCheckBox = new CheckBox();
     final Button queryButton = new Button();
     final Button polyLoadButton = new Button();
+    final Button polyLoadDBButton = new Button();
     final Button parallelogramButton = new Button();
     final Button mergeButton = new Button();
 
@@ -2342,6 +2344,47 @@ public final class Viewer {
         polyLoadButton.setTooltip(Utils.toolTip("Load code sequences from a file, but only draw them"
                 + " if they intersect a specified polygon"));
         Utils.colorButton(polyLoadButton, Color.LIGHTPINK, clickColor);
+        polyLoadButton.setOnAction(event -> {
+            final Rectangle screen = map.getViewRectangle();
+            final Optional<ConvexPolygon> polyOpt = new PolyLoad(
+                    "Polygonal Load", "Load", tmpDir + "PolyLoad.txt", screen)
+                    .getPolyLoad();
+
+            if (!polyOpt.isPresent()) {
+                return;
+            }
+
+            final FileChooser fileChooser = new FileChooser();
+            fileChooser.setTitle("Load Polygon File");
+            final File file = fileChooser.showOpenDialog(mainWindow);
+
+            LoadFileAction(polyOpt.get(), false, file, executor);
+        });
+
+        polyLoadDBButton.setText("PolygonDB");
+        polyLoadDBButton.setTooltip(Utils.toolTip("Load code sequences from a SQLite database file, but only " +
+                "draw them if they intersect a specified polygon"));
+        Utils.colorButton(polyLoadDBButton, Color.LIGHTPINK, clickColor);
+        polyLoadDBButton.setOnAction(event -> {
+            final Rectangle screen = map.getViewRectangle();
+            final Optional<ConvexPolygon> polyOpt = new PolyLoad(
+                    "Polygonal DB Load", "Load", tmpDir + "PolyLoadDB.txt", screen)
+                    .getPolyLoad();
+
+            if (!polyOpt.isPresent()) {
+                return;
+            }
+
+            final FileChooser fileChooser = new FileChooser();
+            fileChooser.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("SQLite DB", "*.db", "*.sqlite", "*.sqlite3"),
+                    new FileChooser.ExtensionFilter("All Files", "*.*")
+            );
+            fileChooser.setTitle("Load Polygon SQL DB File");
+            final File file = fileChooser.showOpenDialog(mainWindow);
+
+            LoadFileAction(polyOpt.get(), false, file, executor, true);
+        });
 
         parallelogramButton.setText("Para");
         parallelogramButton.setTooltip(Utils.toolTip("Load code sequences from a file, but only draw"
@@ -2406,25 +2449,6 @@ public final class Viewer {
 
             final Rectangle screen = map.getViewRectangle();
             new PolyTrimmer(screen, pool, onScreenSequences, saveColors.isSelected());
-        });
-
-
-
-        polyLoadButton.setOnAction(event -> {
-            final Rectangle screen = map.getViewRectangle();
-            final Optional<ConvexPolygon> polyOpt = new PolyLoad(
-                    "Polygonal Load", "Load", tmpDir + "PolyLoad.txt", screen)
-                    .getPolyLoad();
-
-            if (!polyOpt.isPresent()) {
-                return;
-            }
-
-            final FileChooser fileChooser = new FileChooser();
-            fileChooser.setTitle("Load Polygon File");
-            final File file = fileChooser.showOpenDialog(mainWindow);
-
-            LoadFileAction(polyOpt.get(), false, file, executor);
         });
 
         covRectsColorBox.setText("Black");
@@ -2877,7 +2901,7 @@ public final class Viewer {
         // backForOBOHBox, zoomHBox, clickActionHBox, backForthHBox);
         //final VBox leftVBox = new VBox(10, whatMenuHBox, twoHBox, colorsHBox1, varyMenuPane, oboHBox,
         //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
-        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, parallelogramButton);
+        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, polyLoadDBButton, parallelogramButton);
 
         final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
                 backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
@@ -3604,11 +3628,62 @@ public final class Viewer {
 
     private void LoadFileAction(
             final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor) {
+        LoadFileAction(poly, all, file, executor, false);
+    }
+
+    private void LoadFileAction(
+            final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor, boolean loadDB) {
 
         if (file != null) {
             final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                    Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
-                    parseFile(file.toPath(), true);
+                    Map<ClassifiedCodeSequence, Optional<String[]>>> tup;
+
+            // Zhao Yu Li, May 08, 2025.
+            // Load codes from a SQLite DB. Functionality is similar to that of handling singles in the parseFile
+            // function. We only need to handle singles when loading from DB because the DB separates the codes only by
+            // codeType (i.e. cs, cns, oso, osno, ons).
+            if (loadDB) {
+                Optional<Rectangle> optRect = Optional.empty();
+                final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
+                final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
+                        new LinkedHashMap<>();
+
+                String dbPath = file.getAbsolutePath();
+                System.out.println("Loading from DB: " + dbPath);
+
+                String url = "jdbc:sqlite:" + dbPath;
+                final String[] codeTypes = {"cs", "cns", "ons", "osno", "oso"};
+
+                for (String codeType : codeTypes) {
+                    String query = "SELECT code_sequence FROM " + codeType;
+
+                    try (Connection conn = DriverManager.getConnection(url);
+                         Statement stmt = conn.createStatement();
+                         ResultSet rs = stmt.executeQuery(query)) {
+
+                        while (rs.next()) {
+                            String line = Utils.trimCodeLine(rs.getString("code_sequence"));
+
+                            System.out.println(line);
+
+                            final ImmutableIntList sequence = Utils.splitString(line.trim()).get();
+
+                            final ClassifiedCodeSequence codeSeq =
+                                    ClassifiedCodeSequence.create(sequence).get();
+
+                            map.put(codeSeq, Optional.empty());
+                            optIter.put(codeSeq, Optional.empty());
+                        }
+                    } catch (SQLException ex) {
+                        System.err.println("Error: " + ex.getMessage());
+                    }
+                }
+
+                tup = new Tuple3<>(optRect, map, optIter);
+            } else {
+                tup = parseFile(file.toPath(), true);
+            }
+
             final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
             final Map<ClassifiedCodeSequence, Optional<String[]>> iterMap = tup._3;
             final ArrayList<ClassifiedCodeSequence> allCodes = new ArrayList<>(map.keySet());
@@ -3728,7 +3803,6 @@ public final class Viewer {
             }
         }
     }
-
 
     private void zoomAction(final ExecutorService executor) {
         final double xMin = Math.toRadians(Double.parseDouble(xMinTextField.getText()));
