@@ -3664,8 +3664,6 @@ public final class Viewer {
                         while (rs.next()) {
                             String line = Utils.trimCodeLine(rs.getString("code_sequence"));
 
-                            System.out.println(line);
-
                             final ImmutableIntList sequence = Utils.splitString(line.trim()).get();
 
                             final ClassifiedCodeSequence codeSeq =
@@ -3734,6 +3732,7 @@ public final class Viewer {
 
                             addToOnScreenSequences(storage, color);
 
+                            System.out.println(storage.classCodeSeq);
                         }
                     });
 
