@@ -3540,7 +3540,7 @@ public final class Viewer {
                     } else if (!codeStr.equals("OSNO")) {
                         codeStr += " ";
                     }
-                    final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                    final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
                     codeStrings.add(msg);
                     if(autoCover) coverWindow.appendStablesInfo(msg);
                 });
@@ -3695,7 +3695,7 @@ public final class Viewer {
                                 count = 0;
                                 final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
                                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup = new Tuple3<>(optRect, map, optIter);
-                                drawCodes(tup, executor, all, poly);
+                                drawCodes(tup, executor, all, poly, true);
                                 map = new LinkedHashMap<>();
                                 optIter = new LinkedHashMap<>();
                             }
@@ -3704,12 +3704,14 @@ public final class Viewer {
                         if (!map.isEmpty() && !optIter.isEmpty()) {
                             final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
                                     Map<ClassifiedCodeSequence, Optional<String[]>>> tup = new Tuple3<>(optRect, map, optIter);
-                            drawCodes(tup, executor, all, poly);
+                            drawCodes(tup, executor, all, poly, true);
                         }
                     } catch (SQLException ex) {
                         System.err.println("Error: " + ex.getMessage());
                     }
                 }
+
+                coverWindow.appendStablesInfo("// Load from DB");
             } else {
                 final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup = parseFile(file.toPath(), true);
@@ -3720,8 +3722,15 @@ public final class Viewer {
 
     private void drawCodes(final Tuple3<Optional<Rectangle>,
             Map<ClassifiedCodeSequence, Optional<Color>>,
+            Map<ClassifiedCodeSequence, Optional<String[]>>> tup,
+                           final ExecutorService executor, final boolean all, final ConvexPolygon poly) {
+        drawCodes(tup, executor, all, poly, false);
+    }
+
+    private void drawCodes(final Tuple3<Optional<Rectangle>,
+            Map<ClassifiedCodeSequence, Optional<Color>>,
             Map<ClassifiedCodeSequence,
-            Optional<String[]>>> tup, final ExecutorService executor, final boolean all, final ConvexPolygon poly) {
+            Optional<String[]>>> tup, final ExecutorService executor, final boolean all, final ConvexPolygon poly, final boolean autoCover) {
         final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
         final Map<ClassifiedCodeSequence, Optional<String[]>> iterMap = tup._3;
         final ArrayList<ClassifiedCodeSequence> allCodes = new ArrayList<>(map.keySet());
@@ -3773,6 +3782,24 @@ public final class Viewer {
                         addToOnScreenSequences(storage, color);
 
                         System.out.println(storage.classCodeSeq);
+
+                        if (autoCover && (
+                                storage.codeType() == CodeType.CS ||
+                                        storage.codeType() == CodeType.OSNO ||
+                                        storage.codeType() == CodeType.OSO))
+                        {
+                            String codeStr = "" + storage.codeType();
+                            // String codeStr = "xxx " + type; //george july 26 2017 -
+                            // type whatever you want between the quotes in the line above
+                            // make sure to add a space after the xxx
+                            if (codeStr.equals("CS")) {
+                                codeStr += "  ";
+                            } else if (!codeStr.equals("OSNO")) {
+                                codeStr += " ";
+                            }
+                            final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
+                            coverWindow.appendStablesInfo(msg);
+                        }
                     }
                 });
 
