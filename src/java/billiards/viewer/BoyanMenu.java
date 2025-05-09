@@ -99,6 +99,7 @@ public class BoyanMenu {
     final CheckBox ONScb = new CheckBox();
     final CheckBox CScb = new CheckBox();
     final CheckBox CNScb = new CheckBox();
+    final CheckBox Triplescb = new CheckBox();
     
     //george june12,2019 start
     final CheckBox OSO2cb = new CheckBox();
@@ -175,17 +176,20 @@ public class BoyanMenu {
         OSNOcb.setText("OSNO");
         OSNOcb.setSelected(true);
         OSNOcb.setTooltip(Utils.toolTip(
-            "The Vary3 functions will look for codes only of chosen types"));
+            "The Vary3 and Load Directory functions will look for codes only of chosen types"));
         CScb.setText("CS");
         CScb.setSelected(true);
         CScb.setTooltip(Utils.toolTip(
-            "The Vary3 functions will look for codes only of chosen types"));
+            "The Vary3 and Load Directory functions will look for codes only of chosen types"));
         CNScb.setText("CNS");
         CNScb.setTooltip(Utils.toolTip(
-            "The Vary3 functions will look for codes only of chosen types"));
+            "The Vary3 and Load Directory functions will look for codes only of chosen types"));
         ONScb.setText("ONS");
         ONScb.setTooltip(Utils.toolTip(
-            "The Vary3 functions will look for codes only of chosen types"));
+            "The Vary3 and Load Directory functions will look for codes only of chosen types"));
+        Triplescb.setText("Triples");
+        Triplescb.setTooltip(Utils.toolTip(
+                "The Load Directory function will look for codes only of chosen types"));
       //george june12,2019 start
         OSO2cb.setText("OSO2");
         OSO2cb.setSelected(true);
@@ -414,7 +418,7 @@ public class BoyanMenu {
         autoPolyVaryHBox.setAlignment(Pos.CENTER);
 
         final HBox codeTypesHBox =
-            new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb);//george june 18,2019 replaced vary4Btn with vary3Btn
+            new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb, Triplescb);//george june 18,2019 replaced vary4Btn with vary3Btn
         codeTypesHBox.setPadding(new Insets(0, 10, 10, 0));
         codeTypesHBox.setAlignment(Pos.CENTER);
         
