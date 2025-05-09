@@ -429,6 +429,7 @@ public final class Viewer {
     // the Marinov menu
     final Button clearBtn = new Button();
     final Button resetBtn = new Button();
+    final Button loadTriplesButton = new Button();
     final Button btnLoadFile = new Button();
     final Button infoButton = new Button();
     final Button gradientButton = new Button();
@@ -2388,6 +2389,139 @@ public final class Viewer {
             LoadFileAction(polyOpt.get(), false, file, executor, true);
         });
 
+        loadTriplesButton.setText("Load Directory");
+        loadTriplesButton.setTooltip(Utils.toolTip("Recursively searches through a directory for all filed named" +
+                "info.txt, and loads the stables and triples within into the cover if they intersect with the " +
+                "specified polygon."));
+        Utils.colorButton(loadTriplesButton, Color.LIGHTPINK, clickColor);
+        loadTriplesButton.setOnAction(event -> {
+            final Rectangle screen = map.getViewRectangle();
+            final Optional<ConvexPolygon> polyOpt = new PolyLoad(
+                    "Load Directory", "Load", tmpDir + "loadDirectory.txt", screen)
+                    .getPolyLoad();
+
+            if (!polyOpt.isPresent()) {
+                return;
+            }
+
+            final DirectoryChooser directoryChooser = new DirectoryChooser();
+            directoryChooser.setTitle("Load stables and triples from directories");
+            final File directory = directoryChooser.showDialog(mainWindow);
+
+            if (directory != null) {
+                Path startPath = directory.toPath();
+                System.out.println("Searching in: " + startPath);
+
+                AtomicInteger readState = new AtomicInteger(0);
+
+                try (Stream<Path> stream = Files.walk(startPath)) {
+                    stream.filter(Files::isRegularFile)
+                            .filter(path -> path.getFileName().toString().equals("info.txt"))
+                            .forEach(path -> {
+                                final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
+                                final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
+                                        new LinkedHashMap<>();
+
+                                boolean readStables = true;
+                                boolean readTriples = true;
+
+                                try (final Stream<String> lines = Files.lines(path)) {
+                                    for (String line : (Iterable<String>) lines::iterator) {
+                                        if (line.contains("following triples")
+                                                || line.contains("following stables")
+                                                || line.contains("squares were"))
+                                        {
+                                            int state = readState.incrementAndGet();
+
+                                            if (state == 1) {
+                                                if (boyanMenu.CScb.isSelected()
+                                                        || boyanMenu.OSNOcb.isSelected()
+                                                        || boyanMenu.OSOcb.isSelected()) {
+                                                    System.out.println("// Reading stables");
+                                                } else {
+                                                    readStables = false;
+                                                    System.out.println("// Skip reading stables");
+                                                }
+                                            } else if (state == 2) {
+                                                if (boyanMenu.Triplescb.isSelected()) {
+                                                    System.out.println("// Reading triples");
+                                                } else {
+                                                    readTriples = false;
+                                                    System.out.println("// Skip reading triples");
+                                                }
+                                            } else if (line.contains("squares were")) {
+                                                System.out.println("// Finished reading");
+                                            }
+                                            continue;
+                                        }
+
+                                        if (readStables && readState.get() == 1) {
+                                            final String[] sections = Utils.trimCodeLine(line).split(",");
+
+                                            final String sequenceString = sections[0].trim();
+                                            final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
+
+                                            final ClassifiedCodeSequence codeSeq =
+                                                    ClassifiedCodeSequence.create(sequence).get();
+
+                                            if ((codeSeq.codeType == CodeType.CS && boyanMenu.CScb.isSelected())
+                                                    || (codeSeq.codeType == CodeType.OSNO && boyanMenu.OSNOcb.isSelected())
+                                                    || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected())) {
+                                                final Optional<Color> optColor;
+                                                if (sections.length == 2) {
+                                                    final String colorString = sections[1].trim();
+                                                    final Color color = Color.web(colorString);
+                                                    optColor = Optional.of(color);
+                                                } else {
+                                                    optColor = Optional.empty();
+                                                }
+
+                                                map.put(codeSeq, optColor);
+
+                                                final Optional<String[]> lineOptIter = Optional.empty();
+                                                optIter.put(codeSeq, lineOptIter);
+                                            }
+                                        } else if (readTriples && readState.get() == 2) {
+                                            final String[] sections = Utils.trimCodeLine(line).split(",");
+
+                                            for (int i = 0; i < 3; i++) {
+                                                final String sequenceString = sections[i].trim();
+                                                final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
+
+                                                final ClassifiedCodeSequence codeSeq =
+                                                        ClassifiedCodeSequence.create(sequence).get();
+
+                                                final Optional<Color> optColor = Optional.empty();
+
+                                                map.put(codeSeq, optColor);
+
+                                                final Optional<String[]> lineOptIter = Optional.empty();
+                                                optIter.put(codeSeq, lineOptIter);
+                                            }
+                                        } else if (readState.get() == 3) {
+                                            break;
+                                        }
+                                    }
+
+
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
+
+                                final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
+                                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
+                                        new Tuple3<>(Optional.empty(), map, optIter);
+
+                                drawCodes(tup, executor, false, polyOpt.get(), true);
+                            });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                System.out.println("No directory selected.");
+            }
+        });
+
         parallelogramButton.setText("Para");
         parallelogramButton.setTooltip(Utils.toolTip("Load code sequences from a file, but only draw"
                 + " them if they intersect a specified parallelogram"));
@@ -3046,7 +3180,7 @@ public final class Viewer {
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
         twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate,zoomRegionButton);
         boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
-        boyanMenuExtra.getChildren().addAll(coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+        boyanMenuExtra.getChildren().addAll(loadTriplesButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
         //coverExtraHBox.getChildren().addAll(halfTripleBtn, cornerBtn, unstableBtn);
         zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
         backForthHBox.getChildren().addAll(
@@ -3783,21 +3917,23 @@ public final class Viewer {
 
                         System.out.println(storage.classCodeSeq);
 
+                        // Zhao Yu Li, May 09, 2025.
+                        // Autoatically add stables to cover when loading from DB.
                         if (autoCover && (
                                 storage.codeType() == CodeType.CS ||
                                         storage.codeType() == CodeType.OSNO ||
                                         storage.codeType() == CodeType.OSO))
                         {
                             String codeStr = "" + storage.codeType();
-                            // String codeStr = "xxx " + type; //george july 26 2017 -
-                            // type whatever you want between the quotes in the line above
-                            // make sure to add a space after the xxx
+
                             if (codeStr.equals("CS")) {
                                 codeStr += "  ";
                             } else if (!codeStr.equals("OSNO")) {
                                 codeStr += " ";
                             }
                             final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
+
+                            // This line adds msg to the stable text box of the cover window
                             coverWindow.appendStablesInfo(msg);
                         }
                     }
