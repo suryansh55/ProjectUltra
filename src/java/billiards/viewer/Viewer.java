@@ -2484,6 +2484,8 @@ public final class Viewer {
                                         } else if (readTriples && readState.get() == 2) {
                                             final String[] sections = Utils.trimCodeLine(line).split(",");
 
+                                            coverWindow.appendTriplesInfo(line);
+
                                             for (int i = 0; i < 3; i++) {
                                                 final String sequenceString = sections[i].trim();
                                                 final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
@@ -3848,7 +3850,7 @@ public final class Viewer {
                 coverWindow.appendStablesInfo("// Load from DB");
             } else {
                 final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup = parseFile(file.toPath(), true);
+                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup = parseFile(file.toPath(), false);
                 drawCodes(tup, executor, all, poly);
             }
         }
