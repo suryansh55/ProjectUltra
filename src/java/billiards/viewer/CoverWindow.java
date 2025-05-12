@@ -277,6 +277,12 @@ public final class CoverWindow {
         }
         triplesText.setText(currentText);
     }
+
+    // Allows other classes to update the list of stables
+    public void appendTriplesInfo(String triple) {
+        String currentText = triplesText.getText().toString();
+        triplesText.setText(triple + "\n" + currentText);
+    }
     
     // Allows other classes to update the list of stables 
     public void appendStablesInfo(String stable) {
