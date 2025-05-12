@@ -2504,8 +2504,77 @@ public final class Viewer {
                                             break;
                                         }
                                     }
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
+                                }
 
+                                final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
+                                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
+                                        new Tuple3<>(Optional.empty(), map, optIter);
 
+                                drawCodes(tup, executor, false, polyOpt.get(), true);
+                            });
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                try (Stream<Path> stream = Files.walk(startPath)) {
+                    stream.filter(Files::isRegularFile)
+                            .filter(path -> path.getFileName().toString().equals("unused.txt"))
+                            .forEach(path -> {
+                                final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
+                                final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
+                                        new LinkedHashMap<>();
+
+                                try (final Stream<String> lines = Files.lines(path)) {
+                                    for (String line : (Iterable<String>) lines::iterator) {
+                                        if (line.contains("//")) continue;
+
+                                        final String[] sections = Utils.trimCodeLine(line).split(",");
+
+                                        if (sections.length == 1) {
+                                            final String sequenceString = sections[0].trim();
+                                            final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
+
+                                            final ClassifiedCodeSequence codeSeq =
+                                                    ClassifiedCodeSequence.create(sequence).get();
+
+                                            if ((codeSeq.codeType == CodeType.CS && boyanMenu.CScb.isSelected())
+                                                    || (codeSeq.codeType == CodeType.OSNO && boyanMenu.OSNOcb.isSelected())
+                                                    || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected())) {
+                                                final Optional<Color> optColor;
+                                                if (sections.length == 2) {
+                                                    final String colorString = sections[1].trim();
+                                                    final Color color = Color.web(colorString);
+                                                    optColor = Optional.of(color);
+                                                } else {
+                                                    optColor = Optional.empty();
+                                                }
+
+                                                map.put(codeSeq, optColor);
+
+                                                final Optional<String[]> lineOptIter = Optional.empty();
+                                                optIter.put(codeSeq, lineOptIter);
+                                            }
+                                        } else if (sections.length == 3) {
+                                            coverWindow.appendTriplesInfo(line);
+
+                                            for (int i = 0; i < 3; i++) {
+                                                final String sequenceString = sections[i].trim();
+                                                final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
+
+                                                final ClassifiedCodeSequence codeSeq =
+                                                        ClassifiedCodeSequence.create(sequence).get();
+
+                                                final Optional<Color> optColor = Optional.empty();
+
+                                                map.put(codeSeq, optColor);
+
+                                                final Optional<String[]> lineOptIter = Optional.empty();
+                                                optIter.put(codeSeq, lineOptIter);
+                                            }
+                                        }
+                                    }
                                 } catch (IOException e) {
                                     throw new RuntimeException(e);
                                 }
