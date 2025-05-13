@@ -2514,12 +2514,10 @@ public final class Viewer {
 
                                                 // On the other hand, if we are reading triples, we need a structure
                                                 // that preserves the triples relationship of its three components
-                                                if (readTriples) {
-                                                    triple[i] = codeSeq;
-                                                }
+                                                if (readTriples) triple[i] = codeSeq;
                                             }
 
-                                            triples.add(triple);
+                                            if (readTriples) triples.add(triple);
                                         } else if (readState.get() == 3) {
                                             break;
                                         }
