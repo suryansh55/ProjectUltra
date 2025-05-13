@@ -496,7 +496,7 @@ public class BoyanMenu {
             final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
             System.out.println(String.format(
-                    "//------------------------- Vary %d shots at %d to %d moves -------------------------//", shots, min, max));
+                    "//------------------------- " + (printMid ? "Middle " : "") + "Vary %d shots at %d to %d moves -------------------------//", shots, min, max));
 
             final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
                     = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
