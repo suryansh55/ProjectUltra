@@ -4073,6 +4073,10 @@ public final class Viewer {
                             executor);
                 }
 
+                System.out.println("Finished loading stables from directory.");
+
+                if (autoCover) System.out.println("Codes that intersect with the polygon are added to the cover.");
+                else System.out.println("autoCover was turned off");
             });
 
             task.setOnCancelled(e -> {
@@ -4119,14 +4123,8 @@ public final class Viewer {
                                 if (count < 3) tripleStr.append(", ");
                                 else tripleStr.append("\n");
 
-                                final Optional<Color> opt = map.get(storage.classCodeSeq);
-                                final Color color;
-                                if (opt.isPresent()) {
-                                    color = opt.get();
-                                } else {
-                                    final int index = cycle.get();
-                                    color = comboBoxColors.get(index);
-                                }
+                                final int index = cycle.get();
+                                final Color color= comboBoxColors.get(index);
 
                                 addToOnScreenSequences(storage, color);
 
@@ -4183,6 +4181,10 @@ public final class Viewer {
                                 executor);
                     }
 
+                    System.out.println("Finished loading triples from directory.");
+
+                    if (autoCover) System.out.println("Triples that intersect with the polygon are added to the cover.");
+                    else System.out.println("autoCover was turned off");
                 });
 
                 taskTriples.setOnCancelled(e -> {
