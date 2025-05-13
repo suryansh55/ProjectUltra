@@ -429,7 +429,7 @@ public final class Viewer {
     // the Marinov menu
     final Button clearBtn = new Button();
     final Button resetBtn = new Button();
-    final Button loadTriplesButton = new Button();
+    final Button loadDirectoryButton = new Button();
     final Button btnLoadFile = new Button();
     final Button infoButton = new Button();
     final Button gradientButton = new Button();
@@ -2389,12 +2389,12 @@ public final class Viewer {
             LoadFileAction(polyOpt.get(), false, file, executor, true);
         });
 
-        loadTriplesButton.setText("Load Directory");
-        loadTriplesButton.setTooltip(Utils.toolTip("Recursively searches through a directory for all filed named" +
+        loadDirectoryButton.setText("Load Directory");
+        loadDirectoryButton.setTooltip(Utils.toolTip("Recursively searches through a directory for all filed named" +
                 "info.txt, and loads the stables and triples within into the cover if they intersect with the " +
                 "specified polygon."));
-        Utils.colorButton(loadTriplesButton, Color.LIGHTPINK, clickColor);
-        loadTriplesButton.setOnAction(event -> {
+        Utils.colorButton(loadDirectoryButton, Color.LIGHTPINK, clickColor);
+        loadDirectoryButton.setOnAction(event -> {
             final Rectangle screen = map.getViewRectangle();
             final Optional<ConvexPolygon> polyOpt = new PolyLoad(
                     "Load Directory", "Load", tmpDir + "loadDirectory.txt", screen)
@@ -2404,10 +2404,13 @@ public final class Viewer {
                 return;
             }
 
+            // Zhao Yu Li, May 13, 2025.
+            // Extract stables and triples from a directory
             final DirectoryChooser directoryChooser = new DirectoryChooser();
             directoryChooser.setTitle("Load stables and triples from directories");
             final File directory = directoryChooser.showDialog(mainWindow);
 
+            // The two files that we look for are info.txt and unused.txt
             if (directory != null) {
                 Path startPath = directory.toPath();
                 System.out.println("Searching in: " + startPath);
@@ -2421,6 +2424,8 @@ public final class Viewer {
                                 final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
                                 final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
                                         new LinkedHashMap<>();
+
+                                final ArrayList<ClassifiedCodeSequence[]> triples = new ArrayList<>();
 
                                 boolean readStables = true;
                                 boolean readTriples = true;
@@ -2465,7 +2470,7 @@ public final class Viewer {
                                                     ClassifiedCodeSequence.create(sequence).get();
 
                                             if ((codeSeq.codeType == CodeType.CS && boyanMenu.CScb.isSelected())
-                                                    || (codeSeq.codeType == CodeType.OSNO && boyanMenu.OSNOcb.isSelected())
+                                                    || (codeSeq.codeType == OSNO && boyanMenu.OSNOcb.isSelected())
                                                     || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected())) {
                                                 final Optional<Color> optColor;
                                                 if (sections.length == 2) {
@@ -2481,10 +2486,9 @@ public final class Viewer {
                                                 final Optional<String[]> lineOptIter = Optional.empty();
                                                 optIter.put(codeSeq, lineOptIter);
                                             }
-                                        } else if (readTriples && readState.get() == 2) {
+                                        } else if (readState.get() == 2) {
                                             final String[] sections = Utils.trimCodeLine(line).split(",");
-
-                                            coverWindow.appendTriplesInfo(line);
+                                            ClassifiedCodeSequence[] triple = new ClassifiedCodeSequence[3];
 
                                             for (int i = 0; i < 3; i++) {
                                                 final String sequenceString = sections[i].trim();
@@ -2493,13 +2497,29 @@ public final class Viewer {
                                                 final ClassifiedCodeSequence codeSeq =
                                                         ClassifiedCodeSequence.create(sequence).get();
 
-                                                final Optional<Color> optColor = Optional.empty();
+                                                // Zhao Yu Li, May 13, 2025.
+                                                // We may not be reading triples, but the stable components of a
+                                                // triple may be useful to us, and should be added to the stables text
+                                                // box of the cover.
+                                                if (!readTriples && readStables && ((codeSeq.codeType == CodeType.CS && boyanMenu.CScb.isSelected())
+                                                        || (codeSeq.codeType == OSNO && boyanMenu.OSNOcb.isSelected())
+                                                        || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected()))) {
+                                                    final Optional<Color> optColor = Optional.empty();
 
-                                                map.put(codeSeq, optColor);
+                                                    map.put(codeSeq, optColor);
 
-                                                final Optional<String[]> lineOptIter = Optional.empty();
-                                                optIter.put(codeSeq, lineOptIter);
+                                                    final Optional<String[]> lineOptIter = Optional.empty();
+                                                    optIter.put(codeSeq, lineOptIter);
+                                                }
+
+                                                // On the other hand, if we are reading triples, we need a structure
+                                                // that preserves the triples relationship of its three components
+                                                if (readTriples) {
+                                                    triple[i] = codeSeq;
+                                                }
                                             }
+
+                                            triples.add(triple);
                                         } else if (readState.get() == 3) {
                                             break;
                                         }
@@ -2512,7 +2532,7 @@ public final class Viewer {
                                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
                                         new Tuple3<>(Optional.empty(), map, optIter);
 
-                                drawCodes(tup, executor, false, polyOpt.get(), true);
+                                drawCodes(tup, triples, executor, false, polyOpt.get(), true);
                             });
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -2525,6 +2545,8 @@ public final class Viewer {
                                 final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
                                 final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
                                         new LinkedHashMap<>();
+
+                                final ArrayList<ClassifiedCodeSequence[]> triples = new ArrayList<>();
 
                                 try (final Stream<String> lines = Files.lines(path)) {
                                     for (String line : (Iterable<String>) lines::iterator) {
@@ -2543,21 +2565,15 @@ public final class Viewer {
                                                     || (codeSeq.codeType == CodeType.OSNO && boyanMenu.OSNOcb.isSelected())
                                                     || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected())) {
                                                 final Optional<Color> optColor;
-                                                if (sections.length == 2) {
-                                                    final String colorString = sections[1].trim();
-                                                    final Color color = Color.web(colorString);
-                                                    optColor = Optional.of(color);
-                                                } else {
-                                                    optColor = Optional.empty();
-                                                }
+                                                optColor = Optional.empty();
 
                                                 map.put(codeSeq, optColor);
 
                                                 final Optional<String[]> lineOptIter = Optional.empty();
                                                 optIter.put(codeSeq, lineOptIter);
                                             }
-                                        } else if (sections.length == 3) {
-                                            coverWindow.appendTriplesInfo(line);
+                                        } else if (sections.length == 3 && boyanMenu.Triplescb.isSelected()) {
+                                            ClassifiedCodeSequence[] triple = new ClassifiedCodeSequence[3];
 
                                             for (int i = 0; i < 3; i++) {
                                                 final String sequenceString = sections[i].trim();
@@ -2566,13 +2582,27 @@ public final class Viewer {
                                                 final ClassifiedCodeSequence codeSeq =
                                                         ClassifiedCodeSequence.create(sequence).get();
 
-                                                final Optional<Color> optColor = Optional.empty();
+                                                // Zhao Yu Li, May 13, 2025.
+                                                // We may not be reading triples, but the stable components of a
+                                                // triple may be useful to us, and should be added to the stables text
+                                                // box of the cover.
+                                                if ((codeSeq.codeType == CodeType.CS && boyanMenu.CScb.isSelected())
+                                                        || (codeSeq.codeType == OSNO && boyanMenu.OSNOcb.isSelected())
+                                                        || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected())) {
+                                                    final Optional<Color> optColor = Optional.empty();
 
-                                                map.put(codeSeq, optColor);
+                                                    map.put(codeSeq, optColor);
 
-                                                final Optional<String[]> lineOptIter = Optional.empty();
-                                                optIter.put(codeSeq, lineOptIter);
+                                                    final Optional<String[]> lineOptIter = Optional.empty();
+                                                    optIter.put(codeSeq, lineOptIter);
+                                                }
+
+                                                // On the other hand, if we are reading triples, we need a structure
+                                                // that preserves the triples relationship of its three components
+                                                triple[i] = codeSeq;
                                             }
+
+                                            triples.add(triple);
                                         }
                                     }
                                 } catch (IOException e) {
@@ -2583,7 +2613,7 @@ public final class Viewer {
                                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
                                         new Tuple3<>(Optional.empty(), map, optIter);
 
-                                drawCodes(tup, executor, false, polyOpt.get(), true);
+                                drawCodes(tup, triples, executor, false, polyOpt.get(), true);
                             });
                 } catch (IOException e) {
                     e.printStackTrace();
@@ -3251,7 +3281,7 @@ public final class Viewer {
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
         twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate,zoomRegionButton);
         boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
-        boyanMenuExtra.getChildren().addAll(loadTriplesButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+        boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
         //coverExtraHBox.getChildren().addAll(halfTripleBtn, cornerBtn, unstableBtn);
         zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
         backForthHBox.getChildren().addAll(
@@ -3929,13 +3959,22 @@ public final class Viewer {
             Map<ClassifiedCodeSequence, Optional<Color>>,
             Map<ClassifiedCodeSequence, Optional<String[]>>> tup,
                            final ExecutorService executor, final boolean all, final ConvexPolygon poly) {
-        drawCodes(tup, executor, all, poly, false);
+        drawCodes(tup, new ArrayList<>(),executor, all, poly, false);
+    }
+
+    private void drawCodes(final Tuple3<Optional<Rectangle>,
+                                   Map<ClassifiedCodeSequence, Optional<Color>>,
+                                   Map<ClassifiedCodeSequence, Optional<String[]>>> tup,
+                           final ExecutorService executor, final boolean all, final ConvexPolygon poly, final boolean autoCover) {
+        drawCodes(tup, new ArrayList<>(),executor, all, poly, autoCover);
     }
 
     private void drawCodes(final Tuple3<Optional<Rectangle>,
             Map<ClassifiedCodeSequence, Optional<Color>>,
             Map<ClassifiedCodeSequence,
-            Optional<String[]>>> tup, final ExecutorService executor, final boolean all, final ConvexPolygon poly, final boolean autoCover) {
+            Optional<String[]>>> tup,
+                           ArrayList<ClassifiedCodeSequence[]> triples, final ExecutorService executor,
+                           final boolean all, final ConvexPolygon poly, final boolean autoCover) {
         final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
         final Map<ClassifiedCodeSequence, Optional<String[]>> iterMap = tup._3;
         final ArrayList<ClassifiedCodeSequence> allCodes = new ArrayList<>(map.keySet());
@@ -3989,7 +4028,7 @@ public final class Viewer {
                         System.out.println(storage.classCodeSeq);
 
                         // Zhao Yu Li, May 09, 2025.
-                        // Autoatically add stables to cover when loading from DB.
+                        // Automatically add stables to cover when loading from DB.
                         if (autoCover && (
                                 storage.codeType() == CodeType.CS ||
                                         storage.codeType() == CodeType.OSNO ||
@@ -4053,6 +4092,117 @@ public final class Viewer {
 
             progress.incrementWindowCount(progressWindows);
             showProgressWindow(progress);
+
+            // Zhao Yu Li, May 13, 2025.
+            // Handles the drawing and adding the triple to the cover if all three components of the triple intersects
+            // with the specified polygon.
+            if (!triples.isEmpty()) {
+                final DrawPictureTaskTriples taskTriples = new DrawPictureTaskTriples(Array.ofAll(triples), pool, drawExecutor, false, false);
+                final Progress progressTriples = new Progress(taskTriples);
+
+                taskTriples.setOnSucceeded(e -> {
+
+                    final Array<Storage[]> storages;
+                    try {
+                        storages = taskTriples.get();
+                    } catch (InterruptedException | ExecutionException exception) {
+                        throw new RuntimeException(exception);
+                    }
+
+                    storages.forEach(triple -> {
+                        final StringBuilder tripleStr = new StringBuilder();
+                        int count = 0;
+
+                        for (Storage storage : triple) {
+                            if (all || storage.intersects(poly)) {
+                                count++;
+                                tripleStr.append(storage.classCodeSeq.toString());
+
+                                if (count < 3) tripleStr.append(", ");
+                                else tripleStr.append("\n");
+
+                                final Optional<Color> opt = map.get(storage.classCodeSeq);
+                                final Color color;
+                                if (opt.isPresent()) {
+                                    color = opt.get();
+                                } else {
+                                    final int index = cycle.get();
+                                    color = comboBoxColors.get(index);
+                                }
+
+                                addToOnScreenSequences(storage, color);
+
+                                System.out.println(storage.classCodeSeq);
+
+                                // Zhao Yu Li, May 09, 2025.
+                                // Automatically add stables to cover when loading from DB.
+                                if (autoCover && (
+                                        (boyanMenu.CScb.isSelected() && storage.codeType() == CodeType.CS) ||
+                                                (boyanMenu.OSNOcb.isSelected() && storage.codeType() == CodeType.OSNO) ||
+                                                (boyanMenu.OSOcb.isSelected() && storage.codeType() == CodeType.OSO)))
+                                {
+                                    String codeStr = "" + storage.codeType();
+
+                                    if (codeStr.equals("CS")) {
+                                        codeStr += "  ";
+                                    } else if (!codeStr.equals("OSNO")) {
+                                        codeStr += " ";
+                                    }
+                                    final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
+
+                                    // This line adds msg to the stable text box of the cover window
+                                    coverWindow.appendStablesInfo(msg);
+                                }
+                            }
+                        }
+
+                        if (count == 3) coverWindow.appendTriplesInfo(tripleStr.toString());
+                    });
+
+                    Utils.safeShutdownExecutor(drawExecutor);
+                    progressTriples.close();
+
+                    if (tup._1.isPresent()) {
+                        final Rectangle rect = tup._1.get();
+
+                        final String xMin = String.valueOf(Math.toDegrees(rect.intervalX.min));
+                        final String xMax = String.valueOf(Math.toDegrees(rect.intervalX.max));
+                        final String yMin = String.valueOf(Math.toDegrees(rect.intervalY.min));
+                        final String yMax = String.valueOf(Math.toDegrees(rect.intervalY.max));
+
+                        xMinTextField.setText(xMin);
+                        xMaxTextField.setText(xMax);
+
+                        yMinTextField.setText(yMin);
+                        yMaxTextField.setText(yMax);
+
+                        zoomAction(executor);
+                    } else {
+                        // only render the screen after everything has been loaded
+                        // There should be a way to do a "diff" so to speak
+                        // We render the things we added, which get put on top
+                        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView,
+                                executor);
+                    }
+
+                });
+
+                taskTriples.setOnCancelled(e -> {
+                    Utils.safeShutdownExecutor(drawExecutor);
+                    progressTriples.close();
+                });
+
+                taskTriples.setOnFailed(e -> {
+                    Utils.safeShutdownExecutor(drawExecutor);
+                    progressTriples.close();
+                    throw new RuntimeException(taskTriples.getException());
+                });
+
+                executor.execute(taskTriples);
+
+                progressTriples.incrementWindowCount(progressWindows);
+                showProgressWindow(progressTriples);
+            }
         } else {
             final DontDrawPictureTask task =
                     new DontDrawPictureTask(classCodeSeqs, pool);
