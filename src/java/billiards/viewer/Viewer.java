@@ -4111,9 +4111,14 @@ public final class Viewer {
                         throw new RuntimeException(exception);
                     }
 
+                    coverWindow.appendTriplesInfo("// Load triples from directory");
+
                     storages.forEach(triple -> {
                         final StringBuilder tripleStr = new StringBuilder();
                         int count = 0;
+
+                        final int index = cycle.get();
+                        final Color color= comboBoxColors.get(index);
 
                         for (Storage storage : triple) {
                             if (all || storage.intersects(poly)) {
@@ -4121,38 +4126,40 @@ public final class Viewer {
                                 tripleStr.append(storage.classCodeSeq.toString());
 
                                 if (count < 3) tripleStr.append(", ");
-                                else tripleStr.append("\n");
-
-                                final int index = cycle.get();
-                                final Color color= comboBoxColors.get(index);
-
-                                addToOnScreenSequences(storage, color);
-
-                                System.out.println(storage.classCodeSeq);
 
                                 // Zhao Yu Li, May 09, 2025.
                                 // Automatically add stables to cover when loading from DB.
-                                if (autoCover && (
-                                        (boyanMenu.CScb.isSelected() && storage.codeType() == CodeType.CS) ||
-                                                (boyanMenu.OSNOcb.isSelected() && storage.codeType() == CodeType.OSNO) ||
-                                                (boyanMenu.OSOcb.isSelected() && storage.codeType() == CodeType.OSO)))
+                                if ((boyanMenu.CScb.isSelected() && storage.codeType() == CodeType.CS) ||
+                                        (boyanMenu.OSNOcb.isSelected() && storage.codeType() == CodeType.OSNO) ||
+                                        (boyanMenu.OSOcb.isSelected() && storage.codeType() == CodeType.OSO))
                                 {
-                                    String codeStr = "" + storage.codeType();
+                                    addToOnScreenSequences(storage, color);
 
-                                    if (codeStr.equals("CS")) {
-                                        codeStr += "  ";
-                                    } else if (!codeStr.equals("OSNO")) {
-                                        codeStr += " ";
+                                    System.out.println(storage.classCodeSeq);
+
+                                    if (autoCover) {
+                                        String codeStr = "" + storage.codeType();
+
+                                        if (codeStr.equals("CS")) {
+                                            codeStr += "  ";
+                                        } else if (!codeStr.equals("OSNO")) {
+                                            codeStr += " ";
+                                        }
+                                        final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
+
+                                        // This line adds msg to the stable text box of the cover window
+                                        coverWindow.appendStablesInfo(msg);
                                     }
-                                    final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
-
-                                    // This line adds msg to the stable text box of the cover window
-                                    coverWindow.appendStablesInfo(msg);
                                 }
                             }
                         }
 
-                        if (count == 3) coverWindow.appendTriplesInfo(tripleStr.toString());
+                        if (count == 3) {
+                            if (autoCover) coverWindow.appendTriplesInfo(tripleStr.toString());
+                            System.out.println(tripleStr);
+
+                            for (Storage storage : triple) addToOnScreenSequences(storage, color);
+                        }
                     });
 
                     Utils.safeShutdownExecutor(drawExecutor);
