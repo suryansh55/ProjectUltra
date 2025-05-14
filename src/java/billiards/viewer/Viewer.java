@@ -210,6 +210,10 @@ public final class Viewer {
     // We might add more colors later, so this abstraction is nice
     final Map<Integer, Color> comboBoxColors = new HashMap<>();
 
+    // Zhao Yu Li, May 14, 2025.
+    // Storages the codes from the tetrahedron vary tasks, so that all vary tasks from the tetrahedron have a single
+    // place to store their codes. This list can then be used to do a final comparison to find the intersection.
+    ArrayList<MutableSortedSet<ClassifiedCodeSequence>> tetrahedronCodes = new ArrayList<>();
 
     final Map<ConvexPolygon, Color> mrrBounds = new HashMap<>();
 
@@ -470,6 +474,7 @@ public final class Viewer {
     final Button loadFillBtn = new Button();
     final CheckBox showFillsCheckBox = new CheckBox();
 
+    final Button tetrahedronButton = new Button();
     final Button btnLoadOBOFile = new Button();
     final TextField lineNumberTxt = new TextField();
     final Button btnGo = new Button();
@@ -1300,6 +1305,17 @@ public final class Viewer {
                 }
         });
         */
+
+        tetrahedronButton.setText("Load One By One File");
+        tetrahedronButton.setTooltip(Utils.toolTip("Load a file, and go through the contents one by one"));
+        Utils.colorButton(tetrahedronButton, Color.LIGHTPINK, clickColor);
+        tetrahedronButton.setOnAction(event -> {
+            final Tuple2<Double, Double>[] points = new Tetrahedron().getTetrahedron();
+
+            for (Tuple2<Double, Double> point : points) {
+
+            }
+        });
 
         lineNumberTxt.setPromptText("Line");
         lineNumberTxt.setTooltip(Utils.toolTip("The OBO file line number you are on"));
@@ -6921,5 +6937,107 @@ public final class Viewer {
         coverRects.addTriples((Map<Rectangle, Triple>) cover.get(1), Color.BLACK);
         coverArea = Optional.of(polygon);
         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+    }
+
+    // Zhao Yu Li, May 14, 2025.
+    // Vary tasks that starts one after another. This is used for the tetrahedron calculation. We could have launched
+    // the three vary tasks in a for loop, but that may enter a race condition, as we can't calculate the intersection
+    // until all Vary tasks finish. The recursion method makes sures that the next one starts only after the previous
+    // one successfully executes to completion.
+    public void queuedVaryTask(final Tuple2<Double, Double>[] points, final int index, final int max, ExecutorService executor) {
+        final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
+                = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
+
+            @Override
+            protected MutableSortedSet<ClassifiedCodeSequence> call() {
+                return boyanMenu.varyTriangles(points[index]._1, points[index]._2,
+                        Double.parseDouble(boyanMenu.varyX2Text.getText()),
+                        Double.parseDouble(boyanMenu.varyY2Text.getText()),
+                        Double.parseDouble(boyanMenu.varyX3Text.getText()),
+                        Double.parseDouble(boyanMenu.varyY3Text.getText()),
+                        Double.parseDouble(boyanMenu.line1CutText.getText()),
+                        Double.parseDouble(boyanMenu.line2CutText.getText()),
+                        3, executor);
+            }
+        };
+
+        //final Progress progress = new Progress(varyTask);
+        final ProgressWithStatus progress = new ProgressWithStatus(varyTask, "Calling findCodes3 (no status)", 0);
+        final Thread varyThread = new Thread(varyTask);
+
+        varyTask.setOnSucceeded(success -> {
+            try {
+                MutableSortedSet<ClassifiedCodeSequence> allCodes = varyTask.get();
+                allCodes.forEach(seq -> Database.saveToDatabase(seq, "garbage"));
+                tetrahedronCodes.add(allCodes);
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+
+            progress.close();
+
+            int next = index + 1;
+            if (next < max) {
+                queuedVaryTask(points, next, max, executor);
+            } else if (next == max) {  // This is the last Vary task, we need to calculate the intersection
+                assert max == tetrahedronCodes.size();
+
+                ArrayList<ArrayList<String>> cList = new ArrayList<>();
+
+                cList.add(codesToStrs(tetrahedronCodes.get(0)));
+
+                for (int i = 1; i < max; i++) {
+                    cList.add(codesToStrs(tetrahedronCodes.get(i)));
+                    ArrayList<String> matching = Utils.compare(cList);
+
+                    cList.clear();
+                    cList.add(matching);
+                }
+
+                if (cList.get(0).isEmpty()) {
+                    System.out.println("None matching...");
+                } else {
+                    System.out.println("// Found " + cList.get(0).size() + " matching codes.");
+
+                    for (String codeStr : cList.get(0)) {
+                        System.out.println(codeStr);
+                    }
+                }
+
+                executor.shutdown();
+            } else {
+                executor.shutdown();
+                throw new RuntimeException("Performed more Vary task than anticipated. Expected: " + max + ". Actual: " + next + ".");
+            }
+        });
+
+        varyTask.setOnCancelled(cancelled -> {
+            System.out.println("// Tetrahedron Cancelled");
+            varyThread.interrupt();
+            executor.shutdownNow();
+            progress.close();
+        });
+        varyTask.setOnFailed(fail -> {
+            System.out.println("// Tetrahedron failed");
+            executor.shutdown();
+            progress.close();
+        });
+
+        varyThread.start();
+
+        progress.show();
+    }
+
+    private ArrayList<String> codesToStrs(MutableSortedSet<ClassifiedCodeSequence> codeArray) {
+        int count = 0;
+        ArrayList<String> strArray = new ArrayList<>();
+
+        for (ClassifiedCodeSequence code : codeArray) {
+            count += 1;
+            final String codeString = Utils.standard(code, count);
+            strArray.add(codeString.substring(codeString.indexOf("-") + 2));
+        }
+
+        return strArray;
     }
 }
