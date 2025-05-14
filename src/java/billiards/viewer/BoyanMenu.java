@@ -577,7 +577,7 @@ public class BoyanMenu {
                               version, exe);
     }
 
-    private MutableSortedSet<ClassifiedCodeSequence> varyTriangles(
+    public MutableSortedSet<ClassifiedCodeSequence> varyTriangles(
     		final double aX1, final double aY1, final double aX2, final double aY2,
             final double aX3, final double aY3, final double aCut1, final double aCut2,
             final int version, final ExecutorService exe) {
