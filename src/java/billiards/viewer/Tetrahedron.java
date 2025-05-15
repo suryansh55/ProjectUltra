@@ -8,6 +8,12 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Stage;
 import javaslang.Tuple2;
 
+import java.util.ArrayList;
+import java.util.List;
+
+// Zhao Yu Li, May 15, 2025.
+// Opens a new window that allows the input of the (x, y) coordinates of a point, and calculates a tetrahedron based
+// on the point.
 public final class Tetrahedron {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
@@ -22,7 +28,7 @@ public final class Tetrahedron {
 
     private final Stage stage = new Stage();
 
-    private final Tuple2<Double, Double>[] points = new Tuple2[3];
+    private final List<Tuple2<Double, Double>> points = new ArrayList<>(3);
 
     public Tetrahedron() {
         xTextField.setPromptText("X coordinate");
@@ -61,15 +67,15 @@ public final class Tetrahedron {
             final double y2_out = y + (eps / 2);
             final double y3_out = y - eps;
 
-            points[0] = new Tuple2<>(x1_out, y1_out);
-            points[1] = new Tuple2<>(x2_out, y2_out);
-            points[2] = new Tuple2<>(x, y3_out);
+            points.add(new Tuple2<>(x1_out, y1_out));
+            points.add(new Tuple2<>(x2_out, y2_out));
+            points.add(new Tuple2<>(x, y3_out));
 
             stage.close();
         });
     }
 
-    public Tuple2<Double, Double>[] getTetrahedron() {
+    public List<Tuple2<Double, Double>> getTetrahedron() {
         // Wait till the stage is closed
         stage.showAndWait();
         return this.points;
