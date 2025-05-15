@@ -89,10 +89,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Stream;
@@ -1306,15 +1303,15 @@ public final class Viewer {
         });
         */
 
-        tetrahedronButton.setText("Load One By One File");
-        tetrahedronButton.setTooltip(Utils.toolTip("Load a file, and go through the contents one by one"));
+        tetrahedronButton.setText("Tetrahedron");
+        tetrahedronButton.setTooltip(Utils.toolTip("Creates a tetrahedron out of an input coordinate, and finds the intersection of the result of Vary3 on all three points."));
         Utils.colorButton(tetrahedronButton, Color.LIGHTPINK, clickColor);
         tetrahedronButton.setOnAction(event -> {
-            final Tuple2<Double, Double>[] points = new Tetrahedron().getTetrahedron();
+            final List<Tuple2<Double, Double>> points = new Tetrahedron().getTetrahedron();
 
-            for (Tuple2<Double, Double> point : points) {
-
-            }
+            tetrahedronCodes.clear();
+            ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
+            queuedVaryTask(points, 0, points.size(), executorService);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -3289,7 +3286,7 @@ public final class Viewer {
         // mergeButton,loadCoverButton,newPolyTrimBtn, zoomRegionButton, zoomColorButton);
         //zoomRegionHBox.getChildren().addAll(
         //      mergeButton,loadCoverButton, zoomRegionButton, zoomColorButton);//george july15th hide the trimmer button
-        zoomRegionHBox.getChildren().addAll(
+        zoomRegionHBox.getChildren().addAll(tetrahedronButton,  // Zhao Yu Li, May 15, 2025. Added tetrahdron button to the viewer
                 mergeButton,loadCoverButton,calculateChooser);//george july15th hide the trimmer button and red button
         backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
@@ -6944,13 +6941,13 @@ public final class Viewer {
     // the three vary tasks in a for loop, but that may enter a race condition, as we can't calculate the intersection
     // until all Vary tasks finish. The recursion method makes sures that the next one starts only after the previous
     // one successfully executes to completion.
-    public void queuedVaryTask(final Tuple2<Double, Double>[] points, final int index, final int max, ExecutorService executor) {
+    public void queuedVaryTask(final List<Tuple2<Double, Double>> points, final int index, final int max, ExecutorService executor) {
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
                 = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
 
             @Override
             protected MutableSortedSet<ClassifiedCodeSequence> call() {
-                return boyanMenu.varyTriangles(points[index]._1, points[index]._2,
+                return boyanMenu.varyTriangles(points.get(index)._1, points.get(index)._2,
                         Double.parseDouble(boyanMenu.varyX2Text.getText()),
                         Double.parseDouble(boyanMenu.varyY2Text.getText()),
                         Double.parseDouble(boyanMenu.varyX3Text.getText()),
