@@ -2473,6 +2473,8 @@ public final class Viewer {
                                             continue;
                                         }
 
+                                        if (line.startsWith("//") || line.trim().isEmpty()) continue;
+
                                         if (readStables && readState.get() == 1) {
                                             final String[] sections = Utils.trimCodeLine(line).split(",");
 
@@ -2563,7 +2565,7 @@ public final class Viewer {
 
                                 try (final Stream<String> lines = Files.lines(path)) {
                                     for (String line : (Iterable<String>) lines::iterator) {
-                                        if (line.contains("//")) continue;
+                                        if (line.startsWith("//") || line.trim().isEmpty()) continue;
 
                                         final String[] sections = Utils.trimCodeLine(line).split(",");
 
