@@ -2549,6 +2549,8 @@ public final class Viewer {
                     e.printStackTrace();
                 }
 
+                System.out.println("Finished loading stables from directory.");
+
                 try (Stream<Path> stream = Files.walk(startPath)) {
                     stream.filter(Files::isRegularFile)
                             .filter(path -> path.getFileName().toString().equals("unused.txt"))
@@ -2629,6 +2631,8 @@ public final class Viewer {
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
+
+                System.out.println("Finished loading triples from directory.");
             } else {
                 System.out.println("No directory selected.");
             }
@@ -4085,11 +4089,6 @@ public final class Viewer {
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView,
                             executor);
                 }
-
-                System.out.println("Finished loading stables from directory.");
-
-                if (autoCover) System.out.println("Codes that intersect with the polygon are added to the cover.");
-                else System.out.println("autoCover was turned off");
             });
 
             task.setOnCancelled(e -> {
@@ -4200,11 +4199,6 @@ public final class Viewer {
                         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView,
                                 executor);
                     }
-
-                    System.out.println("Finished loading triples from directory.");
-
-                    if (autoCover) System.out.println("Triples that intersect with the polygon are added to the cover.");
-                    else System.out.println("autoCover was turned off");
                 });
 
                 taskTriples.setOnCancelled(e -> {
