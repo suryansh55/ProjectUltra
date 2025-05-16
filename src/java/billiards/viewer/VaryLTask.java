@@ -212,7 +212,6 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                                             }
                                         })
                                 );
-
                             }
 
                             // Clear and re-initialize for the next iteration
@@ -240,6 +239,30 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                                     .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
                             --i;
                             System.out.println(Utils.standard(codeToPrint, codeNum++));
+
+                            // Zhao Yu Li, May 16, 2025.
+                            // This is needed so that the last found code will be drawn and printed in the list of
+                            // drawn codes
+                            if(usedCodes.contains(codeToPrint) || !this.draw) { // Update in the case of not drawing this code
+                                this.updateProgress(progress.incrementAndGet(), todo);
+                                continue;
+                            }
+                            usedCodes.add(codeToPrint);
+                            // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
+                            futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
+                                        @Override
+                                        public Either<String, Storage> call() {
+                                            Either<String, Storage> result = loadStorage(codeToPrint);
+                                            VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
+                                            return result;
+                                        }
+
+                                        @Override
+                                        public int getPriority() {
+                                            return codeToPrint.length();
+                                        }
+                                    })
+                            );
                         }
                     }
                 }
