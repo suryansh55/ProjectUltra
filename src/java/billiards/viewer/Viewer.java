@@ -6986,6 +6986,10 @@ public final class Viewer {
 
             progress.close();
 
+            // Zhao Yu Li, May 16, 2025.
+            // Updated to handle tetrahedron points from a list of coordinates instead of just a single one.
+            // For each tetrahedron, we need to perform Vary3 on three of its points. Therefore, every three points we
+            // process, we need to compute the intersections of the results from the Vary tasks.
             if (next % 3 == 0) {
                 assert 3 == tetrahedronCodes.size();
 
@@ -7026,7 +7030,7 @@ public final class Viewer {
             progress.close();
         });
         varyTask.setOnFailed(fail -> {
-            System.out.println("// Tetrahedron failed");
+            System.out.println("// Tetrahedron failed: " + fail);
             executor.shutdown();
             progress.close();
         });
