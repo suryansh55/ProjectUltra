@@ -15,8 +15,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 // Zhao Yu Li, May 15, 2025.
-// Opens a new window that allows the input of the (x, y) coordinates of a point, and calculates a tetrahedron based
-// on the point.
+// Opens a new window that allows the input of the (x, y) coordinates of a list of point, and calculates the
+// tetrahedrons created from each point.
 public final class Tetrahedron {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
