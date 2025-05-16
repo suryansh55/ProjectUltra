@@ -1307,11 +1307,11 @@ public final class Viewer {
         tetrahedronButton.setTooltip(Utils.toolTip("Creates a tetrahedron out of an input coordinate, and finds the intersection of the result of Vary3 on all three points."));
         Utils.colorButton(tetrahedronButton, Color.LIGHTPINK, clickColor);
         tetrahedronButton.setOnAction(event -> {
-            final List<Tuple2<Double, Double>> points = new Tetrahedron().getTetrahedron();
+            final Tuple2<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>> points = new Tetrahedron().getTetrahedron();
 
             tetrahedronCodes.clear();
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(points, 0, points.size(), executorService);
+            queuedVaryTask(points._1, points._2, 0, points._2.size(), executorService);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -6937,7 +6937,15 @@ public final class Viewer {
     // the three vary tasks in a for loop, but that may enter a race condition, as we can't calculate the intersection
     // until all Vary tasks finish. The recursion method makes sures that the next one starts only after the previous
     // one successfully executes to completion.
-    public void queuedVaryTask(final List<Tuple2<Double, Double>> points, final int index, final int max, ExecutorService executor) {
+    public void queuedVaryTask(final List<Tuple2<Double, Double>> originalPoints, final List<Tuple2<Double, Double>> points, final int index, final int max, ExecutorService executor) {
+        int next = index + 1;
+
+        if (next > max) {
+            executor.shutdown();
+            System.out.println("// Finished Tetrahedron.");
+            return;
+        }
+
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
                 = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
 
@@ -6969,17 +6977,16 @@ public final class Viewer {
 
             progress.close();
 
-            int next = index + 1;
-            if (next < max) {
-                queuedVaryTask(points, next, max, executor);
-            } else if (next == max) {  // This is the last Vary task, we need to calculate the intersection
-                assert max == tetrahedronCodes.size();
+            if (next % 3 == 0) {
+                assert 3 == tetrahedronCodes.size();
+
+                System.out.println("// Tetrahedron results for (" + originalPoints.get(index / 3)._1 + ", " + originalPoints.get(index / 3)._2 + ")");
 
                 ArrayList<ArrayList<String>> cList = new ArrayList<>();
 
                 cList.add(codesToStrs(tetrahedronCodes.get(0)));
 
-                for (int i = 1; i < max; i++) {
+                for (int i = 1; i < 3; i++) {
                     cList.add(codesToStrs(tetrahedronCodes.get(i)));
                     ArrayList<String> matching = Utils.compare(cList);
 
@@ -6988,7 +6995,7 @@ public final class Viewer {
                 }
 
                 if (cList.get(0).isEmpty()) {
-                    System.out.println("None matching...");
+                    System.out.println("// None matching...");
                 } else {
                     System.out.println("// Found " + cList.get(0).size() + " matching codes.");
 
@@ -6997,11 +7004,10 @@ public final class Viewer {
                     }
                 }
 
-                executor.shutdown();
-            } else {
-                executor.shutdown();
-                throw new RuntimeException("Performed more Vary task than anticipated. Expected: " + max + ". Actual: " + next + ".");
+                tetrahedronCodes.clear();
             }
+
+            queuedVaryTask(originalPoints, points, next, max, executor);
         });
 
         varyTask.setOnCancelled(cancelled -> {
