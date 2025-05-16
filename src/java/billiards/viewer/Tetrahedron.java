@@ -17,6 +17,9 @@ import java.util.List;
 // Zhao Yu Li, May 15, 2025.
 // Opens a new window that allows the input of the (x, y) coordinates of a list of point, and calculates the
 // tetrahedrons created from each point.
+// Updated May 16, 2025.
+// Allows the input of multiple coordinates. The x and y values of each coordinate should be in the same line and
+// separated by a singular whitespace character. Different coordinates should be separated by a newline character.
 public final class Tetrahedron {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
@@ -30,6 +33,9 @@ public final class Tetrahedron {
     private final Stage stage = new Stage();
 
     private final List<Tuple2<Double, Double>> originalPoints = new ArrayList<>();
+
+    // Just keep tetrahedron points for all the coordinates as a list of tuples. Every three consecutive points belong
+    // to a different coordinate.
     private final List<Tuple2<Double, Double>> points = new ArrayList<>();
 
     public Tetrahedron() {
