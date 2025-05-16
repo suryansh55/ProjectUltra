@@ -1309,6 +1309,8 @@ public final class Viewer {
         tetrahedronButton.setOnAction(event -> {
             final Tuple2<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>> points = new Tetrahedron().getTetrahedron();
 
+            if (points._1.isEmpty() && points._2.isEmpty()) return;
+
             tetrahedronCodes.clear();
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
             queuedVaryTask(points._1, points._2, 0, points._2.size(), executorService);
