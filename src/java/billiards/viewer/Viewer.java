@@ -2002,7 +2002,7 @@ public final class Viewer {
                 System.out.println("\n// loading file: " + iterationStart.getText()
                         + " to " + iterationEnd.getText() + " in "+ file);
             }
-            LoadFileAction(screen, true, file, executor);
+            LoadFileAction(screen, true, file, executor, false, true);
         });
 
         loadLRCheckBox.setText("lr");
@@ -2401,7 +2401,7 @@ public final class Viewer {
             fileChooser.setTitle("Load Polygon SQL DB File");
             final File file = fileChooser.showOpenDialog(mainWindow);
 
-            LoadFileAction(polyOpt.get(), false, file, executor, true);
+            LoadFileAction(polyOpt.get(), false, file, executor, true, false);
         });
 
         loadDirectoryButton.setText("Load Directory");
@@ -3884,12 +3884,13 @@ public final class Viewer {
 
     private void LoadFileAction(
             final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor) {
-        LoadFileAction(poly, all, file, executor, false);
+        LoadFileAction(poly, all, file, executor, false, false);
     }
 
     private void LoadFileAction(
-            final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor, boolean loadDB) {
-
+            final ConvexPolygon poly, final boolean all, final File file, final ExecutorService executor,
+            final boolean loadDB, final boolean addToGarbage
+    ) {
         if (file != null) {
             // Zhao Yu Li, May 08, 2025.
             // Load codes from a SQLite DB. Functionality is similar to that of handling singles in the parseFile
@@ -3969,6 +3970,12 @@ public final class Viewer {
             } else {
                 final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup = parseFile(file.toPath(), false);
+
+                if (addToGarbage) {
+                    for (ClassifiedCodeSequence codeSeq : tup._2.keySet())
+                        Database.saveToDatabase(codeSeq, "garbage");
+                }
+
                 drawCodes(tup, executor, all, poly);
             }
         }
