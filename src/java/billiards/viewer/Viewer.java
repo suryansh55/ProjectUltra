@@ -44,10 +44,7 @@ import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 import javafx.scene.control.TextArea;
 
-import javaslang.Tuple;
-import javaslang.Tuple2;
-import javaslang.Tuple3;
-import javaslang.Tuple7;
+import javaslang.*;
 import javaslang.collection.Array;
 import javaslang.control.Either;
 
@@ -471,7 +468,7 @@ public final class Viewer {
     final Button loadFillBtn = new Button();
     final CheckBox showFillsCheckBox = new CheckBox();
 
-    final Button tetrahedronButton = new Button();
+    final Button tetrabarButton = new Button();
     final Button btnLoadOBOFile = new Button();
     final TextField lineNumberTxt = new TextField();
     final Button btnGo = new Button();
@@ -1303,17 +1300,18 @@ public final class Viewer {
         });
         */
 
-        tetrahedronButton.setText("Tetrahedron");
-        tetrahedronButton.setTooltip(Utils.toolTip("Creates a tetrahedron out of an input coordinate, and finds the intersection of the result of Vary3 on all three points."));
-        Utils.colorButton(tetrahedronButton, Color.LIGHTPINK, clickColor);
-        tetrahedronButton.setOnAction(event -> {
-            final Tuple2<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>> points = new Tetrahedron().getTetrahedron();
+        // Zhao Yu Li, May 19, 2025.
+        // Tetrahedron/Bar window.
+        tetrabarButton.setText("Tetra/Bar");
+        tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
+        Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
+        tetrabarButton.setOnAction(event -> {
+            Tuple4<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer> varyParams = new TetraBar().getVaryParams();
 
-            if (points._1.isEmpty() && points._2.isEmpty()) return;
+            if (varyParams._3 == -1) return;
 
-            tetrahedronCodes.clear();
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(points._1, points._2, 0, points._2.size(), executorService);
+            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -3294,7 +3292,7 @@ public final class Viewer {
         // mergeButton,loadCoverButton,newPolyTrimBtn, zoomRegionButton, zoomColorButton);
         //zoomRegionHBox.getChildren().addAll(
         //      mergeButton,loadCoverButton, zoomRegionButton, zoomColorButton);//george july15th hide the trimmer button
-        zoomRegionHBox.getChildren().addAll(tetrahedronButton,  // Zhao Yu Li, May 15, 2025. Added tetrahdron button to the viewer
+        zoomRegionHBox.getChildren().addAll(tetrabarButton,  // Zhao Yu Li, May 15, 2025. Added tetrahdron button to the viewer
                 mergeButton,loadCoverButton,calculateChooser);//george july15th hide the trimmer button and red button
         backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
@@ -6946,13 +6944,29 @@ public final class Viewer {
     // the three vary tasks in a for loop, but that may enter a race condition, as we can't calculate the intersection
     // until all Vary tasks finish. The recursion method makes sures that the next one starts only after the previous
     // one successfully executes to completion.
-    public void queuedVaryTask(final List<Tuple2<Double, Double>> originalPoints, final List<Tuple2<Double, Double>> points, final int index, final int max, ExecutorService executor) {
+    public void queuedVaryTask(final List<Tuple2<Double, Double>> originalPoints,
+                               final List<Tuple2<Double, Double>> points,
+                               final int index,
+                               final int max,
+                               ExecutorService executor,
+                               final int step,
+                               final int numToPrint)
+    {
         int next = index + 1;
+
+        String mode = "";
+        if (step == 2) mode = "Bar";
+        if (step == 3) mode = "Tetrahedron";
 
         if (next > max) {
             executor.shutdown();
-            System.out.println("// Finished Tetrahedron.");
+            System.out.println("// Finished " + mode + ".");
             return;
+        }
+
+        if (index == 0) {
+            System.out.println("// Start " + mode + ".");
+            coverWindow.appendStablesInfo("// Start " + mode + ".");
         }
 
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
@@ -6975,6 +6989,7 @@ public final class Viewer {
         final ProgressWithStatus progress = new ProgressWithStatus(varyTask, "Calling findCodes3 (no status)", 0);
         final Thread varyThread = new Thread(varyTask);
 
+        String finalMode = mode;
         varyTask.setOnSucceeded(success -> {
             try {
                 MutableSortedSet<ClassifiedCodeSequence> allCodes = varyTask.get();
@@ -6990,16 +7005,16 @@ public final class Viewer {
             // Updated to handle tetrahedron points from a list of coordinates instead of just a single one.
             // For each tetrahedron, we need to perform Vary3 on three of its points. Therefore, every three points we
             // process, we need to compute the intersections of the results from the Vary tasks.
-            if (next % 3 == 0) {
-                assert 3 == tetrahedronCodes.size();
+            if (next % step == 0) {
+                assert step == tetrahedronCodes.size();
 
-                System.out.println("// Tetrahedron results for (" + originalPoints.get(index / 3)._1 + ", " + originalPoints.get(index / 3)._2 + ")");
+                System.out.println("// " + finalMode +  " results for (" + originalPoints.get(index / 3)._1 + ", " + originalPoints.get(index / 3)._2 + ")");
 
                 ArrayList<ArrayList<String>> cList = new ArrayList<>();
 
                 cList.add(codesToStrs(tetrahedronCodes.get(0)));
 
-                for (int i = 1; i < 3; i++) {
+                for (int i = 1; i < step; i++) {
                     cList.add(codesToStrs(tetrahedronCodes.get(i)));
                     ArrayList<String> matching = Utils.compare(cList);
 
@@ -7012,25 +7027,28 @@ public final class Viewer {
                 } else {
                     System.out.println("// Found " + cList.get(0).size() + " matching codes.");
 
-                    for (String codeStr : cList.get(0)) {
-                        System.out.println(codeStr);
+                    final int finalNumToPrint = numToPrint == 0 ? cList.get(0).size() : numToPrint;
+
+                    for (int i = 0; i < finalNumToPrint; i++) {
+                        System.out.println(cList.get(0).get(i));
+                        coverWindow.appendStablesInfo(cList.get(0).get(i));
                     }
                 }
 
                 tetrahedronCodes.clear();
             }
 
-            queuedVaryTask(originalPoints, points, next, max, executor);
+            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint);
         });
 
         varyTask.setOnCancelled(cancelled -> {
-            System.out.println("// Tetrahedron Cancelled");
+            System.out.println("// " + finalMode + " Cancelled");
             varyThread.interrupt();
             executor.shutdownNow();
             progress.close();
         });
         varyTask.setOnFailed(fail -> {
-            System.out.println("// Tetrahedron failed: " + fail);
+            System.out.println("// " + finalMode + " failed: " + fail);
             executor.shutdown();
             progress.close();
         });
