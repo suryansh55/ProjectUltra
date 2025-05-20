@@ -120,6 +120,7 @@ public final class TetraBar {
 
                 originalPoints.add(new Tuple2<>(x, y));
 
+                // Coordinate calculations for Tetrahedron
                 if (tetraRadio.isSelected()) {
                     final double x1_out = x - (eps * Math.sqrt(3)/2);
                     final double y1_out = y + (eps / 2);
@@ -132,6 +133,7 @@ public final class TetraBar {
                     points.add(new Tuple2<>(x, y3_out));
                 }
 
+                // Coordinate calculations for Bar
                 if (barRadio.isSelected()) {
                     final double x1_out = x - eps;
                     final double x2_out = x + eps;
