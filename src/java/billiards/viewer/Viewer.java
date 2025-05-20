@@ -1306,12 +1306,12 @@ public final class Viewer {
         tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
         Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
         tetrabarButton.setOnAction(event -> {
-            Tuple4<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer> varyParams = new TetraBar().getVaryParams();
+            Tuple5<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean> varyParams = new TetraBar().getVaryParams();
 
             if (varyParams._3 == -1) return;
 
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4);
+            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -6950,7 +6950,8 @@ public final class Viewer {
                                final int max,
                                ExecutorService executor,
                                final int step,
-                               final int numToPrint)
+                               final int numToPrint,
+                               final boolean draw)
     {
         int next = index + 1;
 
@@ -7030,15 +7031,36 @@ public final class Viewer {
                     final int finalNumToPrint = numToPrint == 0 ? cList.get(0).size() : numToPrint;
 
                     for (int i = 0; i < finalNumToPrint; i++) {
-                        System.out.println(cList.get(0).get(i));
-                        coverWindow.appendStablesInfo(cList.get(0).get(i));
+                        final String codeSeq = cList.get(0).get(i);
+                        System.out.println(codeSeq);
+                        coverWindow.appendStablesInfo(codeSeq);
+
+                        if (draw) {
+                            Optional<ImmutableIntList> intList  = Utils.splitString(Utils.trimCodeLine(codeSeq));
+
+                            if (intList.isPresent()) {
+                                Optional<Storage> optionalStorage = Database.loadStorage(ClassifiedCodeSequence.create(intList.get()).get(), pool);
+
+                                if (optionalStorage.isPresent()) {
+                                    final int colorIndex = cycle.get();
+                                    Storage storage = optionalStorage.get();
+                                    addToOnScreenSequences(storage, comboBoxColors.get(colorIndex));
+                                }
+                            }
+                        }
+
                     }
                 }
 
                 tetrahedronCodes.clear();
+
+                if (draw) {
+                    System.out.println("// Printing drawn codes.");
+                    renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                }
             }
 
-            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint);
+            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw);
         });
 
         varyTask.setOnCancelled(cancelled -> {

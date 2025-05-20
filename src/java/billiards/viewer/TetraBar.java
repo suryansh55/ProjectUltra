@@ -7,7 +7,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javaslang.Tuple2;
-import javaslang.Tuple4;
+import javaslang.Tuple5;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +34,8 @@ public final class TetraBar {
 
     private final RadioButton tetraRadio = new RadioButton("Tetra");
     private final RadioButton barRadio = new RadioButton("Bar");
+
+    private final CheckBox drawCheckBox = new CheckBox("Draw");
 
     private final Stage stage = new Stage();
 
@@ -65,10 +67,12 @@ public final class TetraBar {
         tetraRadio.setSelected(true);
         barRadio.setToggleGroup(group);
 
+        drawCheckBox.setSelected(true);
+
         final VBox root = new VBox(10);
         final Scene scene = new Scene(root);
         final Button loadButton = new Button();
-        final HBox hbox = new HBox(10, epsTextField, printCountTextField, tetraRadio, barRadio, loadButton);
+        final HBox hbox = new HBox(10, epsTextField, printCountTextField, tetraRadio, barRadio, drawCheckBox, loadButton);
 
         stage.setScene(scene);
         stage.setOnCloseRequest(event -> stage.close());
@@ -150,7 +154,7 @@ public final class TetraBar {
         });
     }
 
-    public Tuple4<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer> getVaryParams() {
+    public Tuple5<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean> getVaryParams() {
         // Wait till the stage is closed
         stage.showAndWait();
         int step = 0;
@@ -159,9 +163,10 @@ public final class TetraBar {
             if (tetraRadio.isSelected()) step = 3;
             if (barRadio.isSelected()) step = 2;
             this.clickedLoad = false;
-            return new Tuple4<>(this.originalPoints, this.points, step, Integer.parseInt(printCountTextField.getText()));
+            return new Tuple5<>(this.originalPoints, this.points, step,
+                    Integer.parseInt(printCountTextField.getText()), drawCheckBox.isSelected());
         } else {
-            return new Tuple4<>(this.originalPoints, this.points, -1, -1);
+            return new Tuple5<>(this.originalPoints, this.points, -1, -1, false);
         }
     }
 }
