@@ -35,6 +35,7 @@ import javaslang.Tuple;
 import javaslang.Tuple2;
 import javaslang.Tuple3;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -167,10 +168,14 @@ public final class PolyTrimmer {
         final File file = fileChooser.showOpenDialog(stage);
 
         if (file != null) {
-            final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                         Map<ClassifiedCodeSequence, Optional<String[]>>> tup = Viewer.parseFile(file.toPath(), false);
+            final Tuple2<Tuple3<
+                    Optional<Rectangle>,
+                    Map<ClassifiedCodeSequence, Optional<Color>>,
+                    Map<ClassifiedCodeSequence, Optional<String[]>>
+                    >,
+                    ArrayList<ClassifiedCodeSequence[]>> tup = Viewer.parseFile(file.toPath(), false);
 
-            final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
+            final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._1._2;
 
             final MutableSortedSet<ClassifiedCodeSequence> classCodeSeqs = new TreeSortedSet<>(map.keySet());
 
