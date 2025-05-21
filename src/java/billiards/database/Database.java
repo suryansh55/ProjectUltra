@@ -413,8 +413,7 @@ public final class Database {
     public static void deleteBaseFromDatabase(final ClassifiedCodeSequence base, final String db){};
 
     public static void saveTripleToDatabase(final String Triple, final String db) {
-        // First create the triple table if it does not already exist in the database
-        // CREATE TABLE cns(code_sequence text check(typeof(code_sequence) = 'text'),primary key (code_sequence))
+        // First, create the triple table if it does not already exist in the database
         final String createTripleTableQuery = "CREATE TABLE IF NOT EXISTS main.triple (triple text check(typeof(triple) = 'text'),primary key (triple))";
 
         try (Connection conn = DriverManager.getConnection(Admin.getUrl(db));
@@ -424,6 +423,24 @@ public final class Database {
             final String addTripleQuery = "INSERT OR IGNORE INTO main.triple (triple) VALUES (?);";
             PreparedStatement pstmt = conn.prepareStatement(addTripleQuery);
             pstmt.setString(1, Triple);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void saveIterationPatternToDatabase(final ClassifiedCodeSequence codeSeq, final String pattern, final String dbName) {
+        // First, create the iteration patterns table if it does not already exist in the database
+        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),(pattern text check(typeof(pattern) = 'text'),primary key (code_sequence, pattern))";
+
+        try (Connection conn = DriverManager.getConnection(Admin.getUrl(dbName));
+             Statement stmt = conn.createStatement();) {
+            stmt.executeUpdate(createIterPatQuery);
+
+            final String addTripleQuery = "INSERT OR IGNORE INTO main.iteration_pattern (code_sequence,pattern) VALUES (?,?);";
+            PreparedStatement pstmt = conn.prepareStatement(addTripleQuery);
+            pstmt.setString(1, codeSeq.toString());
+            pstmt.setString(2, pattern);
             pstmt.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException(e);
