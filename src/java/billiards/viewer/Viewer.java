@@ -1947,11 +1947,15 @@ public final class Viewer {
             final File file = fileChooser.showOpenDialog(mainWindow);
 
             if (file != null) {
-                final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup =
+                final Tuple2<Tuple3<
+                        Optional<Rectangle>,
+                        Map<ClassifiedCodeSequence, Optional<Color>>,
+                        Map<ClassifiedCodeSequence, Optional<String[]>>
+                        >,
+                        ArrayList<ClassifiedCodeSequence[]>> tup =
                         parseFile(file.toPath(), false);
 
-                final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._2;
+                final Map<ClassifiedCodeSequence, Optional<Color>> map = tup._1._2;
 
                 final MutableSortedSet<ClassifiedCodeSequence> classCodeSeqs =
                         new TreeSortedSet<>(map.keySet());
@@ -3966,15 +3970,14 @@ public final class Viewer {
 
                 coverWindow.appendStablesInfo("// Load from DB");
             } else {
-                final Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-                        Map<ClassifiedCodeSequence, Optional<String[]>>> tup = parseFile(file.toPath(), false);
+                final Tuple2<Tuple3<
+                        Optional<Rectangle>,
+                        Map<ClassifiedCodeSequence, Optional<Color>>,
+                        Map<ClassifiedCodeSequence, Optional<String[]>>
+                        >,
+                        ArrayList<ClassifiedCodeSequence[]>> tup = parseFile(file.toPath(), false, true);
 
-                if (addToGarbage) {
-                    for (ClassifiedCodeSequence codeSeq : tup._2.keySet())
-                        Database.saveToDatabase(codeSeq, "garbage");
-                }
-
-                drawCodes(tup, executor, all, poly);
+                drawCodes(tup._1, tup._2, executor, all, poly, false);
             }
         }
     }
@@ -4132,7 +4135,7 @@ public final class Viewer {
                         throw new RuntimeException(exception);
                     }
 
-                    coverWindow.appendTriplesInfo("// Load triples from directory");
+                    if (autoCover) coverWindow.appendTriplesInfo("// Load triples");
 
                     storages.forEach(triple -> {
                         final StringBuilder tripleStr = new StringBuilder();
@@ -5978,9 +5981,23 @@ public final class Viewer {
         return list;
     }
 
-    public static Tuple3<Optional<Rectangle>, Map<ClassifiedCodeSequence, Optional<Color>>,
-            Map<ClassifiedCodeSequence, Optional<String[]>>>
+    public static Tuple2<Tuple3<
+            Optional<Rectangle>,
+            Map<ClassifiedCodeSequence, Optional<Color>>,
+            Map<ClassifiedCodeSequence, Optional<String[]>>
+            >,
+            ArrayList<ClassifiedCodeSequence[]>>
     parseFile(final Path path, boolean print) {
+        return parseFile(path, print, false);
+    }
+
+    public static Tuple2<Tuple3<
+            Optional<Rectangle>,
+            Map<ClassifiedCodeSequence, Optional<Color>>,
+            Map<ClassifiedCodeSequence, Optional<String[]>>
+            >,
+            ArrayList<ClassifiedCodeSequence[]>>
+    parseFile(final Path path, boolean print, boolean addToGarbage) {
         // we want to load the code sequences in the order they are given in the file
         // we also do not want duplicates
         // Use mutable JDK collection here
@@ -5989,6 +6006,7 @@ public final class Viewer {
         final LinkedHashMap<ClassifiedCodeSequence, Optional<Color>> map = new LinkedHashMap<>();
         final LinkedHashMap<ClassifiedCodeSequence, Optional<String[]>> optIter =
                 new LinkedHashMap<>();
+        final ArrayList<ClassifiedCodeSequence[]> triples = new ArrayList<>();
         int count = 0;
 
         // Inside the file, we allow comments starting with //
@@ -6008,6 +6026,13 @@ public final class Viewer {
                     final String[] sections = line.split(",");
                     if (sections.length == 3) {
                         // triple
+                        // Zhao Yu Li, May 21, 2025.
+                        // This StringBuilder is used to add the triple (in one line) to the garbage DB
+                        final StringBuilder tripleString = new StringBuilder();
+
+                        // This generic array is used to maintain the triple relationship of the three components
+                        ClassifiedCodeSequence[] triple = new ClassifiedCodeSequence[3];
+
                         for (int i = 0; i < 3; i++) {
                             final String sequenceString = sections[i].trim();
                             final ImmutableIntList sequence = Utils.splitString(sequenceString).get();
@@ -6015,13 +6040,17 @@ public final class Viewer {
                             final ClassifiedCodeSequence codeSeq =
                                     ClassifiedCodeSequence.create(sequence).get();
 
-                            final Optional<Color> optColor = Optional.empty();
-
-                            map.put(codeSeq, optColor);
-
-                            final Optional<String[]> lineOptIter = Optional.empty();
-                            optIter.put(codeSeq, lineOptIter);
+                            // Zhao Yu Li, May 21, 2025.
+                            // Add triples to garbage, and maintain triple relationship
+                            if (addToGarbage) tripleString.append(codeSeq.toString()).append(",");
+                            triple[i] = codeSeq;
                         }
+
+                        triples.add(triple);
+
+                        // Delete the last added comma
+                        tripleString.deleteCharAt(tripleString.length() - 1);
+                        Database.saveTripleToDatabase(tripleString.toString(), "garbage");
                     } else {
                         // single
                         final String sequenceString = sections[0].trim();
@@ -6054,7 +6083,7 @@ public final class Viewer {
                     final Rectangle rect = Rectangle.create(minX, maxX, minY, maxY);
                     optRect = Optional.of(rect);
 
-                } else if (!line.isEmpty() && line.contains("+")) {
+                } else if (line.contains("+")) {
                     line = line.replace("+", "");
                     final String[] sections = line.split("#");
                     for (int i = 0; i < sections[0].trim().split(",").length; i++) {
@@ -6063,10 +6092,7 @@ public final class Viewer {
                         final ClassifiedCodeSequence codeSeq = ClassifiedCodeSequence.create(sequence).get();
                         final Optional<Color> optColor = Optional.empty();
                         map.put(codeSeq, optColor);
-                        final ArrayList<String> intermediate = new ArrayList<>();
-                        for (final String position : sections) {
-                            intermediate.add(position);
-                        }
+                        final ArrayList<String> intermediate = new ArrayList<>(Arrays.asList(sections));
                         intermediate.remove(0);
                         final String[] sectionsCut = new String[intermediate.size()];
                         for (int j = 0; j < sectionsCut.length; j++) {
@@ -6083,14 +6109,19 @@ public final class Viewer {
                     alert.setContentText("Invalid formatting at line " + count + " of the file.");
                     alert.showAndWait();
 
-                    return Tuple.of(Optional.empty(), new LinkedHashMap<>(), new LinkedHashMap<>());
+                    return Tuple.of(Tuple.of(Optional.empty(), new LinkedHashMap<>(), new LinkedHashMap<>()), new ArrayList<>());
                 }
             }
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
 
-        return Tuple.of(optRect, map, optIter);
+        if (addToGarbage) {
+            for (ClassifiedCodeSequence codeSeq : map.keySet())
+                Database.saveToDatabase(codeSeq, "garbage");
+        }
+
+        return Tuple.of(Tuple.of(optRect, map, optIter), triples);
     }
 
     private MutableSortedSet<ClassifiedCodeSequence> varyLFunction(final MutableSortedSet<ClassifiedCodeSequence> codesFound, final MutableList<Vector2> points,
