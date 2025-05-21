@@ -24,11 +24,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.IntList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.Optional;
 
 public final class Database {
@@ -416,6 +412,21 @@ public final class Database {
 
     public static void deleteBaseFromDatabase(final ClassifiedCodeSequence base, final String db){};
 
+    public static void saveTripleToDatabase(final String Triple, final String db) {
+        // First create the triple table if it does not already exist in the database
+        // CREATE TABLE cns(code_sequence text check(typeof(code_sequence) = 'text'),primary key (code_sequence))
+        final String createTripleTableQuery = "CREATE TABLE IF NOT EXISTS main.triple (triple text check(typeof(triple) = 'text'),primary key (triple))";
 
-    
+        try (Connection conn = DriverManager.getConnection(Admin.getUrl(db));
+             Statement stmt = conn.createStatement();) {
+            stmt.executeUpdate(createTripleTableQuery);
+
+            final String addTripleQuery = "INSERT OR IGNORE INTO main.triple (triple) VALUES (?);";
+            PreparedStatement pstmt = conn.prepareStatement(addTripleQuery);
+            pstmt.setString(1, Triple);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }
