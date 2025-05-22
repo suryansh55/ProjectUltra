@@ -431,7 +431,7 @@ public final class Database {
 
     public static void saveIterationPatternToDatabase(final String codeSeq, final String pattern, final String dbName) {
         // First, create the iteration patterns table if it does not already exist in the database
-        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),(pattern text check(typeof(pattern) = 'text'),primary key (code_sequence, pattern))";
+        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),pattern text check(typeof(pattern) = 'text'),primary key (code_sequence, pattern))";
 
         try (Connection conn = DriverManager.getConnection(Admin.getUrl(dbName));
              Statement stmt = conn.createStatement();) {
