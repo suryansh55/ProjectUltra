@@ -429,7 +429,7 @@ public final class Database {
         }
     }
 
-    public static void saveIterationPatternToDatabase(final ClassifiedCodeSequence codeSeq, final String pattern, final String dbName) {
+    public static void saveIterationPatternToDatabase(final String codeSeq, final String pattern, final String dbName) {
         // First, create the iteration patterns table if it does not already exist in the database
         final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),(pattern text check(typeof(pattern) = 'text'),primary key (code_sequence, pattern))";
 
@@ -439,7 +439,7 @@ public final class Database {
 
             final String addTripleQuery = "INSERT OR IGNORE INTO main.iteration_pattern (code_sequence,pattern) VALUES (?,?);";
             PreparedStatement pstmt = conn.prepareStatement(addTripleQuery);
-            pstmt.setString(1, codeSeq.toString());
+            pstmt.setString(1, codeSeq);
             pstmt.setString(2, pattern);
             pstmt.executeUpdate();
         } catch (SQLException e) {
