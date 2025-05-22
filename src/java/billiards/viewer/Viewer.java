@@ -737,9 +737,9 @@ public final class Viewer {
         addSubtractPatternIncrementTextField.setText("2");
         addSubtractPatternIncrementTextField.setPrefColumnCount(6);
 
-        // Zhao Yu Li, May 01, 2025
+        // Zhao Yu Li, May 01, 2025.
         // Add/Subtract in iterations
-        // Positve index means adding the increment; negative index means subtracting the increment
+        // Positive index means adding the increment; negative index means subtracting the increment
         addSubtractIterationsButton.setText("Calculate Add/Subtract Iterations");
         Utils.colorButton(addSubtractIterationsButton, Color.SKYBLUE, clickColor);
         addSubtractIterationsButton.setOnAction(event -> {
@@ -766,10 +766,17 @@ public final class Viewer {
 
             ArrayList<Array<ClassifiedCodeSequence>> codes = new ArrayList<>();
 
+            // Zhao Yu Li, May 22, 2025.
+            // Used to add the code sequence - iteration pattern pair to the database
+            final StringBuilder patternString = new StringBuilder();
+
+            final String[] pat1 = addSubtractPatternTextField.getText().trim().split(",");
+
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
                         IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
-                final String[] pat1 = addSubtractPatternTextField.getText().trim().split(",");
+
+                patternString.append(pat1[i].trim()).append(",");
 
                 final String[] vectors = {Utils.ifGet(pat1, i)};
 
@@ -784,15 +791,24 @@ public final class Viewer {
                 codes.add(res);
             }
 
+            // Zhao Yu Li, May 22, 2025.
+            // Used to add the code sequence - iteration pattern pair to the database
+            String codeSeqString;
+
             // Prints each triple in one line
             if (size1 == 3) {
+                codeSeqString = codes.get(0).get(0) + ", " + codes.get(1).get(0) + ", " + codes.get(2).get(0);
+
                 for (int i = 0; i < codes.get(0).size(); i++) {
-                    String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
+                    String printout = codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
                     if(printout.contains("empty set")) {
                         printout = "// " + printout;
                     }
-                    System.out.println(printout);		        }
+                    System.out.println(printout);
+                }
             } else {
+                codeSeqString = codes.get(0).get(0) + "";
+
                 for (int i = 0; i < codes.get(0).size(); i++) {
                     String printout = codes.get(0).get(i) + "";
                     if(printout.contains("empty set")) {
@@ -801,6 +817,9 @@ public final class Viewer {
                     System.out.println(printout);
                 }
             }
+
+            patternString.deleteCharAt(patternString.length() - 1);
+            Database.saveIterationPatternToDatabase(codeSeqString, patternString.toString(), "garbage");
         });
 
         //LeftRights
@@ -1107,13 +1126,26 @@ public final class Viewer {
 
             ArrayList<Array<ClassifiedCodeSequence>> codes = new ArrayList<>();
 
+            // Zhao Yu Li, May 22, 2025.
+            // Used to add the code sequence - iteration pattern pair to the database
+            final StringBuilder patternString1 = new StringBuilder();
+            final StringBuilder patternString2 = new StringBuilder();
+            final StringBuilder patternString3 = new StringBuilder();
+            final StringBuilder patternString4 = new StringBuilder();
+
+            final String[] pat1 = firstPatternTextField.getText().trim().split(",");
+            final String[] pat2 = secondPatternTextField.getText().trim().split(",");
+            final String[] pat3 = thirdPatternTextField.getText().trim().split(",");
+            final String[] pat4 = fourthPatternTextField.getText().trim().split(",");
+
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
                         IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
-                final String[] pat1 = firstPatternTextField.getText().trim().split(",");
-                final String[] pat2 = secondPatternTextField.getText().trim().split(",");
-                final String[] pat3 = thirdPatternTextField.getText().trim().split(",");
-                final String[] pat4 = fourthPatternTextField.getText().trim().split(",");
+
+                if (!firstPatternTextField.getText().trim().isEmpty()) patternString1.append(pat1[i].trim()).append(",");
+                if (!secondPatternTextField.getText().trim().isEmpty()) patternString2.append(pat2[i].trim()).append(",");
+                if (!thirdPatternTextField.getText().trim().isEmpty()) patternString3.append(pat3[i].trim()).append(",");
+                if (!fourthPatternTextField.getText().trim().isEmpty()) patternString4.append(pat4[i].trim()).append(",");
 
                 final String[] vectors = {Utils.ifGet(pat1, i), Utils.ifGet(pat2, i),
                         Utils.ifGet(pat3, i), Utils.ifGet(pat4, i)};
@@ -1168,29 +1200,58 @@ public final class Viewer {
                 //System.out.print("ends" + ends + "\n");//ends[I@137af616
             }
 
+            // Zhao Yu Li, May 22, 2025.
+            // Used to add the code sequence - iteration pattern pair to the database
+            String codeSeqString;
+
             // Prints each triple in one line
             if (size1 == 3) {
+                codeSeqString = codes.get(0).get(0) + ", " + codes.get(1).get(0) + ", " + codes.get(2).get(0);
+
                 for (int i = 0; i < codes.get(0).size(); i++) {
                 	String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
                 	if(printout.contains("empty set")) {
                 		printout = "// " + printout;
-                                          }
-                	System.out.println(printout);		        }
+                    }
+                	System.out.println(printout);
+                }
             } else {
+                codeSeqString = codes.get(0).get(0) + "";
+
                 for (int i = 0; i < codes.get(0).size(); i++) {
                     String printout = codes.get(0).get(i) + "";
                     if(printout.contains("empty set")) {
                         printout = "// " + printout;
-                      }
+                    }
                     System.out.println(printout);
                 }
+            }
+
+            if (!patternString1.toString().isEmpty()) {
+                patternString1.deleteCharAt(patternString1.length() - 1);
+                Database.saveIterationPatternToDatabase(codeSeqString, patternString1.toString(), "garbage");
+            }
+
+            if (!patternString2.toString().isEmpty()) {
+                patternString2.deleteCharAt(patternString2.length() - 1);
+                Database.saveIterationPatternToDatabase(codeSeqString, patternString2.toString(), "garbage");
+            }
+
+            if (!patternString3.toString().isEmpty()) {
+                patternString3.deleteCharAt(patternString3.length() - 1);
+                Database.saveIterationPatternToDatabase(codeSeqString, patternString3.toString(), "garbage");
+            }
+
+            if (!patternString4.toString().isEmpty()) {
+                patternString4.deleteCharAt(patternString4.length() - 1);
+                Database.saveIterationPatternToDatabase(codeSeqString, patternString4.toString(), "garbage");
             }
         });
         checkButton.setOnAction(event -> {
             int iter = Integer.parseInt(firstPatternIterationsTextField.getText().trim());
             boolean isRight = true;
             ArrayList<ClassifiedCodeSequence> wrongOne = new ArrayList<>();
-            if (codes2.size()==0){
+            if (codes2.isEmpty()){
                 System.out.println("empty input");
             }
             else if (iter > codes2.get(0).size()){
@@ -3634,7 +3695,7 @@ public final class Viewer {
 
         Utils.copyInto(workingNumbers, currentCodeNumbers[num]);
 
-        final LinkedHashSet<ClassifiedCodeSequence> todo =
+        final ArrayList<ClassifiedCodeSequence> todo =
                 iterateThru(workingNumbers, vectors, starts, ends, steps, 0, num);
         final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(todo);
         //for (int i=0;i<classCodeSeqs.size();++i){
@@ -3726,11 +3787,11 @@ public final class Viewer {
         return classCodeSeqs;
     }
 
-    private LinkedHashSet<ClassifiedCodeSequence> iterateThru(
+    private ArrayList<ClassifiedCodeSequence> iterateThru(
             final MutableIntList workingNumbers, final String[] vectors, final int[] starts,
             final int[] ends, final int[] steps, final int depth, final int num) {
 
-        final LinkedHashSet<ClassifiedCodeSequence> todo = new LinkedHashSet<>();
+        final ArrayList<ClassifiedCodeSequence> todo = new ArrayList<>();
         if (depth >= vectors.length || vectors[depth].isEmpty()) {
             final Either<InvalidCodeSequence, ClassifiedCodeSequence> either =
                     ClassifiedCodeSequence.create(workingNumbers);
@@ -6735,7 +6796,7 @@ public final class Viewer {
      * Adds and subtracts two from the code sequence at the same time. A positive index means we add two, whereas a
      * negative index means we subtract two
      * Zhao Yu Li, May 22, 2025.
-     * Updated to add code sequence - iteration pattern pair to the garbage da
+     * Updated to add a code sequence - iteration pattern pair to the garbage database.
      */
     private void addSubtract(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
@@ -6743,7 +6804,12 @@ public final class Viewer {
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
+        // Get the original code numbers to be put into the database
+        final StringBuilder codeNumbersString = new StringBuilder();
+
         for (int i = 0; i < pats.length; i++) {
+            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6756,10 +6822,11 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        result = new StringBuilder(result.toString().replace(", ~", ""));
+        codeNumbersString.append("~");
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
+                normalizedPattern.toString(), "garbage");
 
         System.out.println(result.toString().replace(", ~", ""));
         synchronize();
@@ -6771,7 +6838,7 @@ public final class Viewer {
      * Adds and subtracts two from the code sequence at the same time. A negative index means we add two, whereas a
      * positive index means we subtract two
      * Zhao Yu Li, May 22, 2025.
-     * Updated to add code sequence - iteration pattern pair to the garbage database.
+     * Updated to add a code sequence - iteration pattern pair to the garbage database.
      */
     private void addSubtractReverse(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
@@ -6779,7 +6846,12 @@ public final class Viewer {
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
+        // Get the original code numbers to be put into the database
+        final StringBuilder codeNumbersString = new StringBuilder();
+
         for (int i = 0; i < pats.length; i++) {
+            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6792,24 +6864,30 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        result = new StringBuilder(result.toString().replace(", ~", ""));
+        codeNumbersString.append("~");
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
+                normalizedPattern.toString(), "garbage");
 
-        System.out.println(result);
+        System.out.println(result.toString().replace(", ~", ""));
         synchronize();
     }
 
     // Zhao Yu Li, May 22, 2025.
-    // Updated to add code sequence - iteration pattern pair to the garbage database.
+    // Updated to add a code sequence - iteration pattern pair to the garbage database.
     private void increase(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
+        // Get the original code numbers to be put into the database
+        final StringBuilder codeNumbersString = new StringBuilder();
+
         for (int i = 0; i < pats.length; i++) {
+            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6820,24 +6898,30 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        result = new StringBuilder(result.toString().replace(", ~", ""));
+        codeNumbersString.append("~");
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
+                normalizedPattern.toString(), "garbage");
 
-        System.out.println(result);
+        System.out.println(result.toString().replace(", ~", ""));
         synchronize();
     }
 
     // Zhao Yu Li, May 22, 2025.
-    // Updated to add code sequence - iteration pattern pair to the garbage database.
+    // Updated to add a code sequence - iteration pattern pair to the garbage database.
     private void decrease(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
+        // Get the original code numbers to be put into the database
+        final StringBuilder codeNumbersString = new StringBuilder();
+
         for (int i = 0; i < pats.length; i++) {
+            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6848,12 +6932,13 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        result = new StringBuilder(result.toString().replace(", ~", ""));
+        codeNumbersString.append("~");
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
+                normalizedPattern.toString(), "garbage");
 
-        System.out.println(result);
+        System.out.println(result.toString().replace(", ~", ""));
         synchronize();
     }
 
