@@ -6734,11 +6734,14 @@ public final class Viewer {
      * Zhao Yu Li
      * Adds and subtracts two from the code sequence at the same time. A positive index means we add two, whereas a
      * negative index means we subtract two
+     * Zhao Yu Li, May 22, 2025.
+     * Updated to add code sequence - iteration pattern pair to the garbage da
      */
     private void addSubtract(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        String  result = "";
+        StringBuilder result = new StringBuilder();
+        final StringBuilder normalizedPattern = new StringBuilder();
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6749,10 +6752,16 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber + value);
             });
-            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+            normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result += "~";
-        System.out.println(result.replace(", ~", ""));
+        result.append("~");
+        result = new StringBuilder(result.toString().replace(", ~", ""));
+
+        normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
+        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+
+        System.out.println(result.toString().replace(", ~", ""));
         synchronize();
     }
 
@@ -6761,11 +6770,14 @@ public final class Viewer {
      * The reverse operation of addSubtract
      * Adds and subtracts two from the code sequence at the same time. A negative index means we add two, whereas a
      * positive index means we subtract two
+     * Zhao Yu Li, May 22, 2025.
+     * Updated to add code sequence - iteration pattern pair to the garbage database.
      */
     private void addSubtractReverse(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        String  result = "";
+        StringBuilder result = new StringBuilder();
+        final StringBuilder normalizedPattern = new StringBuilder();
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6776,17 +6788,26 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber - value);
             });
-            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+            normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result += "~";
-        System.out.println(result.replace(", ~", ""));
+        result.append("~");
+        result = new StringBuilder(result.toString().replace(", ~", ""));
+
+        normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
+        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+
+        System.out.println(result);
         synchronize();
     }
 
+    // Zhao Yu Li, May 22, 2025.
+    // Updated to add code sequence - iteration pattern pair to the garbage database.
     private void increase(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        String  result = "";
+        StringBuilder result = new StringBuilder();
+        final StringBuilder normalizedPattern = new StringBuilder();
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6795,17 +6816,26 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber + 2);
             });
-            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+            normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result += "~";
-        System.out.println(result.replace(", ~", ""));
+        result.append("~");
+        result = new StringBuilder(result.toString().replace(", ~", ""));
+
+        normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
+        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+
+        System.out.println(result);
         synchronize();
     }
 
+    // Zhao Yu Li, May 22, 2025.
+    // Updated to add code sequence - iteration pattern pair to the garbage database.
     private void decrease(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        String  result = "";
+        StringBuilder result = new StringBuilder();
+        final StringBuilder normalizedPattern = new StringBuilder();
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6814,10 +6844,16 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber - 2);
             });
-            result += calculateCurrentCodeNumbers(pool, i) + ", ";
+            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
+            normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result += "~";
-        System.out.println(result.replace(", ~", ""));
+        result.append("~");
+        result = new StringBuilder(result.toString().replace(", ~", ""));
+
+        normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
+        Database.saveIterationPatternToDatabase(result.toString(), normalizedPattern.toString(), "garbage");
+
+        System.out.println(result);
         synchronize();
     }
 
@@ -6971,9 +7007,9 @@ public final class Viewer {
     }
 
     // Zhao Yu Li, May 14, 2025.
-    // Vary tasks that starts one after another. This is used for the tetrahedron calculation. We could have launched
+    // Vary tasks that start one after another. This is used for the tetrahedron calculation. We could have launched
     // the three vary tasks in a for loop, but that may enter a race condition, as we can't calculate the intersection
-    // until all Vary tasks finish. The recursion method makes sures that the next one starts only after the previous
+    // until all Vary tasks finish. The recursion method makes sure that the next one starts only after the previous
     // one successfully executes to completion.
     public void queuedVaryTask(final List<Tuple2<Double, Double>> originalPoints,
                                final List<Tuple2<Double, Double>> points,
