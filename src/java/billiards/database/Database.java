@@ -15,6 +15,7 @@ import billiards.math.XYZ;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 
+import javafx.scene.control.Alert;
 import javaslang.Tuple;
 import javaslang.Tuple2;
 
@@ -25,6 +26,9 @@ import org.eclipse.collections.api.list.primitive.IntList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
 import java.sql.*;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.Optional;
 
 public final class Database {
@@ -429,19 +433,96 @@ public final class Database {
         }
     }
 
-    public static void saveIterationPatternToDatabase(final String codeSeq, final String pattern, final String dbName) {
+    /**
+     * Zhao Yu Li, May 23, 2025.
+     * A function to enforce a code sequence matches with its odd-even pattern since SQLite does not allow the
+     * implementation of a similar check constraint.
+     * @param codeSeq The code sequence to match with.
+     * @param OEPattern The odd-even pattern to match with.
+     * @return True if the code sequence and odd-even pattern match in parity; false otherwise.
+     */
+    private static boolean codeAndOEMatch(final String codeSeq, final String OEPattern) {
+        final String[] codeSeqArray = codeSeq.split(", ");
+        final String[] OEPatternArray = OEPattern.split(",");
+
+        if (codeSeqArray.length != OEPatternArray.length) return false;
+
+        for (int i = 0; i < codeSeqArray.length; ++i) {
+            String[] codeNumbers = codeSeqArray[i].split(" ");
+
+            if (codeNumbers.length != OEPatternArray[i].length()) return false;
+
+            for (int j = 0; j < codeNumbers.length; ++j) {
+                if ((Integer.parseInt(codeNumbers[i]) % 2 == 0 && OEPatternArray[i].charAt(i) != 'E')
+                        || (Integer.parseInt(codeNumbers[i]) % 2 == 1 && OEPatternArray[i].charAt(i) != 'O'))
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Zhao Yu Li, May 23, 2025.
+     * Save the 4-tuple (codeSeq, OEPattern, iterPattern, time of last use) to the database named dbName
+     * @param codeSeq The code sequence to save.
+     * @param OEPattern The odd-even pattern of codeSeq.
+     * @param iterPattern The iteration pattern for codeSeq.
+     * @param dbName The name of the database to save to.
+     */
+    public static void saveIterationPatternToDatabase(final String codeSeq, final String OEPattern, final String iterPattern, final String dbName) {
+        if (!codeAndOEMatch(codeSeq, OEPattern)) {
+            Alert alert = new Alert(Alert.AlertType.ERROR);
+            alert.setTitle("Error");
+            alert.setHeaderText("Incorrect Code Sequence or Odd-Even Pattern");
+            alert.setContentText("The code sequence and odd-even pattern must match in length and in parity.");
+            alert.showAndWait();
+            return;
+        }
+
         // First, create the iteration patterns table if it does not already exist in the database
-        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),pattern text check(typeof(pattern) = 'text'),primary key (code_sequence, pattern))";
+        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),oe_pattern text check(typeof(oe_pattern) = 'text'),iter_pattern text check(typeof(iter_pattern) = 'text'),last_used text check(typeof(last_used) = 'text'),primary key (code_sequence, iter_pattern))";
 
         try (Connection conn = DriverManager.getConnection(Admin.getUrl(dbName));
              Statement stmt = conn.createStatement();) {
             stmt.executeUpdate(createIterPatQuery);
 
-            final String addTripleQuery = "INSERT OR IGNORE INTO main.iteration_pattern (code_sequence,pattern) VALUES (?,?);";
+            final String addTripleQuery = "INSERT INTO main.iteration_pattern (code_sequence,oe_pattern,iter_pattern,last_used) VALUES (?,?,?,?) ON CONFLICT (code_sequence, iter_pattern) DO UPDATE SET last_used = ?;";
             PreparedStatement pstmt = conn.prepareStatement(addTripleQuery);
             pstmt.setString(1, codeSeq);
-            pstmt.setString(2, pattern);
+            pstmt.setString(2, OEPattern);
+            pstmt.setString(3, iterPattern);
+
+            // Setting a time of last used so we can order by most recently used first.
+            // Explicitly set timezone so all entries will have the same timezone when ordering by time of last used.
+            pstmt.setString(4, OffsetDateTime.now(ZoneId.of("America/Denver")).format(DateTimeFormatter.ISO_DATE_TIME));
+            pstmt.setString(5, OffsetDateTime.now(ZoneId.of("America/Denver")).format(DateTimeFormatter.ISO_DATE_TIME));
             pstmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public ArrayList<String> lookUpIterPatByCodeSeq(final String codeSeq, final String dbName) {
+        // First, create the iteration patterns table if it does not already exist in the database
+        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),oe_pattern text check(typeof(oe_pattern) = 'text'),iter_pattern text check(typeof(iter_pattern) = 'text'),last_used text check(typeof(last_used) = 'text'),primary key (code_sequence, iter_pattern))";
+
+        try (Connection conn = DriverManager.getConnection(Admin.getUrl(dbName));
+             Statement stmt = conn.createStatement();) {
+            stmt.executeUpdate(createIterPatQuery);
+
+            final String selectPatternQuery = "SELECT iter_pattern FROM main.iteration_pattern WHERE code_sequence = ? ORDER BY last_used DESC;";
+            PreparedStatement pstmt = conn.prepareStatement(selectPatternQuery);
+            pstmt.setString(1, codeSeq);
+            ResultSet rs = pstmt.executeQuery();
+
+            ArrayList<String> patterns = new ArrayList<>();
+
+            while (rs.next()) {
+                patterns.add(rs.getString("iter_pattern"));
+            }
+
+            return patterns;
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }

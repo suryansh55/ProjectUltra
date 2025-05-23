@@ -777,7 +777,8 @@ public final class Viewer {
             // Used to add the code sequence - iteration pattern pair to the database
             // Updated May 23, 2025.
             // Use the current code numbers as-is instead of using the normalized form.
-            String codeSeqString = codeNumbersToString();
+            final Tuple2<String, String> codeSeqAndOEString = getCodeSeqAndOEString();
+            final String codeSeqString = codeSeqAndOEString._1;
 
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
@@ -818,7 +819,7 @@ public final class Viewer {
             }
 
             patternString.deleteCharAt(patternString.length() - 1);
-            Database.saveIterationPatternToDatabase(codeSeqString, patternString.toString(), "garbage");
+            Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString.toString(), "garbage");
         });
 
         //LeftRights
@@ -1141,7 +1142,8 @@ public final class Viewer {
             // Used to add the code sequence - iteration pattern pair to the database
             // Updated May 23, 2025.
             // Use the current code numbers as-is instead of using the normalized form.
-            String codeSeqString = codeNumbersToString();
+            final Tuple2<String, String> codeSeqAndOEString = getCodeSeqAndOEString();
+            final String codeSeqString = codeSeqAndOEString._1;
 
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
@@ -1226,22 +1228,22 @@ public final class Viewer {
 
             if (!patternString1.toString().isEmpty()) {
                 patternString1.deleteCharAt(patternString1.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, patternString1.toString(), "garbage");
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString1.toString(), "garbage");
             }
 
             if (!patternString2.toString().isEmpty()) {
                 patternString2.deleteCharAt(patternString2.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, patternString2.toString(), "garbage");
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString2.toString(), "garbage");
             }
 
             if (!patternString3.toString().isEmpty()) {
                 patternString3.deleteCharAt(patternString3.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, patternString3.toString(), "garbage");
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString3.toString(), "garbage");
             }
 
             if (!patternString4.toString().isEmpty()) {
                 patternString4.deleteCharAt(patternString4.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, patternString4.toString(), "garbage");
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString4.toString(), "garbage");
             }
         });
         checkButton.setOnAction(event -> {
@@ -6790,22 +6792,32 @@ public final class Viewer {
 
     /**
      * Zhao Yu Li, May 23, 2025.
-     * Convert the current code numbers into a string as it (without putting it in normalized form)
+     * Convert the current code numbers into a string as it (without putting it in normalized form). And also computes
+     * the odd-even pattern of the current code numbers (as-is). Returns the tuple consiting of the current code numbers
+     * as a string, and its odd-even pattern as a string.
      */
-    private String codeNumbersToString() {
+    private Tuple2<String, String> getCodeSeqAndOEString() {
         final StringBuilder codeNumbersString = new StringBuilder();
+        final StringBuilder OEString = new StringBuilder();
 
         for (int i = 0; i < currentCodeNumbers.length; i++) {
             if (currentCodeNumbers[i].isEmpty()) continue;
-            if (i > 0) codeNumbersString.append(", ");
+            if (i > 0) {
+                codeNumbersString.append(", ");
+                OEString.append(",");
+            }
 
             for (int j = 0; j < currentCodeNumbers[i].size(); j++) {
-                if (j > 0) codeNumbersString.append(" ");
+                if (j > 0) {
+                    codeNumbersString.append(" ");
+                }
+
                 codeNumbersString.append(currentCodeNumbers[i].get(j));
+                OEString.append(currentCodeNumbers[i].get(j) % 2 == 0 ? "E" : "O");
             }
         }
 
-        return codeNumbersString.toString();
+        return Tuple.of(codeNumbersString.toString(), OEString.toString());
     }
 
     /**
@@ -6827,7 +6839,8 @@ public final class Viewer {
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
         // was applied to, and not the ones after modification.
-        final String originalCodeNumbers = codeNumbersToString();
+        final Tuple2<String, String> codeSeqAndOEString = getCodeSeqAndOEString();
+        final String originalCodeNumbers = codeSeqAndOEString._1;
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6849,7 +6862,7 @@ public final class Viewer {
         if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
         synchronize();
@@ -6875,7 +6888,8 @@ public final class Viewer {
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
         // was applied to, and not the ones after modification.
-        final String originalCodeNumbers = codeNumbersToString();
+        final Tuple2<String, String> codeSeqAndOEString = getCodeSeqAndOEString();
+        final String originalCodeNumbers = codeSeqAndOEString._1;
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6897,7 +6911,7 @@ public final class Viewer {
         if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
         synchronize();
@@ -6917,7 +6931,8 @@ public final class Viewer {
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
         // was applied to, and not the ones after modification.
-        final String originalCodeNumbers = codeNumbersToString();
+        final Tuple2<String, String> codeSeqAndOEString = getCodeSeqAndOEString();
+        final String originalCodeNumbers = codeSeqAndOEString._1;
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6937,7 +6952,7 @@ public final class Viewer {
         if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
         synchronize();
@@ -6957,7 +6972,8 @@ public final class Viewer {
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
         // was applied to, and not the ones after modification.
-        final String originalCodeNumbers = codeNumbersToString();
+        final Tuple2<String, String> codeSeqAndOEString = getCodeSeqAndOEString();
+        final String originalCodeNumbers = codeSeqAndOEString._1;
 
         for (int i = 0; i < pats.length; i++) {
             final int j = i;
@@ -6977,7 +6993,7 @@ public final class Viewer {
         if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
         synchronize();
