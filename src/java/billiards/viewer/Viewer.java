@@ -772,6 +772,13 @@ public final class Viewer {
 
             final String[] pat1 = addSubtractPatternTextField.getText().trim().split(",");
 
+
+            // Zhao Yu Li, May 22, 2025.
+            // Used to add the code sequence - iteration pattern pair to the database
+            // Updated May 23, 2025.
+            // Use the current code numbers as-is instead of using the normalized form.
+            String codeSeqString = codeNumbersToString();
+
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
                         IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
@@ -791,14 +798,8 @@ public final class Viewer {
                 codes.add(res);
             }
 
-            // Zhao Yu Li, May 22, 2025.
-            // Used to add the code sequence - iteration pattern pair to the database
-            String codeSeqString;
-
             // Prints each triple in one line
             if (size1 == 3) {
-                codeSeqString = codes.get(0).get(0) + ", " + codes.get(1).get(0) + ", " + codes.get(2).get(0);
-
                 for (int i = 0; i < codes.get(0).size(); i++) {
                     String printout = codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
                     if(printout.contains("empty set")) {
@@ -807,8 +808,6 @@ public final class Viewer {
                     System.out.println(printout);
                 }
             } else {
-                codeSeqString = codes.get(0).get(0) + "";
-
                 for (int i = 0; i < codes.get(0).size(); i++) {
                     String printout = codes.get(0).get(i) + "";
                     if(printout.contains("empty set")) {
@@ -1138,6 +1137,12 @@ public final class Viewer {
             final String[] pat3 = thirdPatternTextField.getText().trim().split(",");
             final String[] pat4 = fourthPatternTextField.getText().trim().split(",");
 
+            // Zhao Yu Li, May 22, 2025.
+            // Used to add the code sequence - iteration pattern pair to the database
+            // Updated May 23, 2025.
+            // Use the current code numbers as-is instead of using the normalized form.
+            String codeSeqString = codeNumbersToString();
+
             for (int i = 0; i < size; i++) {
                 final MutableIntList workingNumbers =
                         IntArrayList.newWithNValues(currentCodeNumbers[i].size(), 0);
@@ -1200,14 +1205,8 @@ public final class Viewer {
                 //System.out.print("ends" + ends + "\n");//ends[I@137af616
             }
 
-            // Zhao Yu Li, May 22, 2025.
-            // Used to add the code sequence - iteration pattern pair to the database
-            String codeSeqString;
-
             // Prints each triple in one line
             if (size1 == 3) {
-                codeSeqString = codes.get(0).get(0) + ", " + codes.get(1).get(0) + ", " + codes.get(2).get(0);
-
                 for (int i = 0; i < codes.get(0).size(); i++) {
                 	String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
                 	if(printout.contains("empty set")) {
@@ -1216,8 +1215,6 @@ public final class Viewer {
                 	System.out.println(printout);
                 }
             } else {
-                codeSeqString = codes.get(0).get(0) + "";
-
                 for (int i = 0; i < codes.get(0).size(); i++) {
                     String printout = codes.get(0).get(i) + "";
                     if(printout.contains("empty set")) {
@@ -4391,7 +4388,7 @@ public final class Viewer {
                     i++;
                 }
                 print += "~";
-                if (print.contains("empty set")) {
+                if (print.contains("empty set") && !print.startsWith("//")) {
                     System.out.println("// " + print.replace(", ~", ""));
 
                 } else {
@@ -6792,11 +6789,35 @@ public final class Viewer {
     }
 
     /**
+     * Zhao Yu Li, May 23, 2025.
+     * Convert the current code numbers into a string as it (without putting it in normalized form)
+     */
+    private String codeNumbersToString() {
+        final StringBuilder codeNumbersString = new StringBuilder();
+
+        for (int i = 0; i < currentCodeNumbers.length; i++) {
+            if (currentCodeNumbers[i].isEmpty()) continue;
+            if (i > 0) codeNumbersString.append(", ");
+
+            for (int j = 0; j < currentCodeNumbers[i].size(); j++) {
+                if (j > 0) codeNumbersString.append(" ");
+                codeNumbersString.append(currentCodeNumbers[i].get(j));
+            }
+        }
+
+        return codeNumbersString.toString();
+    }
+
+    /**
      * Zhao Yu Li
      * Adds and subtracts two from the code sequence at the same time. A positive index means we add two, whereas a
      * negative index means we subtract two
      * Zhao Yu Li, May 22, 2025.
      * Updated to add a code sequence - iteration pattern pair to the garbage database.
+     * Updated, May 23, 2025.
+     * Store the code sequence as-is instead of first normalizing it, because the iteration pattern may only apply to
+     * the current form rather than the normalized form.
+     * TODO: code sequence - iteration pattern pairs where the code sequence and/or the iteration pattern are invalid are also added to the database.
      */
     private void addSubtract(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
@@ -6804,12 +6825,11 @@ public final class Viewer {
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
-        // Get the original code numbers to be put into the database
-        final StringBuilder codeNumbersString = new StringBuilder();
+        // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
+        // was applied to, and not the ones after modification.
+        final String originalCodeNumbers = codeNumbersToString();
 
         for (int i = 0; i < pats.length; i++) {
-            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
-
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6822,13 +6842,16 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        codeNumbersString.append("~");
+        String finalResult = result.toString().replace(", ~", "");
+
+        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
+        // to explicitly add the "//" in front of the string-to-print.
+        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
-                normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
 
-        System.out.println(result.toString().replace(", ~", ""));
+        System.out.println(finalResult);
         synchronize();
     }
 
@@ -6839,6 +6862,10 @@ public final class Viewer {
      * positive index means we subtract two
      * Zhao Yu Li, May 22, 2025.
      * Updated to add a code sequence - iteration pattern pair to the garbage database.
+     * Updated, May 23, 2025.
+     * Store the code sequence as-is instead of first normalizing it, because the iteration pattern may only apply to
+     * the current form rather than the normalized form.
+     * TODO: code sequence - iteration pattern pairs where the code sequence and/or the iteration pattern are invalid are also added to the database.
      */
     private void addSubtractReverse(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
@@ -6846,12 +6873,11 @@ public final class Viewer {
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
-        // Get the original code numbers to be put into the database
-        final StringBuilder codeNumbersString = new StringBuilder();
+        // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
+        // was applied to, and not the ones after modification.
+        final String originalCodeNumbers = codeNumbersToString();
 
         for (int i = 0; i < pats.length; i++) {
-            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
-
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6864,30 +6890,36 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        codeNumbersString.append("~");
+        String finalResult = result.toString().replace(", ~", "");
+
+        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
+        // to explicitly add the "//" in front of the string-to-print.
+        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
-                normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
 
-        System.out.println(result.toString().replace(", ~", ""));
+        System.out.println(finalResult);
         synchronize();
     }
 
     // Zhao Yu Li, May 22, 2025.
     // Updated to add a code sequence - iteration pattern pair to the garbage database.
+    // Updated, May 23, 2025.
+    // Store the code sequence as-is instead of first normalizing it, because the iteration pattern may only apply to
+    // the current form rather than the normalized form.
+    // TODO: code sequence - iteration pattern pairs where the code sequence and/or the iteration pattern are invalid are also added to the database.
     private void increase(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
-        // Get the original code numbers to be put into the database
-        final StringBuilder codeNumbersString = new StringBuilder();
+        // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
+        // was applied to, and not the ones after modification.
+        final String originalCodeNumbers = codeNumbersToString();
 
         for (int i = 0; i < pats.length; i++) {
-            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
-
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6898,30 +6930,36 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        codeNumbersString.append("~");
+        String finalResult = result.toString().replace(", ~", "");
+
+        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
+        // to explicitly add the "//" in front of the string-to-print.
+        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
-                normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
 
-        System.out.println(result.toString().replace(", ~", ""));
+        System.out.println(finalResult);
         synchronize();
     }
 
     // Zhao Yu Li, May 22, 2025.
     // Updated to add a code sequence - iteration pattern pair to the garbage database.
+    // Updated, May 23, 2025.
+    // Store the code sequence as-is instead of first normalizing it, because the iteration pattern may only apply to
+    // the current form rather than the normalized form.
+    // TODO: code sequence - iteration pattern pairs where the code sequence and/or the iteration pattern are invalid are also added to the database.
     private void decrease(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
         StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
-        // Get the original code numbers to be put into the database
-        final StringBuilder codeNumbersString = new StringBuilder();
+        // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
+        // was applied to, and not the ones after modification.
+        final String originalCodeNumbers = codeNumbersToString();
 
         for (int i = 0; i < pats.length; i++) {
-            codeNumbersString.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
-
             final int j = i;
             final ImmutableIntList numbers = Utils.splitString(pats[j].trim()).get();
             numbers.forEach(number -> {
@@ -6932,13 +6970,16 @@ public final class Viewer {
             normalizedPattern.append(pats[i].trim()).append(",");
         }
         result.append("~");
-        codeNumbersString.append("~");
+        String finalResult = result.toString().replace(", ~", "");
+
+        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
+        // to explicitly add the "//" in front of the string-to-print.
+        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
-        Database.saveIterationPatternToDatabase(codeNumbersString.toString().replace(", ~", "").replace("// empty set ", ""),
-                normalizedPattern.toString(), "garbage");
+        Database.saveIterationPatternToDatabase(originalCodeNumbers, normalizedPattern.toString(), "garbage");
 
-        System.out.println(result.toString().replace(", ~", ""));
+        System.out.println(finalResult);
         synchronize();
     }
 
