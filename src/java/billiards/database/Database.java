@@ -503,7 +503,7 @@ public final class Database {
         }
     }
 
-    public ArrayList<String> lookUpIterPatByCodeSeq(final String codeSeq, final String dbName) {
+    public static ArrayList<String> lookUpIterPatByCodeSeq(final String codeSeq, final String dbName) {
         // First, create the iteration patterns table if it does not already exist in the database
         final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),oe_pattern text check(typeof(oe_pattern) = 'text'),iter_pattern text check(typeof(iter_pattern) = 'text'),last_used text check(typeof(last_used) = 'text'),primary key (code_sequence, iter_pattern))";
 
@@ -514,17 +514,38 @@ public final class Database {
             final String selectPatternQuery = "SELECT iter_pattern FROM main.iteration_pattern WHERE code_sequence = ? ORDER BY last_used DESC;";
             PreparedStatement pstmt = conn.prepareStatement(selectPatternQuery);
             pstmt.setString(1, codeSeq);
-            ResultSet rs = pstmt.executeQuery();
-
-            ArrayList<String> patterns = new ArrayList<>();
-
-            while (rs.next()) {
-                patterns.add(rs.getString("iter_pattern"));
-            }
-
-            return patterns;
+            return getPatternsFromDB(pstmt);
         } catch (SQLException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static ArrayList<String> lookUpIterPatByOEPat(final String oePattern, final String dbName) {
+        // First, create the iteration patterns table if it does not already exist in the database
+        final String createIterPatQuery = "CREATE TABLE IF NOT EXISTS main.iteration_pattern (code_sequence text check(typeof(code_sequence) = 'text'),oe_pattern text check(typeof(oe_pattern) = 'text'),iter_pattern text check(typeof(iter_pattern) = 'text'),last_used text check(typeof(last_used) = 'text'),primary key (code_sequence, iter_pattern))";
+
+        try (Connection conn = DriverManager.getConnection(Admin.getUrl(dbName));
+             Statement stmt = conn.createStatement();) {
+            stmt.executeUpdate(createIterPatQuery);
+
+            final String selectPatternQuery = "SELECT DISTINCT iter_pattern FROM main.iteration_pattern WHERE oe_pattern = ? ORDER BY last_used DESC;";
+            PreparedStatement pstmt = conn.prepareStatement(selectPatternQuery);
+            pstmt.setString(1, oePattern);
+            return getPatternsFromDB(pstmt);
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static ArrayList<String> getPatternsFromDB(PreparedStatement pstmt) throws SQLException {
+        ResultSet rs = pstmt.executeQuery();
+
+        ArrayList<String> patterns = new ArrayList<>();
+
+        while (rs.next()) {
+            patterns.add(rs.getString("iter_pattern"));
+        }
+
+        return patterns;
     }
 }
