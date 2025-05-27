@@ -248,6 +248,8 @@ public final class Viewer {
     final Button intersectPolygonButton = new Button();  // Opens a new window to specify the polygon
     final HBox iterationToolsHBox = new HBox();
 
+    final IterationPolyWindow iterationPolyWindow = new IterationPolyWindow();
+
     final TextField box1 = new TextField();
     final Button increaseBox1 = new Button();
     final Button decreaseBox1 = new Button();
@@ -331,8 +333,6 @@ public final class Viewer {
     //caculate expando button
     final Button expandoCalculateButton= new Button();
 
-
-
     final GridPane iterationsGridPane = new GridPane();
 
     final Button iterationsCalculateButton = new Button();
@@ -405,7 +405,6 @@ public final class Viewer {
     final HBox textYRadianHBox = new HBox();
     final Label textYRadianLabel = new Label();
     final TextField textYRadianField = new TextField();
-
 
     // the navigation menu
     final TextField xMinTextField = new TextField();
@@ -504,7 +503,6 @@ public final class Viewer {
 
     final Button coverInfoBtn = new Button();
 
-
     final ComboBox<String> keepPolys = new ComboBox<>();
     final CheckBox coverColorCycle = new CheckBox();
 
@@ -535,7 +533,6 @@ public final class Viewer {
     final CheckBox superAutoCb = new CheckBox();
 
     final BoyanMenu boyanMenu = new BoyanMenu(middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
-
 
     final CoverWindow coverWindow;
 
@@ -628,8 +625,8 @@ public final class Viewer {
 
         intersectPolygonButton.setText("Polygon");
         Utils.colorButton(intersectPolygonButton, Color.SKYBLUE, clickColor);
-        intersectPolygonButton.setDisable(intersectCheckBox.isSelected());
-        intersectPolygonButton.setOnAction(event -> {});
+        intersectPolygonButton.setDisable(!intersectCheckBox.isSelected());
+        intersectPolygonButton.setOnAction(event -> iterationPolyWindow.show());
 
         iterationToolsHBox.getChildren().addAll(lookupButton, intersectCheckBox, intersectPolygonButton);
         iterationToolsHBox.setSpacing(10);
