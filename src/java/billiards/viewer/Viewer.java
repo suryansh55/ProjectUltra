@@ -242,6 +242,12 @@ public final class Viewer {
     final HBox[] minusButtons = {new HBox(), new HBox(), new HBox()};
     final VBox btnsVBox = new VBox();
 
+    // Zhao Yu Li, May 27, 2025.
+    final Button lookupButton = new Button();  // Button to look up iteration patterns from the database
+    final CheckBox intersectCheckBox = new CheckBox();  // Checkbox to optionally specify a polygon to intersect
+    final Button intersectPolygonButton = new Button();  // Opens a new window to specify the polygon
+    final HBox iterationToolsHBox = new HBox();
+
     final TextField box1 = new TextField();
     final Button increaseBox1 = new Button();
     final Button decreaseBox1 = new Button();
@@ -605,6 +611,28 @@ public final class Viewer {
         iterationEnd.setText("0");
         iterationEnd.setPrefWidth(40);
         iterationEnd.setStyle(textBoxColor);
+
+        // Zhao Yu Li, May 27, 2025.
+        // Add the pattern lookup button and the polygon intersection pattern to the iteration window
+        lookupButton.setText("Lookup Patterns");
+        Utils.colorButton(lookupButton, Color.SKYBLUE, clickColor);
+        lookupButton.setOnAction(event -> new PatternLookupWindow(
+                PatternLookupWindow.codeNumbersToString(currentCodeNumbers)
+        ));
+
+        intersectCheckBox.setSelected(false);
+        intersectCheckBox.setText("Intersect Polygon");
+        intersectCheckBox.setOnAction(event -> {
+            intersectPolygonButton.setDisable(!intersectCheckBox.isSelected());
+        });
+
+        intersectPolygonButton.setText("Polygon");
+        Utils.colorButton(intersectPolygonButton, Color.SKYBLUE, clickColor);
+        intersectPolygonButton.setDisable(intersectCheckBox.isSelected());
+        intersectPolygonButton.setOnAction(event -> {});
+
+        iterationToolsHBox.getChildren().addAll(lookupButton, intersectCheckBox, intersectPolygonButton);
+        iterationToolsHBox.setSpacing(10);
 
         increaseBox1.setText("Add 2");
         Utils.colorButton(increaseBox1, Color.SKYBLUE, clickColor);
@@ -1299,7 +1327,7 @@ public final class Viewer {
         });
 
         codeWindowVBox.setPadding(new Insets(10));
-        codeWindowVBox.getChildren().addAll(btnsVBox, manualIncrementHBox,
+        codeWindowVBox.getChildren().addAll(btnsVBox, iterationToolsHBox, manualIncrementHBox,
                 iterationsGridPane, calculateIterationsHBox);
         codeWindowVBox.setSpacing(10);
 
