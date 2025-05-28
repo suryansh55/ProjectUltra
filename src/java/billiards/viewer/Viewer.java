@@ -790,7 +790,12 @@ public final class Viewer {
                 return;
             }
 
-            ArrayList<Array<ClassifiedCodeSequence>> codes = new ArrayList<>();
+            Optional<ConvexPolygon> polygon = iterationPolyWindow.getPolygon();
+
+            if (intersectCheckBox.isSelected() && !polygon.isPresent()) return;
+
+            ArrayList<ArrayList<Storage>> storages = new ArrayList<>();
+            ArrayList<Array<ClassifiedCodeSequence>> codeSequences = new ArrayList<>();
 
             // Zhao Yu Li, May 22, 2025.
             // Used to add the code sequence - iteration pattern pair to the database
@@ -821,31 +826,79 @@ public final class Viewer {
 
                 final int[] steps = {Integer.parseInt(addSubtractPatternIncrementTextField.getText().trim())};
 
-                Array<ClassifiedCodeSequence> res = iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor);
-                codes.add(res);
+                Tuple2<Array<ClassifiedCodeSequence>, ArrayList<Storage>> res =
+                        iterateActionWithPolyIntersect(workingNumbers, vectors, starts, ends, steps, i, false, executor);
+                codeSequences.add(res._1);
+                storages.add(res._2);
             }
 
             // Prints each triple in one line
+            int storageIdx = 0;
+            int codeSequenceIdx = 0;
+
             if (size1 == 3) {
-                for (int i = 0; i < codes.get(0).size(); i++) {
-                    String printout = codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
-                    if(printout.contains("empty set")) {
-                        printout = "// " + printout;
+                while (codeSequenceIdx < codeSequences.get(0).size()) {
+                    String tripleString = codeSequences.get(0).get(codeSequenceIdx).toString() + ", "
+                            + codeSequences.get(1).get(codeSequenceIdx).toString() + ", "
+                            + codeSequences.get(2).get(codeSequenceIdx).toString();
+
+                    if (storageIdx < storages.get(0).size()
+                            && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())
+                            && codeSequences.get(1).get(codeSequenceIdx).toString().equals(storages.get(1).get(storageIdx).toString())
+                            && codeSequences.get(2).get(codeSequenceIdx).toString().equals(storages.get(2).get(storageIdx).toString())
+                    ) {
+                        System.out.println(tripleString);
+
+                        if (intersectCheckBox.isSelected()) {
+                            if (storages.get(0).get(storageIdx).intersects(polygon.get())
+                                    && storages.get(1).get(storageIdx).intersects(polygon.get())
+                                    && storages.get(2).get(storageIdx).intersects(polygon.get())
+                            ) {
+                                final int index = cycle.get();
+                                final Color color = comboBoxColors.get(index);
+                                addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                                addToOnScreenSequences(storages.get(1).get(storageIdx), color);
+                                addToOnScreenSequences(storages.get(2).get(storageIdx), color);
+                                coverWindow.appendTriplesInfo(tripleString);
+                            }
+                        }
+
+                        storageIdx++;
+                    } else {
+                        System.out.println("// empty set " + tripleString);
                     }
-                    System.out.println(printout);
+
+                    codeSequenceIdx++;
                 }
             } else {
-                for (int i = 0; i < codes.get(0).size(); i++) {
-                    String printout = codes.get(0).get(i) + "";
-                    if(printout.contains("empty set")) {
-                        printout = "// " + printout;
+                while (codeSequenceIdx < codeSequences.get(0).size()) {
+                    if (storageIdx < storages.get(0).size()
+                        && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())) {
+                        System.out.println(codeSequences.get(0).get(codeSequenceIdx).toString());
+
+                        if (intersectCheckBox.isSelected()) {
+                            if (storages.get(0).get(storageIdx).intersects(polygon.get())) {
+                                final int index = cycle.get();
+                                final Color color = comboBoxColors.get(index);
+                                addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                                coverWindow.appendStablesInfo(getCoverCodeString(storages.get(0).get(storageIdx)));
+                            }
+                        }
+
+                        storageIdx++;
+                    } else {
+                        System.out.println("// empty set " + codeSequences.get(0).get(codeSequenceIdx));
+
                     }
-                    System.out.println(printout);
+
+                    codeSequenceIdx++;
                 }
             }
 
             patternString.deleteCharAt(patternString.length() - 1);
             Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString.toString(), "garbage");
+
+            if (intersectCheckBox.isSelected()) renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
 
         //LeftRights
@@ -3712,6 +3765,73 @@ public final class Viewer {
         //get the final codesequences Array and return it
         expandoCodeSeqs = Array.ofAll(todo);
         return expandoCodeSeqs ;*/
+    }
+
+    private Tuple2<Array<ClassifiedCodeSequence>, ArrayList<Storage>> iterateActionWithPolyIntersect(
+            final MutableIntList workingNumbers, final String[] vectors, final int[] starts, final int[] ends,
+            final int[] steps, final int num, final boolean print, final ExecutorService executor
+    ) {
+        Utils.copyInto(workingNumbers, currentCodeNumbers[num]);
+
+        final ArrayList<ClassifiedCodeSequence> todo =
+                iterateThru(workingNumbers, vectors, starts, ends, steps, 0, num);
+        final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(todo);
+
+        final Task<Array<Storage>> task;
+        final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
+
+        if (nolrRdoBtn.isSelected()) {
+            task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, print, false);
+
+        } else if (showlrRdoBtn.isSelected()) {
+            task = new DrawPictureTaskShowLR(classCodeSeqs, pool);
+
+        } else if (uselrRdoBtn.isSelected()) {
+            task = new DrawPictureTaskUseLR(classCodeSeqs, pool);
+
+        } else if (uselrTestBtn.isSelected()){
+            task = new DrawPictureTaskUseLRTest(classCodeSeqs,pool);
+        }
+        else {
+            throw new RuntimeException("No selected left right button");
+        }
+
+        ArrayList<Storage> storagesToReturn = new ArrayList<>();
+
+        task.setOnSucceeded(e -> {
+            final Array<Storage> storages;
+            try {
+                storages = task.get();
+            } catch (InterruptedException | ExecutionException exception) {
+                throw new RuntimeException(exception);
+            }
+
+            storages.forEach(storagesToReturn::add);
+
+            Utils.printToFile("iterations.txt", storages);
+
+            try {
+                synchronize();
+            } catch (final NullPointerException exception) {
+                // this is when were iterating from a file, and the iteration window isn't open
+            }
+            Utils.safeShutdownExecutor(drawExecutor);
+        });
+        task.setOnCancelled(e -> {
+            Utils.safeShutdownExecutor(drawExecutor);
+        });
+
+        // If the task throws an exception during the call phase,
+        // simply close the window and throw the exception
+        task.setOnFailed(e -> {
+            //progress.close();
+            Utils.safeShutdownExecutor(drawExecutor);
+            throw new RuntimeException(task.getException());
+        });
+
+        Utils.runAndWait(task);
+
+        return Tuple.of(classCodeSeqs, storagesToReturn);
     }
 
     private Array<ClassifiedCodeSequence> iterateAction(final MutableIntList workingNumbers,
