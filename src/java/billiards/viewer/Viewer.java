@@ -50,6 +50,7 @@ import javaslang.control.Either;
 
 import java.sql.*;
 
+import javaslang.control.Option;
 import org.eclipse.collections.api.bimap.MutableBiMap;
 import org.eclipse.collections.api.list.ImmutableList;
 import org.eclipse.collections.api.list.MutableList;
@@ -2666,7 +2667,7 @@ public final class Viewer {
                                                     ClassifiedCodeSequence.create(sequence).get();
 
                                             if ((codeSeq.codeType == CodeType.CS && boyanMenu.CScb.isSelected())
-                                                    || (codeSeq.codeType == CodeType.OSNO && boyanMenu.OSNOcb.isSelected())
+                                                    || (codeSeq.codeType == OSNO && boyanMenu.OSNOcb.isSelected())
                                                     || (codeSeq.codeType == CodeType.OSO && boyanMenu.OSOcb.isSelected())) {
                                                 final Optional<Color> optColor;
                                                 optColor = Optional.empty();
@@ -4143,7 +4144,7 @@ public final class Viewer {
                         // Automatically add stables to cover when loading from DB.
                         if (autoCover && (
                                 storage.codeType() == CodeType.CS ||
-                                        storage.codeType() == CodeType.OSNO ||
+                                        storage.codeType() == OSNO ||
                                         storage.codeType() == CodeType.OSO))
                         {
                             String codeStr = "" + storage.codeType();
@@ -4239,7 +4240,7 @@ public final class Viewer {
                                 // Zhao Yu Li, May 09, 2025.
                                 // Automatically add stables to cover when loading from DB.
                                 if ((boyanMenu.CScb.isSelected() && storage.codeType() == CodeType.CS) ||
-                                        (boyanMenu.OSNOcb.isSelected() && storage.codeType() == CodeType.OSNO) ||
+                                        (boyanMenu.OSNOcb.isSelected() && storage.codeType() == OSNO) ||
                                         (boyanMenu.OSOcb.isSelected() && storage.codeType() == CodeType.OSO))
                                 {
                                     addToOnScreenSequences(storage, color);
@@ -6816,9 +6817,73 @@ public final class Viewer {
     }
 
     /**
+     * Zhao Yu Li, May 28, 2025.
+     * Gets a code string of STORAGE that is formatted nicely
+     * @param storage The Storage instance to get code string for.
+     * @return The nicely formatted code string of STORAGE.
+     */
+    private String getCoverCodeString(Storage storage) {
+        if (storage == null) return "";
+
+        String codeStr = "" + storage.codeType();
+
+        if (codeStr.equals("CS")) {
+            codeStr += "  ";
+        } else if (!codeStr.equals("OSNO")) {
+            codeStr += " ";
+        }
+
+        return codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
+    }
+
+    /**
+     * Zhao Yu Li, May 28, 2025.
+     * Checks for intersection between currentCodeNumbers and a specified polygon. Adds the single or triple, along with
+     * the iteration pattern used, to the cover if the sinlge or triple intersects with the polygon.
+     * @param pattern The iteration pattern used to produce currentCodeNumbers.
+     */
+    private void handleIterationIntersect(String pattern) {
+        if (!intersectCheckBox.isSelected()) return;
+
+        Optional<ConvexPolygon> polygon = iterationPolyWindow.getPolygon();
+
+        if (!polygon.isPresent()) return;
+
+        int numOfCodes = 0;
+        int numOfIntersects = 0;
+
+        final StringBuilder codeSeqString = new StringBuilder();
+        Storage firstStorage = null;  // Storage of the first code sequence. Used to get a pretty formatted stable code
+
+        for (int i = 0; i < 3; i++) {
+            if (currentCodeNumbers[i].isEmpty()) continue;
+
+            numOfCodes++;
+            Either<InvalidCodeSequence, ClassifiedCodeSequence> classCodeSeq = ClassifiedCodeSequence.create(currentCodeNumbers[i]);
+
+            if (classCodeSeq.isLeft()) return;
+
+            if (i > 0) codeSeqString.append(",");
+
+            codeSeqString.append(classCodeSeq.get().toString());
+            Optional<Storage> storage = Database.loadStorage(classCodeSeq.get(), pool);
+
+            if (storage.isPresent()) {
+                if (i == 0) firstStorage = storage.get();
+                if (storage.get().intersects(polygon.get())) numOfIntersects++;
+            }
+        }
+
+        if (numOfCodes != numOfIntersects) return;
+
+        if (numOfIntersects == 1) coverWindow.appendStablesInfo(getCoverCodeString(firstStorage) + "  // " + pattern);
+        if (numOfIntersects == 3) coverWindow.appendTriplesInfo(codeSeqString.toString() + "  // " + pattern);
+    }
+
+    /**
      * Zhao Yu Li, May 23, 2025.
-     * Convert the current code numbers into a string as it (without putting it in normalized form). And also computes
-     * the odd-even pattern of the current code numbers (as-is). Returns the tuple consiting of the current code numbers
+     * Convert the current code numbers into a string as is (without putting it in normalized form). And also computes
+     * the odd-even pattern of the current code numbers (as-is). Returns the tuple consisting of the current code numbers
      * as a string, and its odd-even pattern as a string.
      */
     private Tuple2<String, String> getCodeSeqAndOEString() {
@@ -6890,6 +6955,7 @@ public final class Viewer {
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
+        handleIterationIntersect(textField.getText());
         synchronize();
     }
 
@@ -6939,6 +7005,7 @@ public final class Viewer {
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
+        handleIterationIntersect(textField.getText());
         synchronize();
     }
 
@@ -6980,6 +7047,7 @@ public final class Viewer {
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
+        handleIterationIntersect(textField.getText());
         synchronize();
     }
 
@@ -7021,6 +7089,7 @@ public final class Viewer {
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
         System.out.println(finalResult);
+        handleIterationIntersect(textField.getText());
         synchronize();
     }
 
