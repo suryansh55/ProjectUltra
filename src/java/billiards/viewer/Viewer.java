@@ -6836,15 +6836,60 @@ public final class Viewer {
         return codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
     }
 
+    private String drawRegion(ArrayList<Optional<Storage>> storages,
+                              ArrayList<ClassifiedCodeSequence> classifiedCodeSequences,
+                              boolean draw) {
+        final StringBuilder result = new StringBuilder();
+
+        for (int i = 0; i < storages.size(); i++) {
+            Optional<Storage> optional = storages.get(i);
+
+            if (i > 0) result.append(", ");
+
+            if (optional.isPresent()) {
+                final Storage storage = optional.get();
+                result.append(storage.classCodeSeq.toString());
+                final String value = calculateChooser.getValue();
+                if (draw && (value.equals("Region") || value.equals("All"))) {
+                    final int index = cycle.get();
+                    final Color color = comboBoxColors.get(index);
+                    addToOnScreenSequences(storage, color);
+                    renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+                }
+                if (storage.classCodeSeq.stable) {
+                    final Storage.Stable stable = (Storage.Stable) storage;
+                    if (draw && (value.equals("MRR") || value.equals("All"))) {
+                        final ConvexPolygon innerPoly = stable.polygon;
+                        innerPolyBounds.add(innerPoly);
+                        renderPolygon(innerPoly, (WritableImage) boundsImageView.getImage(), polyBoundColor);
+                    }
+                    if (draw && (value.equals("Bound") || value.equals("All"))) {
+                        // Change outerPoly to the stable.outerPolygon when that exists
+                        final ConvexPolygon outerPoly = ConvexPolygon.create(Database.parsePoints(Wrapper.boundingPolygon(stable.classCodeSeq, pool)));
+                        outerPolyBounds.add(outerPoly);
+                        renderPolygon(outerPoly, (WritableImage) boundsImageView.getImage(), polyBoundColor);
+                    }
+                }
+            } else {
+                // Zhao Yu Li, May 02, 2025.
+                // Add '//' before 'empty set' so the cover can ignore it
+                result.append("// empty set ").append(classifiedCodeSequences.get(i));
+            }
+        }
+
+        String finalResult = result.toString();
+        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
+
+        return finalResult;
+    }
+
     /**
      * Zhao Yu Li, May 28, 2025.
      * Checks for intersection between currentCodeNumbers and a specified polygon. Adds the single or triple, along with
-     * the iteration pattern used, to the cover if the sinlge or triple intersects with the polygon.
+     * the iteration pattern used, to the cover if the single or triple intersects with the polygon.
      * @param pattern The iteration pattern used to produce currentCodeNumbers.
      */
     private void handleIterationIntersect(String pattern) {
-        if (!intersectCheckBox.isSelected()) return;
-
         Optional<ConvexPolygon> polygon = iterationPolyWindow.getPolygon();
 
         if (!polygon.isPresent()) return;
@@ -6853,6 +6898,9 @@ public final class Viewer {
         int numOfIntersects = 0;
 
         final StringBuilder codeSeqString = new StringBuilder();
+        ArrayList<Optional<Storage>> storages = new ArrayList<>();
+        ArrayList<ClassifiedCodeSequence> classifiedCodeSequences = new ArrayList<>();
+
         Storage firstStorage = null;  // Storage of the first code sequence. Used to get a pretty formatted stable code
 
         for (int i = 0; i < 3; i++) {
@@ -6866,7 +6914,11 @@ public final class Viewer {
             if (i > 0) codeSeqString.append(",");
 
             codeSeqString.append(classCodeSeq.get().toString());
+            classifiedCodeSequences.add(classCodeSeq.get());
+
             Optional<Storage> storage = Database.loadStorage(classCodeSeq.get(), pool);
+
+            storages.add(storage);
 
             if (storage.isPresent()) {
                 if (i == 0) firstStorage = storage.get();
@@ -6874,10 +6926,15 @@ public final class Viewer {
             }
         }
 
-        if (numOfCodes != numOfIntersects) return;
+        boolean draw = !intersectCheckBox.isSelected() || numOfCodes == numOfIntersects;
+        boolean addToCover = intersectCheckBox.isSelected() && numOfCodes == numOfIntersects;
 
-        if (numOfIntersects == 1) coverWindow.appendStablesInfo(getCoverCodeString(firstStorage) + "  // " + pattern);
-        if (numOfIntersects == 3) coverWindow.appendTriplesInfo(codeSeqString.toString() + "  // " + pattern);
+        final String result = drawRegion(storages, classifiedCodeSequences, draw);
+        System.out.println(result);
+
+        if (addToCover && numOfIntersects == 1)
+            coverWindow.appendStablesInfo(getCoverCodeString(firstStorage) + "  // " + pattern);
+        if (addToCover && numOfIntersects == 3) coverWindow.appendTriplesInfo(codeSeqString + "  // " + pattern);
     }
 
     /**
@@ -6924,7 +6981,6 @@ public final class Viewer {
     private void addSubtract(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
@@ -6941,20 +6997,12 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber + value);
             });
-            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
             normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result.append("~");
-        String finalResult = result.toString().replace(", ~", "");
-
-        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
-        // to explicitly add the "//" in front of the string-to-print.
-        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
-        System.out.println(finalResult);
         handleIterationIntersect(textField.getText());
         synchronize();
     }
@@ -6974,7 +7022,6 @@ public final class Viewer {
     private void addSubtractReverse(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
@@ -6991,20 +7038,12 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber - value);
             });
-            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
             normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result.append("~");
-        String finalResult = result.toString().replace(", ~", "");
-
-        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
-        // to explicitly add the "//" in front of the string-to-print.
-        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
-        System.out.println(finalResult);
         handleIterationIntersect(textField.getText());
         synchronize();
     }
@@ -7018,7 +7057,6 @@ public final class Viewer {
     private void increase(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
@@ -7033,20 +7071,12 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber + 2);
             });
-            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
             normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result.append("~");
-        String finalResult = result.toString().replace(", ~", "");
-
-        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
-        // to explicitly add the "//" in front of the string-to-print.
-        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
 
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
-        System.out.println(finalResult);
         handleIterationIntersect(textField.getText());
         synchronize();
     }
@@ -7060,7 +7090,6 @@ public final class Viewer {
     private void decrease(final TextField textField, final ConnectionPool pool) {
         // the indices to increment
         final String[] pats = textField.getText().split(",");
-        StringBuilder result = new StringBuilder();
         final StringBuilder normalizedPattern = new StringBuilder();
 
         // The code sequence - iteration pattern pair should be stored with the code sequence that the iteration pattern
@@ -7075,20 +7104,11 @@ public final class Viewer {
                 final int currentNumber = currentCodeNumbers[j].get(number - 1);
                 currentCodeNumbers[j].set(number - 1, currentNumber - 2);
             });
-            result.append(calculateCurrentCodeNumbers(pool, i)).append(", ");
             normalizedPattern.append(pats[i].trim()).append(",");
         }
-        result.append("~");
-        String finalResult = result.toString().replace(", ~", "");
-
-        // Account for the case where, in a triple, the last stable is an empty set but the first is not. Thus, we need
-        // to explicitly add the "//" in front of the string-to-print.
-        if (finalResult.contains("empty set") && !finalResult.startsWith("//")) finalResult = "// " + finalResult;
-
         normalizedPattern.deleteCharAt(normalizedPattern.length() - 1);
         Database.saveIterationPatternToDatabase(originalCodeNumbers, codeSeqAndOEString._2, normalizedPattern.toString(), "garbage");
 
-        System.out.println(finalResult);
         handleIterationIntersect(textField.getText());
         synchronize();
     }
