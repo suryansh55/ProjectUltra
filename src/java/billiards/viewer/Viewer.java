@@ -250,6 +250,12 @@ public final class Viewer {
     final Button intersectPolygonButton = new Button();  // Opens a new window to specify the polygon
     final HBox iterationToolsHBox = new HBox();
 
+    // Zhao Yu Li, May 29, 2025.
+    // There can be a large number of codes generated from an iteration calculation. Use this to optionally limit the
+    // the number of code sequences drawn and added to the cover.
+    final Label intersectionLimitLabel = new Label();
+    final TextField intersectionLimitTextField = new TextField();
+
     final IterationPolyWindow iterationPolyWindow = new IterationPolyWindow();
 
     final TextField box1 = new TextField();
@@ -630,7 +636,16 @@ public final class Viewer {
         intersectPolygonButton.setDisable(!intersectCheckBox.isSelected());
         intersectPolygonButton.setOnAction(event -> iterationPolyWindow.show());
 
-        iterationToolsHBox.getChildren().addAll(lookupButton, intersectCheckBox, intersectPolygonButton);
+        intersectionLimitLabel.setText("Limit:");
+        intersectionLimitLabel.setTooltip(Utils.toolTip(
+                "Limit the number of code sequences to draw and put into the cover. This value is only used if " +
+                        "the \"Intersect Polygon\" checkbox is checked. Leave the field blank if you want to draw" +
+                        "and put all code sequences into the cover."
+        ));
+
+        intersectionLimitTextField.setPrefColumnCount(3);
+
+        iterationToolsHBox.getChildren().addAll(lookupButton, intersectCheckBox, intersectPolygonButton, intersectionLimitLabel, intersectionLimitTextField);
         iterationToolsHBox.setSpacing(10);
 
         increaseBox1.setText("Add 2");
