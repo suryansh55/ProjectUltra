@@ -814,6 +814,30 @@ public final class Viewer {
 
             if (intersectCheckBox.isSelected() && !polygon.isPresent()) return;
 
+            int limit = -1;
+
+            if (intersectCheckBox.isSelected() && !intersectionLimitTextField.getText().trim().isEmpty()) {
+                try {
+                    limit = Integer.parseInt(intersectionLimitTextField.getText());
+
+                    if (limit < 0) {
+                        Alert alert = new Alert(AlertType.ERROR);
+                        alert.setTitle("Iteration");
+                        alert.setHeaderText("Invalid Input");
+                        alert.setContentText("Please enter an integer greater than 0 for the limit");
+                        alert.showAndWait();
+                        return;
+                    }
+                } catch (final Exception e) {
+                    Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("Iteration");
+                    alert.setHeaderText("Invalid Input");
+                    alert.setContentText("Please enter an integer for the limit");
+                    alert.showAndWait();
+                    return;
+                }
+            }
+
             ArrayList<ArrayList<Storage>> storages = new ArrayList<>();
             ArrayList<Array<ClassifiedCodeSequence>> codeSequences = new ArrayList<>();
 
@@ -822,7 +846,6 @@ public final class Viewer {
             final StringBuilder patternString = new StringBuilder();
 
             final String[] pat1 = addSubtractPatternTextField.getText().trim().split(",");
-
 
             // Zhao Yu Li, May 22, 2025.
             // Used to add the code sequence - iteration pattern pair to the database
@@ -856,6 +879,9 @@ public final class Viewer {
 
             int storageIdx = 0;
             int codeSequenceIdx = 0;
+            int count = 0;
+
+            if (intersectCheckBox.isSelected() && limit == -1) limit = codeSequences.get(0).size();
 
             if (size1 == 3) {
                 while (codeSequenceIdx < codeSequences.get(0).size()) {
@@ -874,6 +900,7 @@ public final class Viewer {
                             if (storages.get(0).get(storageIdx).intersects(polygon.get())
                                     && storages.get(1).get(storageIdx).intersects(polygon.get())
                                     && storages.get(2).get(storageIdx).intersects(polygon.get())
+                                    && count++ < limit
                             ) {
                                 final int index = cycle.get();
                                 final Color color = comboBoxColors.get(index);
@@ -882,6 +909,16 @@ public final class Viewer {
                                 addToOnScreenSequences(storages.get(2).get(storageIdx), color);
                                 coverWindow.appendTriplesInfo(tripleString + "  // " + patternString);
                             }
+                        }
+
+                        // If we don't choose to intersect with a polygon, then the same as before: draw, but don't add
+                        // to cover
+                        if (!intersectCheckBox.isSelected()) {
+                            final int index = cycle.get();
+                            final Color color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                            addToOnScreenSequences(storages.get(1).get(storageIdx), color);
+                            addToOnScreenSequences(storages.get(2).get(storageIdx), color);
                         }
 
                         storageIdx++;
@@ -897,7 +934,10 @@ public final class Viewer {
                         && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())) {
                         System.out.println(codeSequences.get(0).get(codeSequenceIdx).toString());
 
-                        if (intersectCheckBox.isSelected() && storages.get(0).get(storageIdx).intersects(polygon.get())) {
+                        if (intersectCheckBox.isSelected()
+                                && storages.get(0).get(storageIdx).intersects(polygon.get())
+                                && count++ < limit
+                        ) {
                             final int index = cycle.get();
                             final Color color = comboBoxColors.get(index);
                             addToOnScreenSequences(storages.get(0).get(storageIdx), color);
@@ -905,8 +945,8 @@ public final class Viewer {
                         }
 
                         // Zhao Yu Li, May 29, 2025.
-                        // If we don't choose to intersect with a polygon, then same as before: draw, but don't add to
-                        // cover
+                        // If we don't choose to intersect with a polygon, then the same as before: draw, but don't add
+                        // to cover
                         if (!intersectCheckBox.isSelected()) {
                             final int index = cycle.get();
                             final Color color = comboBoxColors.get(index);
@@ -1238,6 +1278,32 @@ public final class Viewer {
 
             if (intersectCheckBox.isSelected() && !polygon.isPresent()) return;
 
+            if (intersectCheckBox.isSelected() && !polygon.isPresent()) return;
+
+            int limit = -1;
+
+            if (intersectCheckBox.isSelected() && !intersectionLimitTextField.getText().trim().isEmpty()) {
+                try {
+                    limit = Integer.parseInt(intersectionLimitTextField.getText());
+
+                    if (limit < 0) {
+                        Alert alert = new Alert(AlertType.ERROR);
+                        alert.setTitle("Iteration");
+                        alert.setHeaderText("Invalid Input");
+                        alert.setContentText("Please enter an integer greater than 0 for the limit");
+                        alert.showAndWait();
+                        return;
+                    }
+                } catch (final Exception e) {
+                    Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("Iteration");
+                    alert.setHeaderText("Invalid Input");
+                    alert.setContentText("Please enter an integer for the limit");
+                    alert.showAndWait();
+                    return;
+                }
+            }
+
             ArrayList<ArrayList<Storage>> storages = new ArrayList<>();
             ArrayList<Array<ClassifiedCodeSequence>> codeSequences = new ArrayList<>();
 
@@ -1342,6 +1408,9 @@ public final class Viewer {
 
             int storageIdx = 0;
             int codeSequenceIdx = 0;
+            int count = 0;
+
+            if (intersectCheckBox.isSelected() && limit == -1) limit = codeSequences.get(0).size();
 
             // Zhao Yu Li, May 29, 2025.
             if (size1 == 3) {
@@ -1361,6 +1430,7 @@ public final class Viewer {
                             if (storages.get(0).get(storageIdx).intersects(polygon.get())
                                     && storages.get(1).get(storageIdx).intersects(polygon.get())
                                     && storages.get(2).get(storageIdx).intersects(polygon.get())
+                                    && count++ < limit
                             ) {
                                 final int index = cycle.get();
                                 final Color color = comboBoxColors.get(index);
@@ -1391,6 +1461,16 @@ public final class Viewer {
                             }
                         }
 
+                        // If we don't choose to intersect with a polygon, then the same as before: draw, but don't add
+                        // to cover
+                        if (!intersectCheckBox.isSelected()) {
+                            final int index = cycle.get();
+                            final Color color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                            addToOnScreenSequences(storages.get(1).get(storageIdx), color);
+                            addToOnScreenSequences(storages.get(2).get(storageIdx), color);
+                        }
+
                         storageIdx++;
                     } else {
                         System.out.println("// empty set " + tripleString);
@@ -1404,7 +1484,10 @@ public final class Viewer {
                             && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())) {
                         System.out.println(codeSequences.get(0).get(codeSequenceIdx).toString());
 
-                        if (intersectCheckBox.isSelected() && storages.get(0).get(storageIdx).intersects(polygon.get())) {
+                        if (intersectCheckBox.isSelected()
+                                && storages.get(0).get(storageIdx).intersects(polygon.get())
+                                && count++ < limit
+                        ) {
                             final int index = cycle.get();
                             final Color color = comboBoxColors.get(index);
                             addToOnScreenSequences(storages.get(0).get(storageIdx), color);
@@ -1448,6 +1531,8 @@ public final class Viewer {
                     codeSequenceIdx++;
                 }
             }
+
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             if (!patternString1.toString().isEmpty()) {
                 Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString1.toString(), "garbage");
