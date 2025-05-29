@@ -42,6 +42,7 @@ import billiards.geometry.Vector2;
 import billiards.math.XYPi;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
+import javafx.concurrent.Worker;
 import javafx.scene.control.TextArea;
 
 import javaslang.*;
@@ -766,6 +767,10 @@ public final class Viewer {
         // Zhao Yu Li, May 01, 2025.
         // Add/Subtract in iterations
         // Positive index means adding the increment; negative index means subtracting the increment
+        // Updated May 29, 2025.
+        // New polygon intersect feature: can optionally choose to check whether codes produced from iterations
+        // intersect with the specified polygon or not. If they do intersect, draw the code sequence and add it to the
+        // cover.
         addSubtractIterationsButton.setText("Calculate Add/Subtract Iterations");
         Utils.colorButton(addSubtractIterationsButton, Color.SKYBLUE, clickColor);
         addSubtractIterationsButton.setOnAction(event -> {
@@ -832,7 +837,8 @@ public final class Viewer {
                 storages.add(res._2);
             }
 
-            // Prints each triple in one line
+            patternString.deleteCharAt(patternString.length() - 1);
+
             int storageIdx = 0;
             int codeSequenceIdx = 0;
 
@@ -859,7 +865,7 @@ public final class Viewer {
                                 addToOnScreenSequences(storages.get(0).get(storageIdx), color);
                                 addToOnScreenSequences(storages.get(1).get(storageIdx), color);
                                 addToOnScreenSequences(storages.get(2).get(storageIdx), color);
-                                coverWindow.appendTriplesInfo(tripleString);
+                                coverWindow.appendTriplesInfo(tripleString + "  // " + patternString);
                             }
                         }
 
@@ -876,29 +882,34 @@ public final class Viewer {
                         && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())) {
                         System.out.println(codeSequences.get(0).get(codeSequenceIdx).toString());
 
-                        if (intersectCheckBox.isSelected()) {
-                            if (storages.get(0).get(storageIdx).intersects(polygon.get())) {
-                                final int index = cycle.get();
-                                final Color color = comboBoxColors.get(index);
-                                addToOnScreenSequences(storages.get(0).get(storageIdx), color);
-                                coverWindow.appendStablesInfo(getCoverCodeString(storages.get(0).get(storageIdx)));
-                            }
+                        if (intersectCheckBox.isSelected() && storages.get(0).get(storageIdx).intersects(polygon.get())) {
+                            final int index = cycle.get();
+                            final Color color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                            coverWindow.appendStablesInfo(getCoverCodeString(storages.get(0).get(storageIdx)) + "  // " + patternString);
+                        }
+
+                        // Zhao Yu Li, May 29, 2025.
+                        // If we don't choose to intersect with a polygon, then same as before: draw, but don't add to
+                        // cover
+                        if (!intersectCheckBox.isSelected()) {
+                            final int index = cycle.get();
+                            final Color color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storages.get(0).get(storageIdx), color);
                         }
 
                         storageIdx++;
                     } else {
                         System.out.println("// empty set " + codeSequences.get(0).get(codeSequenceIdx));
-
                     }
 
                     codeSequenceIdx++;
                 }
             }
 
-            patternString.deleteCharAt(patternString.length() - 1);
             Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString.toString(), "garbage");
 
-            if (intersectCheckBox.isSelected()) renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
 
         //LeftRights
@@ -1168,6 +1179,11 @@ public final class Viewer {
             //}
         });
         ArrayList<Array<ClassifiedCodeSequence>> codes2 = new ArrayList<>();
+
+        // Zhao Yu Li, updated May 29, 2025.
+        // New polygon intersect feature: can optionally choose to check whether codes produced from iterations
+        // intersect with the specified polygon or not. If they do intersect, draw the code sequence and add it to the
+        // cover.
         iterationsCalculateButton.setOnAction(event -> {
             codes2.clear();
             int size = 0;
@@ -1203,7 +1219,12 @@ public final class Viewer {
             //String lr = leftrightsTextArea.getText();
             //System.out.println("asdsadas"+lr+"x");
 
-            ArrayList<Array<ClassifiedCodeSequence>> codes = new ArrayList<>();
+            Optional<ConvexPolygon> polygon = iterationPolyWindow.getPolygon();
+
+            if (intersectCheckBox.isSelected() && !polygon.isPresent()) return;
+
+            ArrayList<ArrayList<Storage>> storages = new ArrayList<>();
+            ArrayList<Array<ClassifiedCodeSequence>> codeSequences = new ArrayList<>();
 
             // Zhao Yu Li, May 22, 2025.
             // Used to add the code sequence - iteration pattern pair to the database
@@ -1253,9 +1274,11 @@ public final class Viewer {
 
                 // Label 8
 //                long start = System.currentTimeMillis();
-                Array<ClassifiedCodeSequence> res = iterateAction(workingNumbers, vectors, starts, ends, steps, i, false, executor);
-                codes.add(res);
-                codes2.add(res);
+                Tuple2<Array<ClassifiedCodeSequence>, ArrayList<Storage>> res =
+                        iterateActionWithPolyIntersect(workingNumbers, vectors, starts, ends, steps, i, false, executor);
+                codeSequences.add(res._1);
+                codes2.add(res._1);
+                storages.add(res._2);
 //                long end = System.currentTimeMillis();
 
 
@@ -1286,42 +1309,144 @@ public final class Viewer {
                 //System.out.print("ends" + ends + "\n");//ends[I@137af616
             }
 
-            // Prints each triple in one line
-            if (size1 == 3) {
-                for (int i = 0; i < codes.get(0).size(); i++) {
-                	String printout =codes.get(0).get(i) + ", " + codes.get(1).get(i) + ", " + codes.get(2).get(i);
-                	if(printout.contains("empty set")) {
-                		printout = "// " + printout;
-                    }
-                	System.out.println(printout);
-                }
-            } else {
-                for (int i = 0; i < codes.get(0).size(); i++) {
-                    String printout = codes.get(0).get(i) + "";
-                    if(printout.contains("empty set")) {
-                        printout = "// " + printout;
-                    }
-                    System.out.println(printout);
-                }
-            }
-
             if (!patternString1.toString().isEmpty()) {
                 patternString1.deleteCharAt(patternString1.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString1.toString(), "garbage");
             }
 
             if (!patternString2.toString().isEmpty()) {
                 patternString2.deleteCharAt(patternString2.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString2.toString(), "garbage");
             }
 
             if (!patternString3.toString().isEmpty()) {
                 patternString3.deleteCharAt(patternString3.length() - 1);
-                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString3.toString(), "garbage");
             }
 
             if (!patternString4.toString().isEmpty()) {
                 patternString4.deleteCharAt(patternString4.length() - 1);
+            }
+
+            int storageIdx = 0;
+            int codeSequenceIdx = 0;
+
+            // Zhao Yu Li, May 29, 2025.
+            if (size1 == 3) {
+                while (codeSequenceIdx < codeSequences.get(0).size()) {
+                    String tripleString = codeSequences.get(0).get(codeSequenceIdx).toString() + ", "
+                            + codeSequences.get(1).get(codeSequenceIdx).toString() + ", "
+                            + codeSequences.get(2).get(codeSequenceIdx).toString();
+
+                    if (storageIdx < storages.get(0).size()
+                            && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())
+                            && codeSequences.get(1).get(codeSequenceIdx).toString().equals(storages.get(1).get(storageIdx).toString())
+                            && codeSequences.get(2).get(codeSequenceIdx).toString().equals(storages.get(2).get(storageIdx).toString())
+                    ) {
+                        System.out.println(tripleString);
+
+                        if (intersectCheckBox.isSelected()) {
+                            if (storages.get(0).get(storageIdx).intersects(polygon.get())
+                                    && storages.get(1).get(storageIdx).intersects(polygon.get())
+                                    && storages.get(2).get(storageIdx).intersects(polygon.get())
+                            ) {
+                                final int index = cycle.get();
+                                final Color color = comboBoxColors.get(index);
+                                addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                                addToOnScreenSequences(storages.get(1).get(storageIdx), color);
+                                addToOnScreenSequences(storages.get(2).get(storageIdx), color);
+
+                                StringBuilder coverString = new StringBuilder(tripleString);
+                                coverString.append("  // ");
+
+                                if (!patternString1.toString().isEmpty()) {
+                                    coverString.append("pat1: ").append(patternString1).append("; ");
+                                }
+
+                                if (!patternString2.toString().isEmpty()) {
+                                    coverString.append("pat2: ").append(patternString2).append("; ");
+                                }
+
+                                if (!patternString3.toString().isEmpty()) {
+                                    coverString.append("pat3: ").append(patternString3).append("; ");
+                                }
+
+                                if (!patternString4.toString().isEmpty()) {
+                                    coverString.append("pat4: ").append(patternString4);
+                                }
+
+                                coverWindow.appendTriplesInfo(coverString.toString());
+                            }
+                        }
+
+                        storageIdx++;
+                    } else {
+                        System.out.println("// empty set " + tripleString);
+                    }
+
+                    codeSequenceIdx++;
+                }
+            } else {
+                while (codeSequenceIdx < codeSequences.get(0).size()) {
+                    if (storageIdx < storages.get(0).size()
+                            && codeSequences.get(0).get(codeSequenceIdx).toString().equals(storages.get(0).get(storageIdx).toString())) {
+                        System.out.println(codeSequences.get(0).get(codeSequenceIdx).toString());
+
+                        if (intersectCheckBox.isSelected() && storages.get(0).get(storageIdx).intersects(polygon.get())) {
+                            final int index = cycle.get();
+                            final Color color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+
+                            StringBuilder coverString = new StringBuilder(getCoverCodeString(storages.get(0).get(storageIdx)));
+                            coverString.append("  // ");
+
+                            if (!patternString1.toString().isEmpty()) {
+                                coverString.append("pat1: ").append(patternString1).append("; ");
+                            }
+
+                            if (!patternString2.toString().isEmpty()) {
+                                coverString.append("pat2: ").append(patternString2).append("; ");
+                            }
+
+                            if (!patternString3.toString().isEmpty()) {
+                                coverString.append("pat3: ").append(patternString3).append("; ");
+                            }
+
+                            if (!patternString4.toString().isEmpty()) {
+                                coverString.append("pat4: ").append(patternString4);
+                            }
+
+                            coverWindow.appendStablesInfo(coverString.toString());
+                        }
+
+                        // Zhao Yu Li, May 29, 2025.
+                        // If we don't choose to intersect with a polygon, then same as before: draw, but don't add to
+                        // cover
+                        if (!intersectCheckBox.isSelected()) {
+                            final int index = cycle.get();
+                            final Color color = comboBoxColors.get(index);
+                            addToOnScreenSequences(storages.get(0).get(storageIdx), color);
+                        }
+
+                        storageIdx++;
+                    } else {
+                        System.out.println("// empty set " + codeSequences.get(0).get(codeSequenceIdx));
+                    }
+
+                    codeSequenceIdx++;
+                }
+            }
+
+            if (!patternString1.toString().isEmpty()) {
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString1.toString(), "garbage");
+            }
+
+            if (!patternString2.toString().isEmpty()) {
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString2.toString(), "garbage");
+            }
+
+            if (!patternString3.toString().isEmpty()) {
+                Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString3.toString(), "garbage");
+            }
+
+            if (!patternString4.toString().isEmpty()) {
                 Database.saveIterationPatternToDatabase(codeSeqString, codeSeqAndOEString._2, patternString4.toString(), "garbage");
             }
         });
@@ -2364,13 +2489,20 @@ public final class Viewer {
         // Then check if the string is valid
 
         btnCalculate.setText("Calculate");
-        btnCalculate.setTooltip(Utils.toolTip("Calculate the code sequece entered"));
+        btnCalculate.setTooltip(Utils.toolTip("Calculate the code sequence entered"));
         Utils.colorButton(btnCalculate, Color.SKYBLUE, clickColor);
 
-        btnCalculate.setOnAction(event -> btnCalculateAction(pool));
+        // Zhao Yu Li, May 29, 2025.
+        // Opens code calculation/iteration window if code sequence is empty.
+        // So that we can use the tools in the window before even actually calculating any iterations.
+        btnCalculate.setOnAction(event -> {
+            if (txtCodeSequence.getText().isEmpty()) codeWindow.show();
+
+            btnCalculateAction(pool);
+        });
 
         btnCalculate2.setText("Calculate");
-        btnCalculate.setTooltip(Utils.toolTip("Calculate the code sequece entered"));
+        btnCalculate.setTooltip(Utils.toolTip("Calculate the code sequence entered"));
         Utils.colorButton(btnCalculate2, Color.SKYBLUE, clickColor);
 
         btnCalculate2.setOnAction(event -> btnCalculateAction(pool));
@@ -3799,17 +3931,6 @@ public final class Viewer {
         ArrayList<Storage> storagesToReturn = new ArrayList<>();
 
         task.setOnSucceeded(e -> {
-            final Array<Storage> storages;
-            try {
-                storages = task.get();
-            } catch (InterruptedException | ExecutionException exception) {
-                throw new RuntimeException(exception);
-            }
-
-            storages.forEach(storagesToReturn::add);
-
-            Utils.printToFile("iterations.txt", storages);
-
             try {
                 synchronize();
             } catch (final NullPointerException exception) {
@@ -3830,6 +3951,20 @@ public final class Viewer {
         });
 
         Utils.runAndWait(task);
+
+        // Zhao Yu Li, May 29, 2025.
+        // Since TASK was executed synchronously, it is safe to GET the result of the task outside the onSucceed method
+        final Array<Storage> storages;
+
+        try {
+            storages = task.get();
+        } catch (InterruptedException | ExecutionException exception) {
+            throw new RuntimeException(exception);
+        }
+
+        storages.forEach(storagesToReturn::add);
+
+        Utils.printToFile("iterations.txt", storages);
 
         return Tuple.of(classCodeSeqs, storagesToReturn);
     }
