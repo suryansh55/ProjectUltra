@@ -7247,7 +7247,7 @@ public final class Viewer {
     private void handleIterationIntersect(String pattern) {
         Optional<ConvexPolygon> polygon = iterationPolyWindow.getPolygon();
 
-        if (!polygon.isPresent()) return;
+        if (intersectCheckBox.isSelected() && !polygon.isPresent()) return;
 
         int numOfCodes = 0;
         int numOfIntersects = 0;
@@ -7277,7 +7277,7 @@ public final class Viewer {
 
             if (storage.isPresent()) {
                 if (i == 0) firstStorage = storage.get();
-                if (storage.get().intersects(polygon.get())) numOfIntersects++;
+                if (intersectCheckBox.isSelected() && storage.get().intersects(polygon.get())) numOfIntersects++;
             }
         }
 
