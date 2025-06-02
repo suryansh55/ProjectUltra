@@ -21,6 +21,9 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
+import static billiards.utils.Polygon.cleanPolygon;
+import static billiards.utils.Polygon.createConvexPolygon;
+
 public final class PolyLoad {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
@@ -73,51 +76,19 @@ public final class PolyLoad {
         loadButton.setText(buttonText);
         Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
         loadButton.setOnAction(event -> {
-
             fullContent = text.getText();
-            if (fullContent.equals("")) {
+            if (fullContent.isEmpty()) {
                 this.result = Optional.of(fullScreen.toConvexPolygon());
 
             } else {
                 final String cleaned = cleanPolygon(fullContent);
-                final String[] lines = cleaned.split("\n");
-                final MutableList<Vector2> pointList = new FastList<>();
-
-                for (final String line : lines) {
-                    final String[] coords = line.split(" ");
-                    final double x = Math.toRadians(Double.parseDouble(coords[0]));
-                    final double y = Math.toRadians(Double.parseDouble(coords[1]));
-                    pointList.add(Vector2.create(x, y));
-                }
-                final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
+                final ConvexPolygon poly = createConvexPolygon(cleaned);
                 this.result = Optional.of(poly);
             }
             Utils.writeToFile(fileName, fullContent);
 
             stage.close();
         });
-    }
-
-    private static String cleanPolygon(final String polygonString) {
-
-        final String[] lines = polygonString.split("\\R");
-
-        final StringBuilder builder = new StringBuilder();
-        for (final String line : lines) {
-
-            final String[] coords = line.trim().replace("(", "").replace(")", "").replace(",", "").split(" ");
-
-            if (coords.length != 2) {
-                throw new RuntimeException("invalid polygon line: " + line);
-            }
-
-            final String x = coords[0].trim();
-            final String y = coords[1].trim();
-
-            builder.append(x).append(' ').append(y).append('\n');
-        }
-
-        return builder.toString().trim();
     }
 
     public Optional<ConvexPolygon> getPolyLoad() {

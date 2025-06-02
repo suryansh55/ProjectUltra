@@ -30,6 +30,8 @@ import javafx.scene.text.Font;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 
+import static billiards.utils.Polygon.cleanPolygon;
+
 public final class CoverWindow {
 
     // ------------------------------------------------------------
@@ -310,32 +312,6 @@ public final class CoverWindow {
         Utils.writeToFile(Viewer.tmpDir + "/cover_empty.txt", emptyString);
         //Utils.writeToFile(Viewer.tmpDir + "/cover_half_triples.txt", halfTripleString);
 
-    }
-
-    public static String cleanPolygon(final String string) {
-
-        final Iterable<String> lines = Splitter.onPattern("\\R")
-                                           .trimResults()
-                                           .omitEmptyStrings()
-                                           .split(string);
-
-        final StringBuilder builder = new StringBuilder();
-
-        for (final String line : lines) {
-
-            final String[] coords = line.trim().replace("(", "").replace(")", "").replace(",", "").split(" ");
-
-            if (coords.length != 2) {
-                throw new RuntimeException("invalid polygon line: " + line);
-            }
-
-            final String x = coords[0].trim();
-            final String y = coords[1].trim();
-
-            builder.append(x).append(' ').append(y).append('\n');
-        }
-
-        return builder.toString().trim();
     }
 
     private static Tuple2<String, String> cleanTriples(final String string, final ConnectionPool pool) {

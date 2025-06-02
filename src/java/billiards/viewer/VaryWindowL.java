@@ -26,6 +26,8 @@ import javafx.stage.Stage;
 import javaslang.Tuple;
 import javaslang.Tuple7;
 
+import static billiards.utils.Polygon.cleanPolygon;
+
 public final class VaryWindowL {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
@@ -223,28 +225,6 @@ public final class VaryWindowL {
             Utils.writeToFile(varyBoundFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
         });
-    }
-    
-    private static String cleanPolygon(final String polygonString) {
-
-        final String[] lines = polygonString.split("\\R");
-
-        final StringBuilder builder = new StringBuilder();
-        for (final String line : lines) {
-
-            final String[] coords = line.trim().replace("(", "").replace(")", "").replace(",", "").split(" ");
-
-            if (coords.length != 2) {
-                throw new RuntimeException("invalid polygon line: " + line);
-            }
-
-            final String x = coords[0].trim();
-            final String y = coords[1].trim();
-
-            builder.append(x).append(' ').append(y).append('\n');
-        }
-
-        return builder.toString().trim();
     }
 
     public Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> 

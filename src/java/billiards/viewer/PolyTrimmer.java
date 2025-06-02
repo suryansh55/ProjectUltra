@@ -2,7 +2,6 @@ package billiards.viewer;
 
 import billiards.geometry.ConvexPolygon;
 import billiards.geometry.Rectangle;
-import billiards.geometry.Vector2;
 import billiards.codeseq.Storage;
 import billiards.database.Database;
 import billiards.codeseq.ClassifiedCodeSequence;
@@ -20,9 +19,7 @@ import javafx.geometry.Pos;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
 import javafx.scene.control.TextArea;
-import javafx.scene.control.ToggleGroup;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
@@ -31,7 +28,6 @@ import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser;
 import javafx.stage.DirectoryChooser;
-import javaslang.Tuple;
 import javaslang.Tuple2;
 import javaslang.Tuple3;
 
@@ -42,6 +38,9 @@ import java.io.FileNotFoundException;
 import java.io.PrintWriter;
 import java.util.Map;
 import java.util.Optional;
+
+import static billiards.utils.Polygon.cleanPolygon;
+import static billiards.utils.Polygon.createConvexPolygon;
 
 public final class PolyTrimmer {
 
@@ -126,7 +125,7 @@ public final class PolyTrimmer {
 
             Utils.writeToFile(fileName, fullContent);
 
-            final String polyStr = CoverWindow.cleanPolygon(fullContent);
+            final String polyStr = cleanPolygon(fullContent);
 
             trim(polyStr, stage);
 
@@ -142,19 +141,9 @@ public final class PolyTrimmer {
         if (content.isEmpty()) {
             poly = fullScreen.toConvexPolygon();
         } else {
-            final String cleaned = CoverWindow.cleanPolygon(content);
+            final String cleaned = cleanPolygon(content);
 
-            final String[] lines = cleaned.split("\n");
-            final MutableList<Vector2> pointList = new FastList<>();
-
-            for (final String line : lines) {
-                final String[] coords = line.split(" ");
-                final double x = Math.toRadians(Double.parseDouble(coords[0]));
-                final double y = Math.toRadians(Double.parseDouble(coords[1]));
-                pointList.add(Vector2.create(x, y));
-            }
-
-            poly = ConvexPolygon.create(pointList.toImmutable());
+            poly = createConvexPolygon(cleaned);
         }
 
         return poly;

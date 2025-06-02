@@ -2,6 +2,7 @@ package billiards.viewer;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.InvalidCodeSequence;
+import billiards.utils.Polygon;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 import com.google.common.base.Splitter;
@@ -23,6 +24,8 @@ import org.eclipse.collections.api.list.primitive.IntList;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Optional;
+
+import static billiards.utils.Polygon.cleanPolygon;
 
 public class CoverWindow4 {
 
@@ -304,32 +307,6 @@ public class CoverWindow4 {
         Utils.writeToFile(Viewer.tmpDir + "/cover_empty.txt", emptyString);
         Utils.writeToFile(Viewer.tmpDir + "/cover_half_triples.txt", halfTripleString);
 
-    }
-
-    public static String cleanPolygon(final String string) {
-
-        final Iterable<String> lines = Splitter.onPattern("\\R")
-                .trimResults()
-                .omitEmptyStrings()
-                .split(string);
-
-        final StringBuilder builder = new StringBuilder();
-
-        for (final String line : lines) {
-
-            final String[] coords = line.trim().replace("(", "").replace(")", "").replace(",", "").split(" ");
-
-            if (coords.length != 2) {
-                throw new RuntimeException("invalid polygon line: " + line);
-            }
-
-            final String x = coords[0].trim();
-            final String y = coords[1].trim();
-
-            builder.append(x).append(' ').append(y).append('\n');
-        }
-
-        return builder.toString().trim();
     }
 
     private static Tuple2<String, String> cleanTriples(final String string, final ConnectionPool pool) {

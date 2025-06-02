@@ -27,6 +27,9 @@ import javafx.stage.Stage;
 import javaslang.Tuple;
 import javaslang.Tuple7;
 
+import static billiards.utils.Polygon.cleanPolygon;
+import static billiards.utils.Polygon.createConvexPolygon;
+
 public class SuperPolyVaryLoad {
 	// WARNING: Global mutable state
     // ------------------------------------------------------------
@@ -252,15 +255,8 @@ public class SuperPolyVaryLoad {
     			return;
     		}
     		polygonString = text.getText();
-    		final String[] lines = cleanPolygon(polygonString).split("\n");
-    		final MutableList<Vector2> pointList = new FastList<>();
-    		for (final String line : lines) {
-    			final String[] coords = line.split(" ");
-    			final double x = Math.toRadians(Double.parseDouble(coords[0]));
-    			final double y = Math.toRadians(Double.parseDouble(coords[1]));
-    			pointList.add(Vector2.create(x, y));
-    		}
-    		final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
+    		final String lines = cleanPolygon(polygonString);
+    		final ConvexPolygon poly = createConvexPolygon(lines);
         	this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
         	//Utils.writeToFile(fileName, polygonString);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, BoundCSstep, BoundOSOstep, BoundOSNOstep));
@@ -271,20 +267,5 @@ public class SuperPolyVaryLoad {
     public Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> getLoad() {
     	stage.showAndWait();
     	return this.result;
-    }
-    
-    private static String cleanPolygon(final String polygonString) {
-		final String[] lines = polygonString.split("\\R");
-		final StringBuilder builder = new StringBuilder();
-		for (final String line : lines) {
-			final String[] coords = line.trim().replace("(", "").replace(")", "").replace(",", "").split(" ");
-			if (coords.length != 2) {
-				throw new RuntimeException("invalid polygon line: " + line);
-			}
-			final String x = coords[0].trim();
-			final String y = coords[1].trim();
-			builder.append(x).append(' ').append(y).append('\n');
-		}
-		return builder.toString().trim();
     }
 }

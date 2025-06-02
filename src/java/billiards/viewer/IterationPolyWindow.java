@@ -1,10 +1,6 @@
 package billiards.viewer;
 
 import billiards.geometry.ConvexPolygon;
-import billiards.geometry.Vector2;
-
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.list.mutable.FastList;
 
 import java.util.Optional;
 
@@ -17,6 +13,9 @@ import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+
+import static billiards.utils.Polygon.cleanPolygon;
+import static billiards.utils.Polygon.createConvexPolygon;
 
 /**
  * Zhao Yu Li, May 27, 2025.
@@ -31,15 +30,13 @@ public final class IterationPolyWindow {
     // ------------------------------------------------------------
 
     private final TextArea text = new TextArea();
-    private final VBox root = new VBox();
-    private final HBox loadHBox = new HBox();
     private final Stage stage = new Stage();
-    private final Scene scene = new Scene(root);
-    private final Label instruct = new Label();
 
     public IterationPolyWindow() {
         fullContent = Utils.readFromFile(fileName);
 
+        VBox root = new VBox();
+        Scene scene = new Scene(root);
         stage.setScene(scene);
 
         stage.setTitle("Iteration Polygon");
@@ -55,6 +52,7 @@ public final class IterationPolyWindow {
         text.setFont(Font.font("Monaco", 16));
         text.setText(fullContent);
 
+        Label instruct = new Label();
         instruct.setText(
                 "Enter points on separate lines, with the coordinates separated by a space.");
         instruct.setPadding(new Insets(5, 5, 5, 10));
@@ -62,32 +60,12 @@ public final class IterationPolyWindow {
         // We want the text to expand as we make the window bigger
         VBox.setVgrow(text, Priority.ALWAYS);
 
+        HBox loadHBox = new HBox();
         loadHBox.getChildren().addAll(instruct);
 
         root.getChildren().addAll(loadHBox, text);
         root.setSpacing(10);
         root.setPadding(new Insets(10));
-    }
-
-    private static String cleanPolygon(final String polygonString) {
-        final String[] lines = polygonString.split("\\R");
-
-        final StringBuilder builder = new StringBuilder();
-        for (final String line : lines) {
-
-            final String[] coords = line.trim().replace("(", "").replace(")", "").replace(",", "").split(" ");
-
-            if (coords.length != 2) {
-                throw new RuntimeException("invalid polygon line: " + line);
-            }
-
-            final String x = coords[0].trim();
-            final String y = coords[1].trim();
-
-            builder.append(x).append(' ').append(y).append('\n');
-        }
-
-        return builder.toString().trim();
     }
 
     public void show() {
@@ -102,17 +80,7 @@ public final class IterationPolyWindow {
             result = Optional.empty();
         } else {
             final String cleaned = cleanPolygon(fullContent);
-            final String[] lines = cleaned.split("\n");
-            final MutableList<Vector2> pointList = new FastList<>();
-
-            for (final String line : lines) {
-                final String[] coords = line.split(" ");
-                final double x = Math.toRadians(Double.parseDouble(coords[0]));
-                final double y = Math.toRadians(Double.parseDouble(coords[1]));
-                pointList.add(Vector2.create(x, y));
-            }
-            final ConvexPolygon poly = ConvexPolygon.create(pointList.toImmutable());
-            result = Optional.of(poly);
+            result = Optional.of(createConvexPolygon(cleaned));
         }
         Utils.writeToFile(fileName, fullContent);
 
