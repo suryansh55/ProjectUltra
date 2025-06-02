@@ -907,7 +907,11 @@ public final class Viewer {
                                 addToOnScreenSequences(storages.get(0).get(storageIdx), color);
                                 addToOnScreenSequences(storages.get(1).get(storageIdx), color);
                                 addToOnScreenSequences(storages.get(2).get(storageIdx), color);
-                                coverWindow.appendTriplesInfo(tripleString + "  // " + patternString);
+
+                                if (storages.get(0).get(storageIdx).classCodeSeq.stable
+                                        && !storages.get(1).get(storageIdx).classCodeSeq.stable
+                                        && storages.get(2).get(storageIdx).classCodeSeq.stable)
+                                    coverWindow.appendTriplesInfo(tripleString + "  // " + patternString);
                             }
                         }
 
@@ -941,7 +945,12 @@ public final class Viewer {
                             final int index = cycle.get();
                             final Color color = comboBoxColors.get(index);
                             addToOnScreenSequences(storages.get(0).get(storageIdx), color);
-                            coverWindow.appendStablesInfo(getCoverCodeString(storages.get(0).get(storageIdx)) + "  // " + patternString);
+
+                            if (storages.get(0).get(storageIdx).classCodeSeq.stable) {
+                                coverWindow.appendStablesInfo(
+                                        getCoverCodeString(storages.get(0).get(storageIdx)) + "  // " + patternString
+                                );
+                            }
                         }
 
                         // Zhao Yu Li, May 29, 2025.
@@ -7257,6 +7266,7 @@ public final class Viewer {
         ArrayList<ClassifiedCodeSequence> classifiedCodeSequences = new ArrayList<>();
 
         Storage firstStorage = null;  // Storage of the first code sequence. Used to get a pretty formatted stable code
+        boolean isTriple = false;
 
         for (int i = 0; i < 3; i++) {
             if (currentCodeNumbers[i].isEmpty()) continue;
@@ -7278,6 +7288,13 @@ public final class Viewer {
             if (storage.isPresent()) {
                 if (i == 0) firstStorage = storage.get();
                 if (intersectCheckBox.isSelected() && storage.get().intersects(polygon.get())) numOfIntersects++;
+
+                if (i == 0)
+                    isTriple = storage.get().classCodeSeq.stable;
+                else if (i == 1)
+                    isTriple = isTriple && !storage.get().classCodeSeq.stable;
+                else
+                    isTriple = isTriple && storage.get().classCodeSeq.stable;
             }
         }
 
@@ -7287,9 +7304,11 @@ public final class Viewer {
         final String result = drawRegion(storages, classifiedCodeSequences, draw);
         System.out.println(result);
 
-        if (addToCover && numOfIntersects == 1)
+        if (addToCover && numOfIntersects == 1 && isTriple)
             coverWindow.appendStablesInfo(getCoverCodeString(firstStorage) + "  // " + pattern);
-        if (addToCover && numOfIntersects == 3) coverWindow.appendTriplesInfo(codeSeqString + "  // " + pattern);
+
+        if (addToCover && numOfIntersects == 3 && isTriple)
+            coverWindow.appendTriplesInfo(codeSeqString + "  // " + pattern);
     }
 
     /**
