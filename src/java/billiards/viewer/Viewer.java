@@ -1447,26 +1447,30 @@ public final class Viewer {
                                 addToOnScreenSequences(storages.get(1).get(storageIdx), color);
                                 addToOnScreenSequences(storages.get(2).get(storageIdx), color);
 
-                                StringBuilder coverString = new StringBuilder(tripleString);
-                                coverString.append("  // ");
+                                if (storages.get(0).get(storageIdx).classCodeSeq.stable
+                                        && !storages.get(1).get(storageIdx).classCodeSeq.stable
+                                        && storages.get(2).get(storageIdx).classCodeSeq.stable) {
+                                    StringBuilder coverString = new StringBuilder(tripleString);
+                                    coverString.append("  // ");
 
-                                if (!patternString1.toString().isEmpty()) {
-                                    coverString.append("pat1: ").append(patternString1).append("; ");
+                                    if (!patternString1.toString().isEmpty()) {
+                                        coverString.append("pat1: ").append(patternString1).append("; ");
+                                    }
+
+                                    if (!patternString2.toString().isEmpty()) {
+                                        coverString.append("pat2: ").append(patternString2).append("; ");
+                                    }
+
+                                    if (!patternString3.toString().isEmpty()) {
+                                        coverString.append("pat3: ").append(patternString3).append("; ");
+                                    }
+
+                                    if (!patternString4.toString().isEmpty()) {
+                                        coverString.append("pat4: ").append(patternString4);
+                                    }
+
+                                    coverWindow.appendTriplesInfo(coverString.toString());
                                 }
-
-                                if (!patternString2.toString().isEmpty()) {
-                                    coverString.append("pat2: ").append(patternString2).append("; ");
-                                }
-
-                                if (!patternString3.toString().isEmpty()) {
-                                    coverString.append("pat3: ").append(patternString3).append("; ");
-                                }
-
-                                if (!patternString4.toString().isEmpty()) {
-                                    coverString.append("pat4: ").append(patternString4);
-                                }
-
-                                coverWindow.appendTriplesInfo(coverString.toString());
                             }
                         }
 
@@ -1501,26 +1505,28 @@ public final class Viewer {
                             final Color color = comboBoxColors.get(index);
                             addToOnScreenSequences(storages.get(0).get(storageIdx), color);
 
-                            StringBuilder coverString = new StringBuilder(getCoverCodeString(storages.get(0).get(storageIdx)));
-                            coverString.append("  // ");
+                            if (storages.get(0).get(storageIdx).classCodeSeq.stable) {
+                                StringBuilder coverString = new StringBuilder(getCoverCodeString(storages.get(0).get(storageIdx)));
+                                coverString.append("  // ");
 
-                            if (!patternString1.toString().isEmpty()) {
-                                coverString.append("pat1: ").append(patternString1).append("; ");
+                                if (!patternString1.toString().isEmpty()) {
+                                    coverString.append("pat1: ").append(patternString1).append("; ");
+                                }
+
+                                if (!patternString2.toString().isEmpty()) {
+                                    coverString.append("pat2: ").append(patternString2).append("; ");
+                                }
+
+                                if (!patternString3.toString().isEmpty()) {
+                                    coverString.append("pat3: ").append(patternString3).append("; ");
+                                }
+
+                                if (!patternString4.toString().isEmpty()) {
+                                    coverString.append("pat4: ").append(patternString4);
+                                }
+
+                                coverWindow.appendStablesInfo(coverString.toString());
                             }
-
-                            if (!patternString2.toString().isEmpty()) {
-                                coverString.append("pat2: ").append(patternString2).append("; ");
-                            }
-
-                            if (!patternString3.toString().isEmpty()) {
-                                coverString.append("pat3: ").append(patternString3).append("; ");
-                            }
-
-                            if (!patternString4.toString().isEmpty()) {
-                                coverString.append("pat4: ").append(patternString4);
-                            }
-
-                            coverWindow.appendStablesInfo(coverString.toString());
                         }
 
                         // Zhao Yu Li, May 29, 2025.
