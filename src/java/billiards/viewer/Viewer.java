@@ -363,7 +363,10 @@ public final class Viewer {
 
     final Stage codeWindow = new Stage();
 
+    final IterateToLimitWindow iterateToLimitWindow = new IterateToLimitWindow();
+
     // main window
+    final Button iterateToLimitBtn = new Button();
     final GridPane codeSequencesGPane = new GridPane();
 
     final RadioButton marinovRdoBtn = new RadioButton();
@@ -1622,11 +1625,14 @@ public final class Viewer {
                 iterationsGridPane, calculateIterationsHBox);
         codeWindowVBox.setSpacing(10);
 
-
         calculateIterationsHBox.getChildren().addAll(txtCodeSequence2, btnCalculate2,
                 labelCodeWindow, iterationsCalculateButton,
                 nolrRdoBtn, showlrRdoBtn, uselrRdoBtn, uselrTestBtn);
         calculateIterationsHBox.setSpacing(10);
+
+        iterateToLimitBtn.setText("Iter To Limit");
+        Utils.colorButton(iterateToLimitBtn, Color.SKYBLUE, clickColor);
+        iterateToLimitBtn.setOnAction(event -> iterateToLimitWindow.show());
 
         zoomScaleLabel.setText("Zoom Scale:");
         zoomScaleText.setText("2");
@@ -2453,6 +2459,7 @@ public final class Viewer {
         txtCodeSequence.setTooltip(Utils.toolTip("here you put in a code sequence that you want to"
                 + " calculate"));
         txtCodeSequence.setStyle(textBoxColor);
+        txtCodeSequence.setPrefColumnCount(6);
         txtCodeSequence.textProperty().bindBidirectional(
                 new SimpleObjectProperty<MutableIntList[]>(currentCodeNumbers),
                 new StringConverter<MutableIntList[]>() {
@@ -3686,7 +3693,7 @@ public final class Viewer {
                 mergeButton,loadCoverButton,calculateChooser);//george july15th hide the trimmer button and red button
         backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
-        twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate,zoomRegionButton);
+        twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton, iterateToLimitBtn);
         boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
         boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
         //coverExtraHBox.getChildren().addAll(halfTripleBtn, cornerBtn, unstableBtn);
