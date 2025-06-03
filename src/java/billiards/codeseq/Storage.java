@@ -193,6 +193,10 @@ public abstract class Storage implements Comparable<Storage> {
         return this.classCodeSeq.codeSum;
     }
 
+    public String oddEvenPattern() {
+        return this.classCodeSeq.oddEvenPattern;
+    }
+
     @Override
     public int compareTo(final Storage other) {
         return this.classCodeSeq.compareTo(other.classCodeSeq);
