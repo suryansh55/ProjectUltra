@@ -40,6 +40,8 @@ import billiards.geometry.Rectangle;
 
 import billiards.geometry.Vector2;
 import billiards.math.XYPi;
+import billiards.utils.BatchLoadStorage;
+import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 import javafx.concurrent.Worker;
@@ -74,20 +76,9 @@ import java.io.PrintWriter;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.NoSuchElementException;
-import java.util.Optional;
-import java.util.SortedSet;
-import java.util.TreeSet;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.DoubleUnaryOperator;
@@ -1687,7 +1678,7 @@ public final class Viewer {
 
         // Zhao Yu Li, May 19, 2025.
         // Tetrahedron/Bar window.
-        tetrabarButton.setText("Tetra/Bar");
+        tetrabarButton.setText("LiBainT/B");
         tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
         Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
         tetrabarButton.setOnAction(event -> {
@@ -4228,7 +4219,7 @@ public final class Viewer {
                            final boolean printMid) {
 
         List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
-        codeList.replaceAll(j -> Utils.tripleTrimmer(j));
+        codeList.replaceAll(Utils::tripleTrimmer);
         // Create the task
         final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor, printMid);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
@@ -7721,13 +7712,13 @@ public final class Viewer {
 
                 System.out.println("// " + finalMode +  " results for (" + originalPoints.get(index / 3)._1 + ", " + originalPoints.get(index / 3)._2 + ")");
 
-                ArrayList<ArrayList<String>> cList = new ArrayList<>();
+                ArrayList<Collection<ClassifiedCodeSequence>> cList = new ArrayList<>();
 
-                cList.add(codesToStrs(tetrahedronCodes.get(0)));
+                cList.add(tetrahedronCodes.get(0));
 
                 for (int i = 1; i < step; i++) {
-                    cList.add(codesToStrs(tetrahedronCodes.get(i)));
-                    ArrayList<String> matching = Utils.compare(cList);
+                    cList.add(tetrahedronCodes.get(i));
+                    ArrayList<ClassifiedCodeSequence> matching = Utils.compareClassCodeSeqLists(cList);
 
                     cList.clear();
                     cList.add(matching);
@@ -7740,25 +7731,16 @@ public final class Viewer {
 
                     final int finalNumToPrint = numToPrint == 0 ? cList.get(0).size() : numToPrint;
 
-                    for (int i = 0; i < finalNumToPrint; i++) {
-                        final String codeSeq = cList.get(0).get(i);
-                        System.out.println(codeSeq);
-                        coverWindow.appendStablesInfo(codeSeq);
+                    ArrayList<ClassifiedCodeSequence> codesPrinted = PrintMid.printMid(cList.get(0), finalNumToPrint);
+                    ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
 
-                        if (draw) {
-                            Optional<ImmutableIntList> intList  = Utils.splitString(Utils.trimCodeLine(codeSeq));
+                    if (draw) {
+                        final int colorIndex = cycle.get();
+                        Color color = comboBoxColors.get(colorIndex);
 
-                            if (intList.isPresent()) {
-                                Optional<Storage> optionalStorage = Database.loadStorage(ClassifiedCodeSequence.create(intList.get()).get(), pool);
-
-                                if (optionalStorage.isPresent()) {
-                                    final int colorIndex = cycle.get();
-                                    Storage storage = optionalStorage.get();
-                                    addToOnScreenSequences(storage, comboBoxColors.get(colorIndex));
-                                }
-                            }
+                        for (Storage storage : storages) {
+                            addToOnScreenSequences(storage, color);
                         }
-
                     }
                 }
 
