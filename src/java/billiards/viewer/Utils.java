@@ -17,6 +17,8 @@ import org.eclipse.collections.api.list.primitive.IntList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
+
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 import java.io.IOException;
@@ -27,6 +29,7 @@ import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -225,6 +228,26 @@ public final class Utils {
 
     }
 
+    public static ArrayList<ClassifiedCodeSequence> compareClassCodeSeqLists(final ArrayList<Collection<ClassifiedCodeSequence>> lists) {
+        ArrayList<ClassifiedCodeSequence> toReturn = new ArrayList<>();
+
+        if (lists.size() == 2) {
+            Iterable<ClassifiedCodeSequence> l1 = lists.get(0);
+            Iterable<ClassifiedCodeSequence> l2 = lists.get(1);
+
+            for (ClassifiedCodeSequence c1 : l1) {
+                for (ClassifiedCodeSequence c2 : l2) {
+                    if (c1.compareTo(c2) == 0) {
+                        if (!toReturn.contains(c1)) {
+                            toReturn.add(c1);
+                        }
+                    }
+                }
+            }
+        }
+
+        return toReturn;
+    }
 
     // this gives comparison functionality by comparing two ArrayLists
     public static ArrayList<String> compare(final ArrayList<ArrayList<String>> seq) {
