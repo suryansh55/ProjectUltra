@@ -44,7 +44,6 @@ import billiards.utils.BatchLoadStorage;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
-import javafx.concurrent.Worker;
 import javafx.scene.control.TextArea;
 
 import javaslang.*;
@@ -53,7 +52,6 @@ import javaslang.control.Either;
 
 import java.sql.*;
 
-import javaslang.control.Option;
 import org.eclipse.collections.api.bimap.MutableBiMap;
 import org.eclipse.collections.api.list.ImmutableList;
 import org.eclipse.collections.api.list.MutableList;
@@ -7718,7 +7716,7 @@ public final class Viewer {
 
                 for (int i = 1; i < step; i++) {
                     cList.add(tetrahedronCodes.get(i));
-                    ArrayList<ClassifiedCodeSequence> matching = Utils.compareClassCodeSeqLists(cList);
+                    ArrayList<ClassifiedCodeSequence> matching = Utils.getIntersectionCodes(cList);
 
                     cList.clear();
                     cList.add(matching);
@@ -7731,12 +7729,15 @@ public final class Viewer {
 
                     final int finalNumToPrint = numToPrint == 0 ? cList.get(0).size() : numToPrint;
 
+                    // Zhao Yu Li, Jun 3, 2025.
+                    // Lifted the print mid and load storage functionalities into their own utility files.
                     ArrayList<ClassifiedCodeSequence> codesPrinted = PrintMid.printMid(cList.get(0), finalNumToPrint);
-                    ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
 
                     if (draw) {
                         final int colorIndex = cycle.get();
                         Color color = comboBoxColors.get(colorIndex);
+
+                        ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
 
                         for (Storage storage : storages) {
                             addToOnScreenSequences(storage, color);
@@ -7747,7 +7748,6 @@ public final class Viewer {
                 tetrahedronCodes.clear();
 
                 if (draw) {
-                    System.out.println("// Printing drawn codes.");
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
                 }
             }
@@ -7770,18 +7770,5 @@ public final class Viewer {
         varyThread.start();
 
         progress.show();
-    }
-
-    private ArrayList<String> codesToStrs(MutableSortedSet<ClassifiedCodeSequence> codeArray) {
-        int count = 0;
-        ArrayList<String> strArray = new ArrayList<>();
-
-        for (ClassifiedCodeSequence code : codeArray) {
-            count += 1;
-            final String codeString = Utils.standard(code, count);
-            strArray.add(codeString.substring(codeString.indexOf("-") + 2));
-        }
-
-        return strArray;
     }
 }
