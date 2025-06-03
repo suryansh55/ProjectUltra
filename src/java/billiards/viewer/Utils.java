@@ -1,24 +1,17 @@
 package billiards.viewer;
 
 import billiards.codeseq.*;
-import billiards.database.Info;
 import billiards.database.InfoAll;
 import billiards.database.Database;
 import billiards.geometry.Vector2;
-import billiards.math.CosEquation;
 import billiards.math.Equation;
-import billiards.math.SinEquation;
-import billiards.wrapper.CInfoAll;
 import org.apache.commons.lang3.StringUtils;
 import org.eclipse.collections.api.list.ImmutableList;
-import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.ImmutableIntList;
 import org.eclipse.collections.api.list.primitive.IntList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
-import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 import java.io.IOException;
@@ -228,7 +221,13 @@ public final class Utils {
 
     }
 
-    public static ArrayList<ClassifiedCodeSequence> compareClassCodeSeqLists(final ArrayList<Collection<ClassifiedCodeSequence>> lists) {
+    /**
+     * Zhao Yu Li, Jun 3, 2025.
+     * Returns a list of ClassifiedCodeSequences which are in both lists.
+     * @param lists A list that contains two lists of ClassifiedCodeSequences to be compared.
+     * @return A list of ClassifiedCodeSequences that are in both lists.
+     */
+    public static ArrayList<ClassifiedCodeSequence> getIntersectionCodes(final ArrayList<Collection<ClassifiedCodeSequence>> lists) {
         ArrayList<ClassifiedCodeSequence> toReturn = new ArrayList<>();
 
         if (lists.size() == 2) {

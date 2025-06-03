@@ -16,6 +16,10 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.concurrent.*;
 
+/**
+ * Zhao Yu Li, Jun 3, 2025.
+ * Load Storage for a Collection of ClassifiedCodeSequences
+ */
 public class BatchLoadStorage {
     public static ArrayList<Storage> batchLoadStorage(Collection<ClassifiedCodeSequence> codes, ConnectionPool pool) {
         final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<>();
@@ -44,6 +48,8 @@ public class BatchLoadStorage {
         for (Either<String, Storage> e : result) {
             if (e.isRight()) storages.add(e.get());
         }
+
+        executor.shutdown();
 
         return storages;
     }

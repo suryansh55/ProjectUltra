@@ -2,11 +2,14 @@ package billiards.utils;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeType;
-import billiards.codeseq.Storage;
 import billiards.viewer.Utils;
 
 import java.util.*;
 
+/**
+ * Given a Collection of ClassifiedCodeSequences, prints the middle one of each (type, length, odd-even pattern) group,
+ * up to the specified number of codes to print.
+ */
 public class PrintMid {
     public static ArrayList<ClassifiedCodeSequence> printMid(Collection<ClassifiedCodeSequence> codes, final int numToPrint) {
         final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
