@@ -296,6 +296,46 @@ public final class Utils {
         return countStr + codeString;
     }
 
+    /**
+     * Zhao Yu Li, May 28, 2025.
+     * Gets a code string of STORAGE that is formatted nicely
+     * @param storage The Storage instance to get code string for.
+     * @return The nicely formatted code string of STORAGE.
+     */
+    public static String getCoverCodeString(Storage storage) {
+        if (storage == null) return "";
+
+        String codeStr = "" + storage.codeType();
+
+        if (codeStr.equals("CS")) {
+            codeStr += "  ";
+        } else if (!codeStr.equals("OSNO")) {
+            codeStr += " ";
+        }
+
+        return codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
+    }
+
+    /**
+     * Zhao Yu Li, May 28, 2025.
+     * Gets a code string of STORAGE that is formatted nicely
+     * @param classifiedCodeSequence The Storage instance to get code string for.
+     * @return The nicely formatted code string of STORAGE.
+     */
+    public static String getCoverCodeString(ClassifiedCodeSequence classifiedCodeSequence) {
+        if (classifiedCodeSequence == null) return "";
+
+        String codeStr = "" + classifiedCodeSequence.codeType;
+
+        if (codeStr.equals("CS")) {
+            codeStr += "  ";
+        } else if (!codeStr.equals("OSNO")) {
+            codeStr += " ";
+        }
+
+        return codeStr + " (" + classifiedCodeSequence.codeLength + ", " + classifiedCodeSequence.codeSum + ") " + classifiedCodeSequence;
+    }
+
     public static String hex(final Color color) {
         final long rd = Math.round(color.getRed() * 255);
         final long gr = Math.round(color.getGreen() * 255);
