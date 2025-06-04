@@ -5,21 +5,27 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javaslang.Tuple2;
-import javaslang.Tuple5;
+import javaslang.Tuple6;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// Zhao Yu Li, May 15, 2025.
-// Opens a new window that allows the input of the (x, y) coordinates of a list of point, and calculates the
-// tetrahedrons created from each point.
-// Updated May 16, 2025.
-// Allows the input of multiple coordinates. The x and y values of each coordinate should be in the same line and
-// separated by a singular whitespace character. Different coordinates should be separated by a newline character.
-// Updated May 20, 2025.
-// Added new fields for how many of the results to print, and whether we are calculating a Bar or Tetrahedron.
+/**
+ * Zhao Yu Li, May 15, 2025.
+ * Opens a new window that allows the input of the (x, y) coordinates of a list of point, and calculates the
+ * tetrahedrons created from each point.
+ * Updated May 16, 2025.
+ * Allows the input of multiple coordinates. The x and y values of each coordinate should be in the same line and
+ * separated by a singular whitespace character. Different coordinates should be separated by a newline character.
+ * Updated May 20, 2025.
+ * Added new fields for how many of the results to print, and whether we are calculating a Bar or Tetrahedron.
+ * Updated Jun 4, 2025.
+ * When this window is opened, can close main window without causing a exception.
+ * Added an option to add codes to cover.
+ */
 public final class TetraBar {
     // WARNING: Global mutable state
     // ------------------------------------------------------------
@@ -36,6 +42,7 @@ public final class TetraBar {
     private final RadioButton barRadio = new RadioButton("Bar");
 
     private final CheckBox drawCheckBox = new CheckBox("Draw");
+    private final CheckBox addToCoverCheckBox = new CheckBox("Add to cover");
 
     private final Stage stage = new Stage();
 
@@ -47,7 +54,7 @@ public final class TetraBar {
 
     private boolean clickedLoad = false;
 
-    public TetraBar() {
+    public TetraBar(Stage parentStage) {
         if (coordsDefault.isEmpty()) coordsDefault = Utils.readFromFile("tetrahedron.txt");
 
         epsTextField.setPromptText("epsilon");
@@ -68,13 +75,21 @@ public final class TetraBar {
         barRadio.setToggleGroup(group);
 
         drawCheckBox.setSelected(true);
+        addToCoverCheckBox.setSelected(true);
 
         final VBox root = new VBox(10);
         final Scene scene = new Scene(root);
         final Button loadButton = new Button();
-        final HBox hbox = new HBox(10, epsTextField, printCountTextField, tetraRadio, barRadio, drawCheckBox, loadButton);
+        final HBox hbox = new HBox(10, epsTextField, printCountTextField, tetraRadio, barRadio, drawCheckBox, addToCoverCheckBox, loadButton);
 
         stage.setScene(scene);
+
+        // Zhao Yu Li, Jun 4, 2025.
+        // When closing the main window with this window open, close this window first.
+        // Without these two lines, JavaFX will throw an IllegalStateException.
+        stage.initModality(Modality.NONE);
+        stage.initOwner(parentStage);
+
         stage.setOnCloseRequest(event -> stage.close());
 
         Label label = new Label("Enter coordinates on each line. The x and y coordinates should be separated by a whitespace.");
@@ -154,7 +169,7 @@ public final class TetraBar {
         });
     }
 
-    public Tuple5<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean> getVaryParams() {
+    public Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> getVaryParams() {
         // Wait till the stage is closed
         stage.showAndWait();
         int step = 0;
@@ -163,10 +178,10 @@ public final class TetraBar {
             if (tetraRadio.isSelected()) step = 3;
             if (barRadio.isSelected()) step = 2;
             this.clickedLoad = false;
-            return new Tuple5<>(this.originalPoints, this.points, step,
-                    Integer.parseInt(printCountTextField.getText()), drawCheckBox.isSelected());
+            return new Tuple6<>(this.originalPoints, this.points, step,
+                    Integer.parseInt(printCountTextField.getText()), drawCheckBox.isSelected(), addToCoverCheckBox.isSelected());
         } else {
-            return new Tuple5<>(this.originalPoints, this.points, -1, -1, false);
+            return new Tuple6<>(this.originalPoints, this.points, -1, -1, false, false);
         }
     }
 }

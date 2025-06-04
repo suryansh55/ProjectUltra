@@ -120,6 +120,7 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 
 import static billiards.codeseq.CodeType.OSNO;
+import static billiards.viewer.Utils.getCoverCodeString;
 import static billiards.viewer.Utils.readFromFile;
 
 // Places for input
@@ -1680,12 +1681,12 @@ public final class Viewer {
         tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
         Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
         tetrabarButton.setOnAction(event -> {
-            Tuple5<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean> varyParams = new TetraBar().getVaryParams();
+            Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams = new TetraBar(mainWindow).getVaryParams();
 
             if (varyParams._3 == -1) return;
 
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5);
+            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -7182,26 +7183,6 @@ public final class Viewer {
         return;
     }
 
-    /**
-     * Zhao Yu Li, May 28, 2025.
-     * Gets a code string of STORAGE that is formatted nicely
-     * @param storage The Storage instance to get code string for.
-     * @return The nicely formatted code string of STORAGE.
-     */
-    private String getCoverCodeString(Storage storage) {
-        if (storage == null) return "";
-
-        String codeStr = "" + storage.codeType();
-
-        if (codeStr.equals("CS")) {
-            codeStr += "  ";
-        } else if (!codeStr.equals("OSNO")) {
-            codeStr += " ";
-        }
-
-        return codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
-    }
-
     private String drawRegion(ArrayList<Optional<Storage>> storages,
                               ArrayList<ClassifiedCodeSequence> classifiedCodeSequences,
                               boolean draw) {
@@ -7650,7 +7631,8 @@ public final class Viewer {
                                ExecutorService executor,
                                final int step,
                                final int numToPrint,
-                               final boolean draw)
+                               final boolean draw,
+                               final boolean addToCover)
     {
         int next = index + 1;
 
@@ -7666,7 +7648,7 @@ public final class Viewer {
 
         if (index == 0) {
             System.out.println("// Start " + mode + ".");
-            coverWindow.appendStablesInfo("// Start " + mode + ".");
+            if (addToCover) coverWindow.appendStablesInfo("// Start " + mode + ".");
         }
 
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
@@ -7733,6 +7715,16 @@ public final class Viewer {
                     // Lifted the print mid and load storage functionalities into their own utility files.
                     ArrayList<ClassifiedCodeSequence> codesPrinted = PrintMid.printMid(cList.get(0), finalNumToPrint);
 
+                    // Zhao Yu Li, Jun 3, 2025.
+                    // Add codes to cover.
+                    if (addToCover) {
+                        for (ClassifiedCodeSequence code : codesPrinted) {
+                            if (ClassifiedCodeSequence.isStableCodeType(code.codeType)) {
+                                coverWindow.appendStablesInfo(getCoverCodeString(code));
+                            }
+                        }
+                    }
+
                     if (draw) {
                         final int colorIndex = cycle.get();
                         Color color = comboBoxColors.get(colorIndex);
@@ -7752,7 +7744,7 @@ public final class Viewer {
                 }
             }
 
-            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw);
+            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw, addToCover);
         });
 
         varyTask.setOnCancelled(cancelled -> {
