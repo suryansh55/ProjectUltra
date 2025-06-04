@@ -353,7 +353,7 @@ public final class Viewer {
 
     final Stage codeWindow = new Stage();
 
-    final IterateToLimitWindow iterateToLimitWindow = new IterateToLimitWindow();
+    IterateToLimitWindow iterateToLimitWindow;
 
     // main window
     final Button iterateToLimitBtn = new Button();
@@ -552,6 +552,7 @@ public final class Viewer {
         // This gets passed in from the outside world
         mainWindow = primaryStage;
         this.pool = pool;
+        this.iterateToLimitWindow = new IterateToLimitWindow(pool);
 
         final String windowTitle = String.format("Billiards Everything %s (%s)", version, dbName);
 
