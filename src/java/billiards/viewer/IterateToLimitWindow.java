@@ -15,12 +15,19 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
+import javaslang.Tuple3;
 import javaslang.control.Either;
+import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.ImmutableIntList;
+import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 public class IterateToLimitWindow {
     private final TextArea polygonTextArea = new TextArea();
@@ -38,6 +45,8 @@ public class IterateToLimitWindow {
     private final Stage stage = new Stage();
 
     private final ConnectionPool pool;
+
+    private boolean run = false;
 
     public IterateToLimitWindow(ConnectionPool pool) {
         this.pool = pool;
@@ -71,7 +80,10 @@ public class IterateToLimitWindow {
         coverCheckbox.setText("Add To Cover");
 
         runButton.setText("Run");
-//        runButton.setOnAction(event -> run());
+        runButton.setOnAction(event -> {
+            this.run = true;
+            stage.close();
+        });
     }
 
     private static Tooltip getCodePatternTextAreaTooltip() {
@@ -105,66 +117,83 @@ public class IterateToLimitWindow {
         return new VBox(10, polygonHBox, polygonTextArea, codePatternHBox, codePatternTextArea, toolsHBox);
     }
 
-    private void run() {
-        if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) return;
+    private Tuple3<
+            ArrayList<Storage>,
+            ArrayList<ArrayList<Storage>>,
+            ArrayList<ArrayList<Storage>>
+            > iterateTask(
+                    String codePattern,
+                    ConvexPolygon polygon,
+                    int limit
+    ) {
+        String trimmedCodePattern = codePattern.trim();
 
-        String cleanedPolygonString = Polygon.cleanPolygon(this.polygonTextArea.getText());
-        ConvexPolygon polygon = Polygon.createConvexPolygon(cleanedPolygonString);
+        // Ignore comments and empty lines
+        if (trimmedCodePattern.startsWith("//") || trimmedCodePattern.isEmpty()) return null;
 
-        int limit;
+        String[] codeAndPattern = trimmedCodePattern.split(";");
 
-        if (limitTextField.getText().trim().isEmpty()) limit = -1;
-        else {
-            try {
-                limit = Integer.parseInt(limitTextField.getText());
-            } catch (NumberFormatException e) {
-                throw new RuntimeException(e);
-            }
+        // The line must be the code and pattern separated by a semicolon
+        if (codeAndPattern.length != 2) return null;
 
-            if (limit < 0) return;
+        // Assume the section before the semicolon is the code sequence, and the one after is the iteration pattern
+        String codeString = codeAndPattern[0].trim();
+        String patternString = codeAndPattern[1].trim();
+
+        String[] codes = codeString.split(",");
+        String[] patterns = patternString.split(",");
+
+        if (codes.length != 1 && codes.length != 3) return null;
+        if (codes.length != patterns.length) return null;
+
+        ArrayList<ImmutableIntList> codeNumbersList = new ArrayList<>();
+        ArrayList<ImmutableIntList> patternNumbersList = new ArrayList<>();
+
+        for (int i = 0; i < codes.length; i++) {
+            Optional<ImmutableIntList> codeOptional = Utils.splitString(codes[i]);
+
+            codeOptional.ifPresent(codeNumbersList::add);
+
+            Optional<ImmutableIntList> patternOptional = Utils.splitString(patterns[i]);
+
+            patternOptional.ifPresent(patternNumbersList::add);
         }
 
-        String[] codePatterns = codePatternTextArea.getText().trim().split("\n");
+        if (codeNumbersList.size() != codes.length || patternNumbersList.size() != patterns.length) return null;
 
-        for (String codePattern : codePatterns) {
-            String trimmedCodePattern = codePattern.trim();
+        // We only iterate if the original code sequence is valid, and intersects with the polygon.
+        ArrayList<ClassifiedCodeSequence> classCodeSequences = new ArrayList<>();
 
-            // Ignore comments and empty lines
-            if (trimmedCodePattern.startsWith("//") || trimmedCodePattern.isEmpty()) continue;
+        for (ImmutableIntList immutableIntList : codeNumbersList) {
+            IntArrayList codeNumbers = IntArrayList.newList(immutableIntList);
 
-            String[] codeAndPattern = trimmedCodePattern.split(";");
+            Either<InvalidCodeSequence, ClassifiedCodeSequence> classCodeSequence = ClassifiedCodeSequence.create(codeNumbers);
 
-            // The line must be the code and pattern separated by a semicolon
-            if (codeAndPattern.length != 2) continue;
-
-            // Assume the section before the semicolon is the code sequence, and the one after is the iteration pattern
-            String codeString = codeAndPattern[0].trim();
-            String patternString = codeAndPattern[1].trim();
-
-            String[] codes = codeString.split(",");
-            String[] patterns = patternString.split(",");
-
-            if (codes.length != 1 && codes.length != 3) continue;
-            if (codes.length != patterns.length) continue;
-
-            ArrayList<ImmutableIntList> codeNumbersList = new ArrayList<>();
-            ArrayList<ImmutableIntList> patternNumbersList = new ArrayList<>();
-
-            for (int i = 0; i < codes.length; i++) {
-                Optional<ImmutableIntList> codeOptional = Utils.splitString(codes[i]);
-
-                codeOptional.ifPresent(codeNumbersList::add);
-
-                Optional<ImmutableIntList> patternOptional = Utils.splitString(patterns[i]);
-
-                patternOptional.ifPresent(patternNumbersList::add);
-            }
-
-            if (codeNumbersList.size() != codes.length || patternNumbersList.size() != patterns.length) continue;
-
-            ArrayList<ArrayList<Storage>> forwardResult = iterate(codeNumbersList, patternNumbersList, polygon, 1, limit);
-            ArrayList<ArrayList<Storage>> backwardResult = iterate(codeNumbersList, patternNumbersList, polygon, -1, limit);
+            if (classCodeSequence.isRight()) classCodeSequences.add(classCodeSequence.get());
         }
+
+        if (classCodeSequences.size() != codeNumbersList.size()) return null;
+
+        // Check if this is a valid triple.
+        if (classCodeSequences.size() == 3) {
+            if (!(classCodeSequences.get(0).stable && !classCodeSequences.get(1).stable && classCodeSequences.get(2).stable)) return null;
+        }
+
+        ArrayList<Storage> originalStorages = BatchLoadStorage.batchLoadStorage(classCodeSequences, pool);
+
+        int numOfIntersects = 0;
+        for (Storage storage : originalStorages) {
+            if (storage.intersects(polygon)) numOfIntersects++;
+        }
+
+        if (numOfIntersects != originalStorages.size()) return null;
+
+        // At this point, the original code sequence is valid, the iteration pattern is valid given the original code
+        // sequence, and the original code sequence intersects with the polygon. Thus, we can iterate.
+        ArrayList<ArrayList<Storage>> forwardResult = iterate(codeNumbersList, patternNumbersList, polygon, 1, limit);
+        ArrayList<ArrayList<Storage>> backwardResult = iterate(codeNumbersList, patternNumbersList, polygon, -1, limit);
+
+        return new Tuple3<>(originalStorages, forwardResult, backwardResult);
     }
 
     private ArrayList<ArrayList<Storage>> iterate(
@@ -180,29 +209,31 @@ public class IterateToLimitWindow {
 
         // First, iteration forward
         while (limitNotReached) {
+            if (++iterationCount >= limit) break;
+
             ArrayList<ClassifiedCodeSequence> classCodeSequences = new ArrayList<>();
 
             for (int i = 0; i < codeNumbersList.size(); i++) {
-                IntArrayList codeNumbers = calcCodeNumbers(codeNumbersList, patternNumbersList, i, ++iterationCount, direction);
+                IntArrayList codeNumbers = calcCodeNumbers(codeNumbersList, patternNumbersList, i, iterationCount, direction);
 
                 Either<InvalidCodeSequence, ClassifiedCodeSequence> classCodeSequence = ClassifiedCodeSequence.create(codeNumbers);
 
                 if (classCodeSequence.isRight()) classCodeSequences.add(classCodeSequence.get());
             }
 
-            if (classCodeSequences.size() != codeNumbersList.size()) continue;
+            // This code sequence is invalid, we can assume the rest of the code sequences in the iteration will also be
+            // invalid.
+            if (classCodeSequences.size() != codeNumbersList.size()) break;
 
             // Check if this is a valid triple.
             if (classCodeSequences.size() == 3) {
-                if (!(classCodeSequences.get(0).stable && !classCodeSequences.get(1).stable && classCodeSequences.get(2).stable)) continue;
+                if (!(classCodeSequences.get(0).stable && !classCodeSequences.get(1).stable && classCodeSequences.get(2).stable)) break;
             }
 
             ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(classCodeSequences, pool);
 
             // ClassifiedCodeSequence reduced to empty set, we have possibly reached the limit.
             if (storages.size() != classCodeSequences.size()) limitNotReached = false;
-
-            if (limit != -1 && iterationCount >= limit) limitNotReached = false;
 
             int numOfIntersects = 0;
             for (Storage storage : storages) {
@@ -211,6 +242,8 @@ public class IterateToLimitWindow {
 
             if (numOfIntersects == storages.size()) {
                 iterationResults.add(storages);
+            } else {
+                limitNotReached = false;
             }
         }
 
@@ -239,7 +272,63 @@ public class IterateToLimitWindow {
         return codeNumbers;
     }
 
-    public void show() {
-        stage.show();
+    private ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> run() {
+        if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) return null;
+
+        String cleanedPolygonString = Polygon.cleanPolygon(this.polygonTextArea.getText());
+        ConvexPolygon polygon = Polygon.createConvexPolygon(cleanedPolygonString);
+
+        int limit;
+
+        // Iteration can go on indefinitely, so the user must enter a limit
+        if (limitTextField.getText().trim().isEmpty()) return null;
+        else {
+            try {
+                limit = Integer.parseInt(limitTextField.getText());
+            } catch (NumberFormatException e) {
+                throw new RuntimeException(e);
+            }
+
+            if (limit <= 0) return null;
+        }
+
+        String[] codePatterns = codePatternTextArea.getText().trim().split("\n");
+
+        final MutableList<
+                Future<
+                        Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>
+                        >
+                > futures = new FastList<>();
+
+        ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
+
+        for (String codePattern : codePatterns) {
+            futures.add(executor.submit(() -> iterateTask(codePattern, polygon, limit)));
+        }
+
+        ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> result = new ArrayList<>();
+
+        for (Future<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> future : futures) {
+            try {
+                result.add(future.get());
+            } catch (InterruptedException | ExecutionException ignored) {
+            }
+        }
+
+        return result;
+    }
+
+    public ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> execute() {
+        stage.showAndWait();
+
+        ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> result = null;
+
+        if (this.run) {
+            result = this.run();
+        }
+
+        this.run = false;
+
+        return result;
     }
 }
