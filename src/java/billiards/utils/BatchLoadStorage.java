@@ -7,9 +7,7 @@ import billiards.viewer.Utils;
 import billiards.wrapper.ConnectionPool;
 import javaslang.control.Either;
 import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.list.mutable.FastList;
-import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -19,19 +17,17 @@ import java.util.concurrent.*;
 /**
  * Zhao Yu Li, Jun 3, 2025.
  * Load Storage for a Collection of ClassifiedCodeSequences
+ * Updated Jun 5, 2025.
+ * Always load the storage for the code. Before, we don't load storage for duplicate codes. The check for duplicate
+ * codes is removed so that we return the same number of Storages as the number of input ClassifiedCodeSequences
  */
 public class BatchLoadStorage {
     public static ArrayList<Storage> batchLoadStorage(Collection<ClassifiedCodeSequence> codes, ConnectionPool pool) {
-        final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<>();
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
 
         ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
         for (ClassifiedCodeSequence code : codes) {
-            if (usedCodes.contains(code)) continue;
-
-            usedCodes.add(code);
-
             futures.add(executor.submit(() -> loadStorage(code, pool)));
         }
 
