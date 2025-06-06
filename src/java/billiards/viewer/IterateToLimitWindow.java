@@ -177,7 +177,10 @@ public class IterateToLimitWindow {
             patternOptional.ifPresent(patternNumbersList::add);
         }
 
-        if (codeNumbersList.size() != codes.length || patternNumbersList.size() != patterns.length) return null;
+        if (codeNumbersList.size() != codes.length || patternNumbersList.size() != patterns.length) {
+            System.out.println("Skipping '" + trimmedCodePattern + "' because its code sequence or iteration pattern contains invalid values.");
+            return null;
+        }
 
         // We only iterate if the original code sequence is valid, and intersects with the polygon.
         ArrayList<ClassifiedCodeSequence> classCodeSequences = new ArrayList<>();
