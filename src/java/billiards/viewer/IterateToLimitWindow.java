@@ -30,6 +30,14 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+/**
+ * Zhao Yu Li, Jun 06, 2025.
+ * Iterate to the limit. Given a ConvexPolygon, for each code sequence (single or triple) - iteration pattern pair in a
+ * list, we iterate forward (addition) and backward (subtraction) until one of the following two conditions occurred:
+ *  1. The number of iterations reached a user specified limit.
+ *  2. New code sequences produced from the iteration no longer intersect with the user specified polygon.
+ * All produced codes are (optionally) drawn on the screen and added to the cover.
+ */
 public class IterateToLimitWindow {
     private final TextArea polygonTextArea = new TextArea();
     private final TextArea codePatternTextArea = new TextArea();
@@ -47,8 +55,15 @@ public class IterateToLimitWindow {
 
     private final ConnectionPool pool;
 
+    // The IterateToLimitWindow uses this Observable Boolean Property to notify the Viewer when the iterate-to-limit
+    // task is finished
     private SimpleBooleanProperty finish = null;
+
+    // This array is used to store the result from the iterate-to-limit task
     private ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = null;
+
+    // This boolean value ensures that only one iterate-to-limit task is running at any time, for this task can be very
+    // resource consuming
     private boolean running = false;
 
     public IterateToLimitWindow(ConnectionPool pool) {
@@ -125,6 +140,13 @@ public class IterateToLimitWindow {
         return new VBox(10, polygonHBox, polygonTextArea, codePatternHBox, codePatternTextArea, toolsHBox);
     }
 
+    /**
+     * The per code sequence - iteration pattern pair iterate-to-limit task to be submitted to the executor.
+     * @param codePattern The code sequence - iteration pattern pair as a string.
+     * @param polygon The ConvexPolygon to check for intersection.
+     * @param limit The user specified limit of how many codes to produce (separately for each direction)
+     * @return A 3-tuple: the Storages of the base code sequence, the list of Storages from iterating forward, and the list of Storages from iterating backward.
+     */
     private Tuple3<
             ArrayList<Storage>,
             ArrayList<ArrayList<Storage>>,
@@ -134,6 +156,8 @@ public class IterateToLimitWindow {
                     ConvexPolygon polygon,
                     int limit
     ) {
+        // The code sequence - iteration pattern pairs are entered by the user and retrieved as strings. Users can make
+        // mistakes, so we must check very carefully to make sure that everything is okay before we proceed.
         String trimmedCodePattern = codePattern.trim();
 
         // Ignore comments and empty lines
@@ -226,6 +250,15 @@ public class IterateToLimitWindow {
         return new Tuple3<>(originalStorages, forwardResult, backwardResult);
     }
 
+    /**
+     * Iterate, either forwards or backwards for a single code sequence - iteration pattern pair.
+     * @param codeNumbersList The code numbers of the code sequence to iterate.
+     * @param patternNumbersList The iteration pattern.
+     * @param polygon The ConvexPolygon to check for intersection.
+     * @param direction 1 to iterate forwards; -1 to iterate backwards.
+     * @param limit The user-specified maximum number of codes to produce.
+     * @return A list of Storages which represents all the produced code sequences that intersect with the polygon.
+     */
     private ArrayList<ArrayList<Storage>> iterate(
             ArrayList<ImmutableIntList> codeNumbersList,
             ArrayList<ImmutableIntList> patternNumbersList,
@@ -280,6 +313,15 @@ public class IterateToLimitWindow {
         return iterationResults;
     }
 
+    /**
+     * Perform one iteration for the i-th component of a code sequence.
+     * @param codeNumbersList The code numbers for the code sequence.
+     * @param patternNumbersList The pattern numbers for the iteration pattern.
+     * @param i The i-th component to iterate.
+     * @param iteration The iteration number we are at. On the n-th iteration, we add/subtract n * 2 to the base code numbers.
+     * @param direction The direction of iteration (forward/addition or backward/subtraction).
+     * @return The code numbers which are the result of the iteration.
+     */
     private static IntArrayList calcCodeNumbers(
             ArrayList<ImmutableIntList> codeNumbersList,
             ArrayList<ImmutableIntList> patternNumbersList,
@@ -303,6 +345,10 @@ public class IterateToLimitWindow {
         return codeNumbers;
     }
 
+    /**
+     * Checks all the inputs from the window and runs the iterate-to-limit task for all the code sequence - iteration
+     * pattern pairs.
+     */
     private void run() {
         if (running) return;
 
@@ -384,11 +430,16 @@ public class IterateToLimitWindow {
 
         executor.shutdown();
 
+        // We are done. Set the results, and notify the observer.
         running = false;
         this.results = results;
         this.finish.set(true);
     }
 
+    /**
+     * Returns an observable boolean property for an observer that will use the result of the iterate-to-limit task.
+     * @return A SimpleBooleanProperty that will be set true once the iterate-to-limit task is finished.
+     */
     public SimpleBooleanProperty execute() {
         stage.show();
         this.finish = new SimpleBooleanProperty(false);

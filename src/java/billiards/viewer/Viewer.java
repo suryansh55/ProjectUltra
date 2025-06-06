@@ -1623,14 +1623,18 @@ public final class Viewer {
                 nolrRdoBtn, showlrRdoBtn, uselrRdoBtn, uselrTestBtn);
         calculateIterationsHBox.setSpacing(10);
 
+        // Zhao Yu Li, Jun 09, 2025.
+        // Iterate-to-Limit feature.
         iterateToLimitBtn.setText("Iter To Limit");
         Utils.colorButton(iterateToLimitBtn, Color.SKYBLUE, clickColor);
         iterateToLimitBtn.setOnAction(event -> {
             // Allow only one instance to run at any time.
             if (iterateToLimitWindow.isShowing()) return;
 
+            // Obtain the finish flag from the IterateToLimitWindow.
             AtomicReference<SimpleBooleanProperty> finish = new AtomicReference<>(iterateToLimitWindow.execute());
 
+            // Once the iterate-to-limit task is finish, we draw the codes and add the codes to the cover.
             finish.get().addListener((observable, oldValue, newValue) -> {
                 if (oldValue != newValue && newValue) {
                     ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = iterateToLimitWindow.getResults();
@@ -1656,6 +1660,8 @@ public final class Viewer {
                     }
 
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+
+                    // Nullify the results and the flags for the next execution.
                     iterateToLimitWindow.nullifyFinish();
                     iterateToLimitWindow.nullifyResult();
                 }
