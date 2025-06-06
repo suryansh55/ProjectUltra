@@ -44,6 +44,7 @@ import billiards.utils.BatchLoadStorage;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.scene.control.TextArea;
 
 import javaslang.*;
@@ -79,6 +80,7 @@ import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.DoubleUnaryOperator;
 import java.util.stream.Stream;
 
@@ -1623,7 +1625,42 @@ public final class Viewer {
 
         iterateToLimitBtn.setText("Iter To Limit");
         Utils.colorButton(iterateToLimitBtn, Color.SKYBLUE, clickColor);
-        iterateToLimitBtn.setOnAction(event -> iterateToLimitWindow.show());
+        iterateToLimitBtn.setOnAction(event -> {
+            // Allow only one instance to run at any time.
+            if (iterateToLimitWindow.isShowing()) return;
+
+            AtomicReference<SimpleBooleanProperty> finish = new AtomicReference<>(iterateToLimitWindow.execute());
+
+            finish.get().addListener((observable, oldValue, newValue) -> {
+                if (oldValue != newValue && newValue) {
+                    ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = iterateToLimitWindow.getResults();
+
+                    if (results == null) {
+                        iterateToLimitWindow.nullifyFinish();
+                        finish.set(null);
+                        return;
+                    }
+
+                    boolean draw = iterateToLimitWindow.getDraw();
+                    boolean addToCover = iterateToLimitWindow.getAddToCover();
+
+                    for (Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>> result : results) {
+                        ArrayList<Storage> originalCode = result._1;
+                        ArrayList<ArrayList<Storage>> forwardResult = result._2;
+                        ArrayList<ArrayList<Storage>> backwardResult = result._3;
+
+                        drawAndAddToCover(draw, addToCover, originalCode);
+
+                        for (ArrayList<Storage> storages : forwardResult) drawAndAddToCover(draw, addToCover, storages);
+                        for (ArrayList<Storage> storages : backwardResult) drawAndAddToCover(draw, addToCover, storages);
+                    }
+
+                    renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                    iterateToLimitWindow.nullifyFinish();
+                    iterateToLimitWindow.nullifyResult();
+                }
+            });
+        });
 
         zoomScaleLabel.setText("Zoom Scale:");
         zoomScaleText.setText("2");
@@ -7763,5 +7800,26 @@ public final class Viewer {
         varyThread.start();
 
         progress.show();
+    }
+
+    public void drawAndAddToCover(boolean draw, boolean addToCover, ArrayList<Storage> storages) {
+        Color color = comboBoxColors.get(cycle.get());
+
+        if (draw) {
+            for (Storage storage : storages) {
+                addToOnScreenSequences(storage, color);
+            }
+        }
+
+        if (addToCover) {
+            if (storages.size() == 1) {
+                Storage storage = storages.get(0);
+
+                if (storage.classCodeSeq.stable) coverWindow.appendStablesInfo(Utils.getCoverCodeString(storage));
+            } else if (storages.size() == 3) {
+                String tripleString = storages.get(0) + "," + storages.get(1) + "," + storages.get(2);
+                coverWindow.appendTriplesInfo(tripleString);
+            }
+        }
     }
 }
