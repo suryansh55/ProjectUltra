@@ -7,6 +7,7 @@ import billiards.geometry.ConvexPolygon;
 import billiards.utils.BatchLoadStorage;
 import billiards.utils.Polygon;
 import billiards.wrapper.ConnectionPool;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
@@ -46,7 +47,9 @@ public class IterateToLimitWindow {
 
     private final ConnectionPool pool;
 
-    private boolean run = false;
+    private SimpleBooleanProperty finish = null;
+    private ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = null;
+    private boolean running = false;
 
     public IterateToLimitWindow(ConnectionPool pool) {
         this.pool = pool;
@@ -56,7 +59,11 @@ public class IterateToLimitWindow {
 
         stage.setScene(scene);
         stage.setTitle("Iterate To Limit Window");
-        stage.setOnCloseRequest(event -> stage.close());
+        stage.setOnCloseRequest(event -> {
+            this.results = null;
+            this.finish.set(true);
+            stage.close();
+        });
 
         root.setPadding(new Insets(10));
 
@@ -81,7 +88,7 @@ public class IterateToLimitWindow {
 
         runButton.setText("Run");
         runButton.setOnAction(event -> {
-            this.run = true;
+            run();
             stage.close();
         });
     }
@@ -209,7 +216,7 @@ public class IterateToLimitWindow {
 
         // First, iteration forward
         while (limitNotReached) {
-            if (++iterationCount >= limit) break;
+            if (++iterationCount > limit) break;
 
             ArrayList<ClassifiedCodeSequence> classCodeSequences = new ArrayList<>();
 
@@ -267,13 +274,21 @@ public class IterateToLimitWindow {
             int value = index < 0 ? -2 : 2;
             value = value * iteration * direction;
             index = index < 0 ? -index : index;
+            index = index - 1;
             codeNumbers.set(index, codeNumbers.get(index) + value);
         }
         return codeNumbers;
     }
 
-    private ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> run() {
-        if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) return null;
+    private void run() {
+        if (running) return;
+
+        running = true;
+
+        if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) {
+            running = false;
+            return;
+        }
 
         String cleanedPolygonString = Polygon.cleanPolygon(this.polygonTextArea.getText());
         ConvexPolygon polygon = Polygon.createConvexPolygon(cleanedPolygonString);
@@ -281,15 +296,22 @@ public class IterateToLimitWindow {
         int limit;
 
         // Iteration can go on indefinitely, so the user must enter a limit
-        if (limitTextField.getText().trim().isEmpty()) return null;
+        if (limitTextField.getText().trim().isEmpty()) {
+            running = false;
+            return;
+        }
         else {
             try {
                 limit = Integer.parseInt(limitTextField.getText());
             } catch (NumberFormatException e) {
+                running = false;
                 throw new RuntimeException(e);
             }
 
-            if (limit <= 0) return null;
+            if (limit <= 0) {
+                running = false;
+                return;
+            }
         }
 
         String[] codePatterns = codePatternTextArea.getText().trim().split("\n");
@@ -312,23 +334,44 @@ public class IterateToLimitWindow {
             try {
                 result.add(future.get());
             } catch (InterruptedException | ExecutionException ignored) {
+                running = false;
             }
         }
 
-        return result;
+        executor.shutdown();
+
+        running = false;
+        this.results = result;
+        this.finish.set(true);
     }
 
-    public ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> execute() {
-        stage.showAndWait();
+    public SimpleBooleanProperty execute() {
+        stage.show();
+        this.finish = new SimpleBooleanProperty(false);
+        return this.finish;
+    }
 
-        ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> result = null;
+    public boolean getDraw() {
+        return this.drawCheckbox.isSelected();
+    }
 
-        if (this.run) {
-            result = this.run();
-        }
+    public boolean getAddToCover() {
+        return this.coverCheckbox.isSelected();
+    }
 
-        this.run = false;
+    public ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> getResults() {
+        return this.results;
+    }
 
-        return result;
+    public void nullifyFinish() {
+        this.finish = null;
+    }
+
+    public void nullifyResult() {
+        this.results = null;
+    }
+
+    public boolean isShowing() {
+        return this.stage.isShowing();
     }
 }
