@@ -79,6 +79,7 @@ public class IterateToLimitWindow {
 
         limitTextField.setPrefColumnCount(4);
         limitTextField.setPromptText("Limit");
+        limitTextField.setText("2");
 
         drawCheckbox.setSelected(true);
         drawCheckbox.setText("Draw");
@@ -141,7 +142,10 @@ public class IterateToLimitWindow {
         String[] codeAndPattern = trimmedCodePattern.split(";");
 
         // The line must be the code and pattern separated by a semicolon
-        if (codeAndPattern.length != 2) return null;
+        if (codeAndPattern.length != 2) {
+            System.out.println("Skipping '" + trimmedCodePattern + "' because it is not a valid code-pattern pair.");
+            return null;
+        }
 
         // Assume the section before the semicolon is the code sequence, and the one after is the iteration pattern
         String codeString = codeAndPattern[0].trim();
@@ -150,8 +154,15 @@ public class IterateToLimitWindow {
         String[] codes = codeString.split(",");
         String[] patterns = patternString.split(",");
 
-        if (codes.length != 1 && codes.length != 3) return null;
-        if (codes.length != patterns.length) return null;
+        if (codes.length != 1 && codes.length != 3) {
+            System.out.println("Skipping '" + trimmedCodePattern + "' because it is not a single nor a triple.");
+            return null;
+        }
+
+        if (codes.length != patterns.length) {
+            System.out.println("Skipping '" + trimmedCodePattern + "' because its code and iteration pattern are not both singles or not both triples.");
+            return null;
+        }
 
         ArrayList<ImmutableIntList> codeNumbersList = new ArrayList<>();
         ArrayList<ImmutableIntList> patternNumbersList = new ArrayList<>();
@@ -179,11 +190,17 @@ public class IterateToLimitWindow {
             if (classCodeSequence.isRight()) classCodeSequences.add(classCodeSequence.get());
         }
 
-        if (classCodeSequences.size() != codeNumbersList.size()) return null;
+        if (classCodeSequences.size() != codeNumbersList.size()) {
+            System.out.println("Skipping '" + trimmedCodePattern + "' because it contains invalid code sequences.");
+            return null;
+        }
 
         // Check if this is a valid triple.
         if (classCodeSequences.size() == 3) {
-            if (!(classCodeSequences.get(0).stable && !classCodeSequences.get(1).stable && classCodeSequences.get(2).stable)) return null;
+            if (!(classCodeSequences.get(0).stable && !classCodeSequences.get(1).stable && classCodeSequences.get(2).stable)) {
+                System.out.println("Skipping '" + trimmedCodePattern + "' because it is not a valid triple.");
+                return null;
+            }
         }
 
         ArrayList<Storage> originalStorages = BatchLoadStorage.batchLoadStorage(classCodeSequences, pool);
@@ -193,7 +210,10 @@ public class IterateToLimitWindow {
             if (storage.intersects(polygon)) numOfIntersects++;
         }
 
-        if (numOfIntersects != originalStorages.size()) return null;
+        if (numOfIntersects != originalStorages.size()) {
+            System.out.println("Skipping '" + trimmedCodePattern + "' because the base code sequence does not intersection with the polygon.");
+            return null;
+        }
 
         // At this point, the original code sequence is valid, the iteration pattern is valid given the original code
         // sequence, and the original code sequence intersects with the polygon. Thus, we can iterate.
@@ -287,6 +307,13 @@ public class IterateToLimitWindow {
 
         if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) {
             running = false;
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Iterate To Limit");
+            alert.setHeaderText("Empty polygon or code pattern");
+            alert.setContentText("Please enter a valid polygon and code - pattern pairs.");
+            alert.showAndWait();
+
             return;
         }
 
@@ -298,9 +325,15 @@ public class IterateToLimitWindow {
         // Iteration can go on indefinitely, so the user must enter a limit
         if (limitTextField.getText().trim().isEmpty()) {
             running = false;
+
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle("Iterate To Limit");
+            alert.setHeaderText("Limit not provided");
+            alert.setContentText("Iterations can go on indefinitely; Please enter a valid limit (a non-zero, positive integer).");
+            alert.showAndWait();
+
             return;
-        }
-        else {
+        } else {
             try {
                 limit = Integer.parseInt(limitTextField.getText());
             } catch (NumberFormatException e) {
@@ -310,6 +343,13 @@ public class IterateToLimitWindow {
 
             if (limit <= 0) {
                 running = false;
+
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle("Iterate To Limit");
+                alert.setHeaderText("Limit cannot be negative or zero");
+                alert.setContentText("Limit must be a positive, non-zero integer.");
+                alert.showAndWait();
+
                 return;
             }
         }
@@ -328,11 +368,12 @@ public class IterateToLimitWindow {
             futures.add(executor.submit(() -> iterateTask(codePattern, polygon, limit)));
         }
 
-        ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> result = new ArrayList<>();
+        ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = new ArrayList<>();
 
         for (Future<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> future : futures) {
             try {
-                result.add(future.get());
+                Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>> result = future.get();
+                if (result != null) results.add(result);  // Only add results from tasks that ran to completion successfully
             } catch (InterruptedException | ExecutionException ignored) {
                 running = false;
             }
@@ -341,7 +382,7 @@ public class IterateToLimitWindow {
         executor.shutdown();
 
         running = false;
-        this.results = result;
+        this.results = results;
         this.finish.set(true);
     }
 
