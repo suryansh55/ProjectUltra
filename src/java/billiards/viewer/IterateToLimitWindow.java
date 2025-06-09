@@ -25,6 +25,7 @@ import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -41,16 +42,16 @@ import java.util.concurrent.Future;
  */
 public class IterateToLimitWindow {
     private final TextArea polygonTextArea = new TextArea();
-    private final TextArea codePatternTextArea = new TextArea();
+    private final TextArea stablesTextArea = new TextArea();
+    private final TextArea unstablesTextArea = new TextArea();
+    private final TextArea triplesTextArea = new TextArea();
 
-    private final Button lookupButton = new Button();
+    private final HashMap<String, TextArea> textAreaMap = new HashMap<>();
 
     private final TextField limitTextField = new TextField();
 
     private final CheckBox drawCheckbox = new CheckBox();
     private final CheckBox coverCheckbox = new CheckBox();
-
-    private final Button runButton = new Button();
 
     private final Stage stage = new Stage();
 
@@ -70,11 +71,18 @@ public class IterateToLimitWindow {
     public IterateToLimitWindow(ConnectionPool pool) {
         this.pool = pool;
 
-        VBox root = getRoot();
+        Button lookupButton = new Button();
+        Button runButton = new Button();
+        VBox root = new VBox(
+                10,
+                getRoot(),
+                new HBox(10, lookupButton, limitTextField, drawCheckbox, coverCheckbox, runButton)
+        );
         final Scene scene = new Scene(root);
 
         stage.setScene(scene);
         stage.setTitle("Iterate To Limit Window");
+        stage.setHeight(600);
         stage.setOnCloseRequest(event -> {
             this.results = null;
             this.finish.set(true);
@@ -87,9 +95,31 @@ public class IterateToLimitWindow {
                 "Enter each (x,y) coordinate in a separate line, with a whitespace separating the x and y coordinates.")
         );
         polygonTextArea.setWrapText(true);
+        polygonTextArea.setMaxHeight(130);
 
-        codePatternTextArea.setTooltip(getCodePatternTextAreaTooltip());
-        codePatternTextArea.setWrapText(true);
+        stablesTextArea.setTooltip(getTooltip(
+                "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
+                        "separating the stable and the pattern."
+        ));
+        stablesTextArea.setWrapText(true);
+
+        unstablesTextArea.setTooltip(getTooltip(
+                "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
+                        "separating the unstable and the pattern."
+        ));
+        unstablesTextArea.setWrapText(true);
+
+        triplesTextArea.setTooltip(getTooltip(
+                "Enter each triple - iteration pattern pair in a separate line, with a semicolon " +
+                        "separating the triple and the pattern. Different components of the triple should be" +
+                        "separated by a comma."
+        ));
+        triplesTextArea.setWrapText(true);
+
+        textAreaMap.put("Polygon", polygonTextArea);
+        textAreaMap.put("Stables", stablesTextArea);
+        textAreaMap.put("Unstables", unstablesTextArea);
+        textAreaMap.put("Triples", triplesTextArea);
 
         lookupButton.setText("Lookup");
 
@@ -109,35 +139,41 @@ public class IterateToLimitWindow {
         });
     }
 
-    private static Tooltip getCodePatternTextAreaTooltip() {
-        Tooltip codePatternTextAreaTooltip = new Tooltip(
-                "Enter each code sequence - iteration pattern pair in a separate line, with a semicolon " +
-                        "separating the code sequence and the pattern. If the code sequence is a triple, then " +
-                        "separate the components with a comma. The code sequence and its iteration pattern should" +
-                        "match in the number of components."
-        );
-        codePatternTextAreaTooltip.setWrapText(true);
-        codePatternTextAreaTooltip.setPrefWidth(400);
-        return codePatternTextAreaTooltip;
+    private static Tooltip getTooltip(String content) {
+        Tooltip tooltip = new Tooltip(content);
+        tooltip.setWrapText(true);
+        tooltip.setPrefWidth(400);
+        return tooltip;
     }
 
-    private VBox getRoot() {
-        final Label polygonLabel = new Label("Polygon:");
-        final Button clearPolygonButton = new Button("Clear");
-        final HBox polygonHBox = new HBox(10, polygonLabel, clearPolygonButton);
+    private HBox getTextAreaHBox(String labelText) {
+        final Label label = new Label(labelText + ":");
+        final Button clearButton = new Button("Clear");
 
-        polygonLabel.setFont(Font.font("Verdana", FontWeight.BOLD, 16));
-        clearPolygonButton.setOnAction(event -> polygonTextArea.setText(""));
+        label.setFont(Font.font("Verdana", FontWeight.BOLD, 16));
+        clearButton.setOnAction(event -> textAreaMap.get(labelText).setText(""));
 
-        final Label codePatternLabel = new Label("Code and Iteration Pattern:");
-        final Button clearCodePatternButton = new Button("Clear");
-        final HBox codePatternHBox = new HBox(10, codePatternLabel, clearCodePatternButton);
+        return new HBox(10, label, clearButton);
+    }
 
-        codePatternLabel.setFont(Font.font("Verdana", FontWeight.BOLD, 16));
-        clearCodePatternButton.setOnAction(event -> codePatternTextArea.setText(""));
+    private ScrollPane getRoot() {
+        final HBox polygonHBox = getTextAreaHBox("Polygon");
+        final HBox stablesHBox = getTextAreaHBox("Stables");
+        final HBox unstablesHBox = getTextAreaHBox("Unstables");
+        final HBox triplesHBox = getTextAreaHBox("Triples");
 
-        HBox toolsHBox = new HBox(10, lookupButton, limitTextField, drawCheckbox, coverCheckbox, runButton);
-        return new VBox(10, polygonHBox, polygonTextArea, codePatternHBox, codePatternTextArea, toolsHBox);
+        VBox vbox = new VBox(10,
+                polygonHBox, polygonTextArea,
+                stablesHBox, stablesTextArea,
+                unstablesHBox, unstablesTextArea,
+                triplesHBox, triplesTextArea
+        );
+
+        ScrollPane scrollPane = new ScrollPane(vbox);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(false);
+
+        return scrollPane;
     }
 
     /**
@@ -348,7 +384,7 @@ public class IterateToLimitWindow {
     /**
      * Checks all the inputs from the window and runs the iterate-to-limit task for all the code sequence - iteration
      * pattern pairs.
-     * @return True if user input have no errors (the task is ran); false if there are errors in the user input.
+     * @return True if user input have no errors (the task is running); false if there are errors in the user input.
      */
     private boolean run() {
         if (running) {
@@ -363,7 +399,7 @@ public class IterateToLimitWindow {
 
         running = true;
 
-        if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) {
+        if (polygonTextArea.getText().trim().isEmpty() || stablesTextArea.getText().trim().isEmpty()) {
             running = false;
 
             Alert alert = getInfoAlertDialogue(
@@ -412,7 +448,7 @@ public class IterateToLimitWindow {
             }
         }
 
-        String[] codePatterns = codePatternTextArea.getText().trim().split("\n");
+        String[] codePatterns = stablesTextArea.getText().trim().split("\n");
 
         final MutableList<
                 Future<
