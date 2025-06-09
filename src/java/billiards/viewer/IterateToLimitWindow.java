@@ -358,15 +358,10 @@ public class IterateToLimitWindow {
         if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) {
             running = false;
 
-            Text alertText = new Text("Please enter a valid polygon and code - pattern pairs.");
-            alertText.setWrappingWidth(380);
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Iterate To Limit");
-            alert.setHeaderText("Empty polygon or code pattern");
-            alert.getDialogPane().setContent(alertText);
-            alert.getDialogPane().setPadding(new Insets(10));
-            alert.getDialogPane().setMaxWidth(400);
+            Alert alert = getInfoAlertDialogue(
+                    "Empty polygon or code pattern",
+                    "Please enter a valid polygon and code - pattern pairs."
+            );
             alert.showAndWait();
 
             return;
@@ -381,15 +376,10 @@ public class IterateToLimitWindow {
         if (limitTextField.getText().trim().isEmpty()) {
             running = false;
 
-            Text alertText = new Text("Iterations can go on indefinitely; Please enter a valid limit (a non-zero, positive integer).");
-            alertText.setWrappingWidth(380);
-
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("Iterate To Limit");
-            alert.setHeaderText("Limit not provided");
-            alert.getDialogPane().setContent(alertText);
-            alert.getDialogPane().setPadding(new Insets(10));
-            alert.getDialogPane().setMaxWidth(400);
+            Alert alert = getInfoAlertDialogue(
+                    "Limit not provided",
+                    "Iterations can go on indefinitely; Please enter a valid limit (a non-zero, positive integer)."
+            );
             alert.showAndWait();
 
             return;
@@ -404,15 +394,10 @@ public class IterateToLimitWindow {
             if (limit <= 0) {
                 running = false;
 
-                Text alertText = new Text("Limit must be a positive, non-zero integer.");
-                alertText.setWrappingWidth(350);
-
-                Alert alert = new Alert(Alert.AlertType.INFORMATION);
-                alert.setTitle("Iterate To Limit");
-                alert.setHeaderText("Limit cannot be negative or zero");
-                alert.getDialogPane().setContent(alertText);
-                alert.getDialogPane().setPadding(new Insets(10));
-                alert.getDialogPane().setMaxWidth(400);
+                Alert alert = getInfoAlertDialogue(
+                        "Limit cannot be negative or zero",
+                        "Limit must be a positive, non-zero integer."
+                );
                 alert.showAndWait();
 
                 return;
@@ -484,5 +469,18 @@ public class IterateToLimitWindow {
 
     public boolean isShowing() {
         return this.stage.isShowing();
+    }
+
+    private Alert getInfoAlertDialogue(String header, String content) {
+        Text alertText = new Text(content);
+        alertText.setWrappingWidth(350);
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Iterate To Limit");
+        alert.setHeaderText(header);
+        alert.getDialogPane().setContent(alertText);
+        alert.getDialogPane().setPadding(new Insets(10));
+        alert.getDialogPane().setMaxWidth(400);
+        return alert;
     }
 }
