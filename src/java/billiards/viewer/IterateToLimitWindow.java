@@ -15,6 +15,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javaslang.Tuple3;
 import javaslang.control.Either;
@@ -357,10 +358,15 @@ public class IterateToLimitWindow {
         if (polygonTextArea.getText().trim().isEmpty() || codePatternTextArea.getText().trim().isEmpty()) {
             running = false;
 
+            Text alertText = new Text("Please enter a valid polygon and code - pattern pairs.");
+            alertText.setWrappingWidth(380);
+
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Iterate To Limit");
             alert.setHeaderText("Empty polygon or code pattern");
-            alert.setContentText("Please enter a valid polygon and code - pattern pairs.");
+            alert.getDialogPane().setContent(alertText);
+            alert.getDialogPane().setPadding(new Insets(10));
+            alert.getDialogPane().setMaxWidth(400);
             alert.showAndWait();
 
             return;
@@ -375,10 +381,15 @@ public class IterateToLimitWindow {
         if (limitTextField.getText().trim().isEmpty()) {
             running = false;
 
+            Text alertText = new Text("Iterations can go on indefinitely; Please enter a valid limit (a non-zero, positive integer).");
+            alertText.setWrappingWidth(380);
+
             Alert alert = new Alert(Alert.AlertType.INFORMATION);
             alert.setTitle("Iterate To Limit");
             alert.setHeaderText("Limit not provided");
-            alert.setContentText("Iterations can go on indefinitely; Please enter a valid limit (a non-zero, positive integer).");
+            alert.getDialogPane().setContent(alertText);
+            alert.getDialogPane().setPadding(new Insets(10));
+            alert.getDialogPane().setMaxWidth(400);
             alert.showAndWait();
 
             return;
@@ -393,10 +404,15 @@ public class IterateToLimitWindow {
             if (limit <= 0) {
                 running = false;
 
+                Text alertText = new Text("Limit must be a positive, non-zero integer.");
+                alertText.setWrappingWidth(350);
+
                 Alert alert = new Alert(Alert.AlertType.INFORMATION);
                 alert.setTitle("Iterate To Limit");
                 alert.setHeaderText("Limit cannot be negative or zero");
-                alert.setContentText("Limit must be a positive, non-zero integer.");
+                alert.getDialogPane().setContent(alertText);
+                alert.getDialogPane().setPadding(new Insets(10));
+                alert.getDialogPane().setMaxWidth(400);
                 alert.showAndWait();
 
                 return;
