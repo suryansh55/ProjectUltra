@@ -105,8 +105,7 @@ public class IterateToLimitWindow {
 
         runButton.setText("Run");
         runButton.setOnAction(event -> {
-            run();
-            stage.close();
+            if (run()) stage.close();
         });
     }
 
@@ -349,9 +348,18 @@ public class IterateToLimitWindow {
     /**
      * Checks all the inputs from the window and runs the iterate-to-limit task for all the code sequence - iteration
      * pattern pairs.
+     * @return True if user input have no errors (the task is ran); false if there are errors in the user input.
      */
-    private void run() {
-        if (running) return;
+    private boolean run() {
+        if (running) {
+            Alert alert = getInfoAlertDialogue(
+                    "Task already running",
+                    "You can run only run a single instance of iterate-to-limit task at any time."
+            );
+            alert.showAndWait();
+
+            return false;
+        }
 
         running = true;
 
@@ -364,7 +372,7 @@ public class IterateToLimitWindow {
             );
             alert.showAndWait();
 
-            return;
+            return false;
         }
 
         String cleanedPolygonString = Polygon.cleanPolygon(this.polygonTextArea.getText());
@@ -382,7 +390,7 @@ public class IterateToLimitWindow {
             );
             alert.showAndWait();
 
-            return;
+            return false;
         } else {
             try {
                 limit = Integer.parseInt(limitTextField.getText());
@@ -400,7 +408,7 @@ public class IterateToLimitWindow {
                 );
                 alert.showAndWait();
 
-                return;
+                return false;
             }
         }
 
@@ -435,6 +443,8 @@ public class IterateToLimitWindow {
         running = false;
         this.results = results;
         this.finish.set(true);
+
+        return true;
     }
 
     /**
