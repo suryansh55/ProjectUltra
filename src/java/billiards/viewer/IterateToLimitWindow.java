@@ -70,6 +70,8 @@ public class IterateToLimitWindow {
     // resource consuming
     private boolean running = false;
 
+    private CodeAndPatternLookupWindow codeAndPatternLookupWindow = null;
+
     public IterateToLimitWindow(ConnectionPool pool) {
         this.pool = pool;
 
@@ -137,6 +139,10 @@ public class IterateToLimitWindow {
         textAreaMap.put("Triples", triplesTextArea);
 
         lookupButton.setText("Lookup");
+        lookupButton.setOnAction(event -> {
+            if (codeAndPatternLookupWindow == null) codeAndPatternLookupWindow = new CodeAndPatternLookupWindow(this);
+            codeAndPatternLookupWindow.show();
+        });
 
         limitTextField.setPrefColumnCount(4);
         limitTextField.setPromptText("Limit");
@@ -537,6 +543,10 @@ public class IterateToLimitWindow {
 
     public void nullifyResult() {
         this.results = null;
+    }
+
+    public Stage getStage() {
+        return this.stage;
     }
 
     public boolean isShowing() {
