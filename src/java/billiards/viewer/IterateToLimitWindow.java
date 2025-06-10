@@ -41,6 +41,8 @@ import java.util.concurrent.Future;
  * All produced codes are (optionally) drawn on the screen and added to the cover.
  */
 public class IterateToLimitWindow {
+    private final String contentFileName = "iterToLimit.txt";
+
     private final TextArea polygonTextArea = new TextArea();
     private final TextArea stablesTextArea = new TextArea();
     private final TextArea unstablesTextArea = new TextArea();
@@ -71,6 +73,9 @@ public class IterateToLimitWindow {
     public IterateToLimitWindow(ConnectionPool pool) {
         this.pool = pool;
 
+        String fileContent = Utils.readFromFile(contentFileName);
+        String[] contents = fileContent.split("-----");
+
         Button lookupButton = new Button();
         Button runButton = new Button();
         VBox root = new VBox(
@@ -78,6 +83,12 @@ public class IterateToLimitWindow {
                 getRoot(),
                 new HBox(10, lookupButton, limitTextField, drawCheckbox, coverCheckbox, runButton)
         );
+
+        if (contents.length > 0) polygonTextArea.setText(contents[0].trim());
+        if (contents.length > 1) stablesTextArea.setText(contents[1].trim());
+        if (contents.length > 2) unstablesTextArea.setText(contents[2].trim());
+        if (contents.length > 3) triplesTextArea.setText(contents[3].trim());
+
         final Scene scene = new Scene(root);
 
         stage.setScene(scene);
@@ -86,8 +97,12 @@ public class IterateToLimitWindow {
         stage.setOnCloseRequest(event -> {
             this.results = null;
             this.finish.set(true);
+
+            saveContentsToFile();
+
             stage.close();
         });
+        stage.setOnHiding(event -> saveContentsToFile());
 
         root.setPadding(new Insets(10));
 
@@ -125,7 +140,7 @@ public class IterateToLimitWindow {
 
         limitTextField.setPrefColumnCount(4);
         limitTextField.setPromptText("Limit");
-        limitTextField.setText("2");
+        limitTextField.setText(contents.length > 4 ? contents[4].trim() : "2");
 
         drawCheckbox.setSelected(true);
         drawCheckbox.setText("Draw");
@@ -539,5 +554,14 @@ public class IterateToLimitWindow {
         alert.getDialogPane().setPadding(new Insets(10));
         alert.getDialogPane().setMaxWidth(400);
         return alert;
+    }
+
+    private void saveContentsToFile() {
+        Utils.writeToFile(contentFileName,
+                polygonTextArea.getText().trim() + "\n-----\n"
+                        + stablesTextArea.getText().trim() + "\n-----\n"
+                        + unstablesTextArea.getText().trim() + "\n-----\n"
+                        + triplesTextArea.getText().trim() + "\n-----\n"
+                        + limitTextField.getText().trim());
     }
 }
