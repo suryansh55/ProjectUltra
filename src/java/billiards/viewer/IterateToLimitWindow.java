@@ -399,12 +399,16 @@ public class IterateToLimitWindow {
 
         running = true;
 
-        if (polygonTextArea.getText().trim().isEmpty() || stablesTextArea.getText().trim().isEmpty()) {
+        if (polygonTextArea.getText().trim().isEmpty() ||
+                (stablesTextArea.getText().trim().isEmpty()
+                        && unstablesTextArea.getText().trim().isEmpty()
+                        && triplesTextArea.getText().trim().isEmpty())
+        ) {
             running = false;
 
             Alert alert = getInfoAlertDialogue(
-                    "Empty polygon or code pattern",
-                    "Please enter a valid polygon and code - pattern pairs."
+                    "Empty polygon and/or code sequence - iteration pattern pairs",
+                    "Please enter a valid polygon and and at least one code sequence - iteration pattern pair."
             );
             alert.showAndWait();
 
@@ -448,28 +452,35 @@ public class IterateToLimitWindow {
             }
         }
 
-        String[] codePatterns = stablesTextArea.getText().trim().split("\n");
-
-        final MutableList<
-                Future<
-                        Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>
-                        >
-                > futures = new FastList<>();
+        String[] stablePatterns = stablesTextArea.getText().trim().split("\n");
+        String[] unstablePatterns = unstablesTextArea.getText().trim().split("\n");
+        String[] triplePatterns = triplesTextArea.getText().trim().split("\n");
+        String[][] codePatterns = {stablePatterns, unstablePatterns, triplePatterns};
 
         ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-
-        for (String codePattern : codePatterns) {
-            futures.add(executor.submit(() -> iterateTask(codePattern, polygon, limit)));
-        }
-
         ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = new ArrayList<>();
 
-        for (Future<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> future : futures) {
-            try {
-                Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>> result = future.get();
-                if (result != null) results.add(result);  // Only add results from tasks that ran to completion successfully
-            } catch (InterruptedException | ExecutionException ignored) {
-                running = false;
+        for (String[] codePattern : codePatterns) {
+            if (codePattern[0].isEmpty() && codePattern.length == 1) continue;
+
+            final MutableList<
+                    Future<
+                            Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>
+                            >
+                    > futures = new FastList<>();
+
+            for (String pair : codePattern) {
+                futures.add(executor.submit(() -> iterateTask(pair, polygon, limit)));
+            }
+
+            for (int i = 0; i < futures.size(); i++) {
+                try {
+                    Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>> result = futures.get(i).get();
+                    if (result != null) results.add(result);  // Only add results from tasks that ran to completion successfully
+                } catch (InterruptedException | ExecutionException e) {
+                    System.out.println("An exception occurred for the code sequence - iteration pattern pair '"
+                            + codePattern[i] + "':  " + e.getMessage());
+                }
             }
         }
 
