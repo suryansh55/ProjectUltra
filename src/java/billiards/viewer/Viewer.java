@@ -355,7 +355,7 @@ public final class Viewer {
 
     final Stage codeWindow = new Stage();
 
-    IterateToLimitWindow iterateToLimitWindow;
+    IterateToLimitWindow iterateToLimitWindow = null;
 
     // main window
     final Button iterateToLimitBtn = new Button();
@@ -554,7 +554,6 @@ public final class Viewer {
         // This gets passed in from the outside world
         mainWindow = primaryStage;
         this.pool = pool;
-        this.iterateToLimitWindow = new IterateToLimitWindow(pool);
 
         final String windowTitle = String.format("Billiards Everything %s (%s)", version, dbName);
 
@@ -1628,6 +1627,9 @@ public final class Viewer {
         iterateToLimitBtn.setText("Iter To Limit");
         Utils.colorButton(iterateToLimitBtn, Color.SKYBLUE, clickColor);
         iterateToLimitBtn.setOnAction(event -> {
+            // Lazy initialization
+            if (iterateToLimitWindow == null) this.iterateToLimitWindow = new IterateToLimitWindow(pool);
+
             // Allow only one instance to run at any time.
             if (iterateToLimitWindow.isShowing()) return;
 
