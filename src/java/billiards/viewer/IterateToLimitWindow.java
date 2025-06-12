@@ -606,7 +606,7 @@ public class IterateToLimitWindow {
                         );
                     } else {
                         unstablesTextArea.setText(
-                                stablesTextArea.getText().trim() + "\n" +
+                                unstablesTextArea.getText().trim() + "\n" +
                                         code.trim() + ";" + pattern.trim()
                         );
                     }
