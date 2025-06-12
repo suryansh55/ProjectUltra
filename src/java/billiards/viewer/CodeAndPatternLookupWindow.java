@@ -76,6 +76,23 @@ public class CodeAndPatternLookupWindow {
             } else {
                 contentLabel.setText(item.toString());
                 this.setGraphic(scrollPane);
+
+                // Delay styling to ensure scrollbars are created
+                Platform.runLater(() -> {
+                    scrollPane.setPrefHeight(8);
+                    scrollPane.lookupAll(".scroll-bar").forEach(node -> {
+                        if (node instanceof ScrollBar) {
+                            ScrollBar sb = (ScrollBar) node;
+                            if (sb.getOrientation() == Orientation.HORIZONTAL) {
+                                sb.setPrefHeight(8);
+                                sb.setStyle("-fx-background-color: transparent;");
+                                sb.lookupAll(".thumb").forEach(thumb ->
+                                        thumb.setStyle("-fx-background-color: rgba(100,100,100,0.6);"
+                                                + "-fx-background-radius: 3px;"));
+                            }
+                        }
+                    });
+                });
             }
         }
     }
