@@ -4,6 +4,7 @@ import billiards.database.Admin;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
 import javafx.scene.Scene;
@@ -77,7 +78,8 @@ public class CodeAndPatternLookupWindow {
                 contentLabel.setText(item.toString());
                 this.setGraphic(scrollPane);
 
-                // Delay styling to ensure scrollbars are created
+                // Jun 12, 2025.
+                // ChatGPT, Delay styling to ensure scrollbars are created
                 Platform.runLater(() -> {
                     scrollPane.setPrefHeight(8);
                     scrollPane.lookupAll(".scroll-bar").forEach(node -> {
@@ -130,9 +132,18 @@ public class CodeAndPatternLookupWindow {
         tableView.getColumns().add(patternCol);
         tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         tableView.setPrefSize(CELL_WIDTH * 2, CELL_WIDTH * 2);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        tableView.getSelectionModel().selectFirst();
+
+        final Button addButton = new Button("Add");
+        addButton.setOnAction(e -> {
+            CodeAndPattern codeAndPattern = tableView.getSelectionModel().getSelectedItem();
+            iterateToLimitWindow.addToContent(codeAndPattern.getCodeSequence(), codeAndPattern.getIterationPattern());
+        });
 
         // Set up the scene
-        VBox vbox = new VBox(tableView);
+        VBox vbox = new VBox(10, tableView, addButton);
+        vbox.setPadding(new Insets(10));
         Scene scene = new Scene(vbox, CELL_WIDTH * 2, CELL_WIDTH * 2);
         stage.setScene(scene);
 

@@ -574,4 +574,39 @@ public class IterateToLimitWindow {
                         + triplesTextArea.getText().trim() + "\n-----\n"
                         + limitTextField.getText().trim());
     }
+
+    public void addToContent(String code, String pattern) {
+        String[] codeComponents = code.trim().split(",");
+
+        if (codeComponents.length == 3) {
+            triplesTextArea.setText(
+                    triplesTextArea.getText().trim() + "\n" +
+                            code.trim() + ";" + pattern.trim()
+            );
+        }
+
+        if (codeComponents.length == 1) {
+            Optional<ImmutableIntList> codeNumbers = Utils.splitString(code.trim());
+
+            if (codeNumbers.isPresent()) {
+                Either<InvalidCodeSequence, ClassifiedCodeSequence> either = ClassifiedCodeSequence.create(codeNumbers.get());
+
+                if (either.isRight()) {
+                    ClassifiedCodeSequence codeSequence = either.get();
+
+                    if (codeSequence.stable) {
+                        stablesTextArea.setText(
+                                stablesTextArea.getText().trim() + "\n" +
+                                        code.trim() + ";" + pattern.trim()
+                        );
+                    } else {
+                        unstablesTextArea.setText(
+                                stablesTextArea.getText().trim() + "\n" +
+                                        code.trim() + ";" + pattern.trim()
+                        );
+                    }
+                }
+            }
+        }
+    }
 }
