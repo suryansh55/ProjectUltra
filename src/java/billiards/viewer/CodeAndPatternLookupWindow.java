@@ -139,23 +139,30 @@ public class CodeAndPatternLookupWindow {
         tableView.getColumns().add(patternCol);
         tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         tableView.setPrefSize(CELL_WIDTH * 2, CELL_WIDTH * 2);
-        tableView.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+        tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().selectFirst();
 
-        final Button addButton = new Button("Add");
-        addButton.setOnAction(e -> {
-            CodeAndPattern codeAndPattern = tableView.getSelectionModel().getSelectedItem();
-            iterateToLimitWindow.addToContent(codeAndPattern.getCodeSequence(), codeAndPattern.getIterationPattern());
-        });
-
-        // Set up the scene
-        VBox vbox = new VBox(10, tableView, addButton);
-        vbox.setPadding(new Insets(10));
+        VBox vbox = getVBox(iterateToLimitWindow);
         Scene scene = new Scene(vbox, CELL_WIDTH * 2, CELL_WIDTH * 2);
         stage.setScene(scene);
 
         stage.initModality(Modality.NONE);
         stage.initOwner(iterateToLimitWindow.getStage());
+    }
+
+    private VBox getVBox(IterateToLimitWindow iterateToLimitWindow) {
+        final Button addButton = new Button("Add");
+        addButton.setOnAction(e -> {
+            ObservableList<CodeAndPattern> codeAndPatterns = tableView.getSelectionModel().getSelectedItems();
+
+            for (CodeAndPattern codeAndPattern : codeAndPatterns)
+                iterateToLimitWindow.addToContent(codeAndPattern.getCodeSequence(), codeAndPattern.getIterationPattern());
+        });
+
+        // Set up the scene
+        VBox vbox = new VBox(10, tableView, addButton);
+        vbox.setPadding(new Insets(10));
+        return vbox;
     }
 
     /**
