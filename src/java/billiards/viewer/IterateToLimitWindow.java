@@ -3,6 +3,7 @@ package billiards.viewer;
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.InvalidCodeSequence;
 import billiards.codeseq.Storage;
+import billiards.database.Database;
 import billiards.geometry.ConvexPolygon;
 import billiards.utils.BatchLoadStorage;
 import billiards.utils.Polygon;
@@ -286,6 +287,10 @@ public class IterateToLimitWindow {
                 return null;
             }
         }
+
+        // Jun 12, 2025. Save the code sequence - iteration pattern pairs to the garbage database so we can look it up
+        // in the future.
+        addIterPatToGarbage(patternString, classCodeSequences);
 
         ArrayList<Storage> originalStorages = BatchLoadStorage.batchLoadStorage(classCodeSequences, pool);
 
@@ -608,5 +613,22 @@ public class IterateToLimitWindow {
                 }
             }
         }
+    }
+
+    private void addIterPatToGarbage(String iterationPattern, ArrayList<ClassifiedCodeSequence> codeSequences) {
+        StringBuilder codeSequence = new StringBuilder(codeSequences.get(0).toString());
+        StringBuilder oddEvenPattern = new StringBuilder(codeSequences.get(0).oddEvenPattern);
+
+        for (int i = 1; i < codeSequences.size(); i++) {
+            codeSequence.append(", ").append(codeSequences.get(i).toString());
+            oddEvenPattern.append(",").append(codeSequences.get(i).oddEvenPattern);
+        }
+
+        Database.saveIterationPatternToDatabase(
+                codeSequence.toString(),
+                oddEvenPattern.toString(),
+                iterationPattern,
+                "garbage"
+        );
     }
 }
