@@ -23,6 +23,12 @@ import java.sql.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/**
+ * Zhao Yu Li, Jun 12, 2025.
+ * A window that looks in the garbage database for code sequence - iteration pattern pairs. It is currently designed to
+ * work only with an IterateToLimitWindow as the parent window. In regard to implementation, this window works with any
+ * class that gives access to its Stage, and implements the addToContent method.
+ */
 public class CodeAndPatternLookupWindow {
     private static final int INITIAL_LOAD = 20;
     private static final int BATCH_SIZE = 5;
@@ -79,7 +85,7 @@ public class CodeAndPatternLookupWindow {
                 this.setGraphic(scrollPane);
 
                 // Jun 12, 2025.
-                // ChatGPT, Delay styling to ensure scrollbars are created
+                // ChatGPT, delay styling to ensure scrollbars are created; Makes the scrollbar thin.
                 Platform.runLater(() -> {
                     scrollPane.setPrefHeight(8);
                     scrollPane.lookupAll(".scroll-bar").forEach(node -> {
@@ -99,6 +105,7 @@ public class CodeAndPatternLookupWindow {
         }
     }
 
+    // The wrapper class for a code sequence - iteration pattern pair that allows a TableView to display its contents
     public static class CodeAndPattern {
         private final String codeSequence;
         private final String iterationPattern;
@@ -151,6 +158,13 @@ public class CodeAndPatternLookupWindow {
         stage.initOwner(iterateToLimitWindow.getStage());
     }
 
+    /**
+     * Zhao Yu Li, Jun 12, 2025.
+     * Looks up code sequence - iteration pattern pairs in the garbage database starting from (but excluding) the
+     * OFFSET'th entry, and retrieving at most LIMIT entries.
+     * @param limit The maximum number of entries to retrieve.
+     * @param offset The number of entries to skip.
+     */
     private void lookUpIterPat(int limit, int offset) {
         isLoading = true;
         final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -199,10 +213,13 @@ public class CodeAndPatternLookupWindow {
     }
 
     public void show() {
+        // Initially loads INITIAL_LOAD entries from the database, and loads BATCH_SIZE more each time we scroll to the
+        // bottom of the list.
         if (data.isEmpty()) lookUpIterPat(INITIAL_LOAD, 0);  // Load data from database
 
         this.stage.show();
 
+        // Enables load on-demand based on the position of the scrollbar.
         if (!scrollBarInitialized) {
             Platform.runLater(() -> {
                 ScrollBar scrollBar = getVerticalScrollbar(tableView);
