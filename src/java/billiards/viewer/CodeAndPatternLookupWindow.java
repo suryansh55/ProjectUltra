@@ -1,5 +1,7 @@
 package billiards.viewer;
 
+import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.InvalidCodeSequence;
 import billiards.database.Admin;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
@@ -20,9 +22,13 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.Callback;
+import javaslang.control.Either;
+import org.eclipse.collections.api.list.primitive.ImmutableIntList;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -114,14 +120,49 @@ public class CodeAndPatternLookupWindow {
     public static class CodeAndPattern {
         private final String codeSequence;
         private final String iterationPattern;
+        private final String type;
+        private final int numOfCodeComponents;
+        private final ArrayList<ClassifiedCodeSequence> classifiedCodeSequences = new ArrayList<>();
 
         public CodeAndPattern(String column1, String column2) {
             this.codeSequence = column1;
             this.iterationPattern = column2;
+
+            String[] codeComponents = column1.trim().split(",");
+            numOfCodeComponents = codeComponents.length;
+
+            for (String codeComponent : codeComponents) {
+                Optional<ImmutableIntList> codeNumbers = Utils.splitString(codeComponent);
+
+                if (codeNumbers.isPresent()) {
+                    Either<InvalidCodeSequence, ClassifiedCodeSequence> either = ClassifiedCodeSequence.create(codeNumbers.get());
+
+                    if (either.isRight()) {
+                        classifiedCodeSequences.add(either.get());
+                    }
+                }
+            }
+
+            this.type = calcType();
+        }
+
+        public String calcType() {
+            if (classifiedCodeSequences.size() != numOfCodeComponents) return "N/A";
+
+            if (classifiedCodeSequences.size() == 1) return classifiedCodeSequences.get(0).codeType.toString();
+
+            if (classifiedCodeSequences.size() == 3) {
+                if (classifiedCodeSequences.get(0).stable &&
+                        !classifiedCodeSequences.get(1).stable &&
+                        classifiedCodeSequences.get(2).stable) return "Triple";
+            }
+
+            return "N/A";
         }
 
         public String getCodeSequence() { return codeSequence; }
         public String getIterationPattern() { return iterationPattern; }
+        public String getType() { return type; }
     }
 
     public CodeAndPatternLookupWindow(IterateToLimitWindow iterateToLimitWindow) {
@@ -130,6 +171,11 @@ public class CodeAndPatternLookupWindow {
                 col -> new ScrollableTableCell<>();
 
         // Create columns
+        TableColumn<CodeAndPattern, String> typeCol = new TableColumn<>("Type");
+        typeCol.setCellValueFactory(new PropertyValueFactory<>("type"));
+        typeCol.setCellFactory(cellFactory);
+        typeCol.setPrefWidth(CELL_WIDTH);
+
         TableColumn<CodeAndPattern, String> codeCol = new TableColumn<>("Code Sequence");
         codeCol.setCellValueFactory(new PropertyValueFactory<>("codeSequence"));
         codeCol.setCellFactory(cellFactory);
@@ -140,10 +186,11 @@ public class CodeAndPatternLookupWindow {
         patternCol.setCellFactory(cellFactory);
         patternCol.setPrefWidth(CELL_WIDTH);
 
+        tableView.getColumns().add(typeCol);
         tableView.getColumns().add(codeCol);
         tableView.getColumns().add(patternCol);
         tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-        tableView.setPrefSize(CELL_WIDTH * 2, CELL_WIDTH * 2);
+        tableView.setPrefSize(CELL_WIDTH * 3, CELL_WIDTH * 2);
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().selectFirst();
 
@@ -179,7 +226,7 @@ public class CodeAndPatternLookupWindow {
         }
 
         VBox vbox = getVBox(iterateToLimitWindow);
-        Scene scene = new Scene(vbox, CELL_WIDTH * 2, CELL_WIDTH * 2);
+        Scene scene = new Scene(vbox, CELL_WIDTH * 3, CELL_WIDTH * 2);
         stage.setScene(scene);
 
         stage.initModality(Modality.NONE);
