@@ -222,6 +222,7 @@ public class IterateToLimitWindow {
         if (trimmedCodePattern.startsWith("//") || trimmedCodePattern.isEmpty()) return null;
 
         String[] codeAndPattern = trimmedCodePattern.split(";");
+        codeAndPattern[0] = Utils.trimCodeLine(codeAndPattern[0]);
 
         // The line must be the code and pattern separated by a semicolon
         if (codeAndPattern.length != 2) {
