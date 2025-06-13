@@ -3,7 +3,9 @@ package billiards.viewer;
 import billiards.database.Admin;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
+import javafx.collections.transformation.SortedList;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.scene.Node;
@@ -20,6 +22,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 
 import java.sql.*;
+import java.util.Comparator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -32,13 +35,15 @@ import java.util.concurrent.Executors;
 public class CodeAndPatternLookupWindow {
     private static final int INITIAL_LOAD = 20;
     private static final int BATCH_SIZE = 5;
+    private final ObservableList<CodeAndPattern> originalOrder = FXCollections.observableArrayList();
     private final ObservableList<CodeAndPattern> data = FXCollections.observableArrayList();
+    private final SortedList<CodeAndPattern> sortedData = new SortedList<>(data);
     private boolean isLoading = false;
     private int currentOffset = 0;
     private boolean scrollBarInitialized = false;
 
     private final Stage stage = new Stage();
-    TableView<CodeAndPattern> tableView = new TableView<>(data);
+    TableView<CodeAndPattern> tableView = new TableView<>(sortedData);
 
     private static final int CELL_WIDTH = 200;
     private static final int EXPANDED_WIDTH = 400;
@@ -141,6 +146,37 @@ public class CodeAndPatternLookupWindow {
         tableView.setPrefSize(CELL_WIDTH * 2, CELL_WIDTH * 2);
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().selectFirst();
+
+        // Jun 13, 2025.
+        // ChatGPT, maintain a list of items in their insertion order so that we can return to this order if we don't
+        // want to sort the items anymore.
+        data.addListener((ListChangeListener<CodeAndPattern>) change -> {
+            while (change.next()) {
+                if (change.wasAdded()) originalOrder.addAll(change.getAddedSubList());
+                if (change.wasRemoved()) originalOrder.removeAll(change.getRemoved());
+            }
+        });
+
+        sortedData.comparatorProperty().bind(tableView.comparatorProperty());
+
+        // This allows the items to be put back in the insertion order after clicking the column header a third time.
+        Runnable applySort = () -> {
+            if (tableView.getSortOrder().isEmpty()) {
+                // user reached UNSORTED -> restore insertion order
+                sortedData.comparatorProperty().unbind();
+                sortedData.setComparator(Comparator.comparingInt(originalOrder::indexOf));
+                sortedData.comparatorProperty().bind(tableView.comparatorProperty());
+            } else {
+                // user wants a sort -> follow it
+                sortedData.comparatorProperty().bind(tableView.comparatorProperty());
+            }
+        };
+
+        // Bind our new sorting method to the TableView and its columns
+        tableView.getSortOrder().addListener((ListChangeListener.Change<? extends TableColumn<CodeAndPattern, ?>> c) -> applySort.run());
+        for (TableColumn<?,?> col : tableView.getColumns()) {
+            col.sortTypeProperty().addListener((obs, oldV, newV) -> applySort.run());
+        }
 
         VBox vbox = getVBox(iterateToLimitWindow);
         Scene scene = new Scene(vbox, CELL_WIDTH * 2, CELL_WIDTH * 2);
