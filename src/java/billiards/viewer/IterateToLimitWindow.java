@@ -598,17 +598,19 @@ public class IterateToLimitWindow {
 
                 if (either.isRight()) {
                     ClassifiedCodeSequence codeSequence = either.get();
+                    String coverCodeString = Utils.getCoverCodeString(codeSequence);
+                    String stringToAdd = coverCodeString + ";" + pattern.trim();
 
                     if (codeSequence.stable) {
-                        stablesTextArea.setText(
-                                stablesTextArea.getText().trim() + "\n" +
-                                        code.trim() + ";" + pattern.trim()
-                        );
+                        if (!stablesTextArea.getText().trim().isEmpty())
+                            stringToAdd = stablesTextArea.getText().trim() + "\n" + stringToAdd;
+
+                        stablesTextArea.setText(stringToAdd);
                     } else {
-                        unstablesTextArea.setText(
-                                unstablesTextArea.getText().trim() + "\n" +
-                                        code.trim() + ";" + pattern.trim()
-                        );
+                        if (!unstablesTextArea.getText().trim().isEmpty())
+                            stringToAdd = unstablesTextArea.getText().trim() + "\n" + stringToAdd;
+
+                        unstablesTextArea.setText(stringToAdd);
                     }
                 }
             }
