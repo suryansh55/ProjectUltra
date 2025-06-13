@@ -60,6 +60,7 @@ public final class VaryWindowL {
     private final TextField OSNOsbox = new TextField();
     private final CheckBox overrideBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
+    private final CheckBox firstLastBox = new CheckBox();
     private final CheckBox drawCB = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
@@ -78,7 +79,7 @@ public final class VaryWindowL {
 
     private Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
-    public VaryWindowL(final String windowTitle, final String buttonText, final String fileName, final String varyBoundFileName) {
+    public VaryWindowL(final String windowTitle, final String buttonText, final String fileName, final String varyBoundFileName, final boolean middle) {
         fullContent = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(varyBoundFileName).trim().split(" ");
     	if (boundTokens.length >= 6) {
@@ -153,6 +154,11 @@ public final class VaryWindowL {
         autoCoverBox.setSelected(AutoCover);
         autoCoverBox.setText("Add codes to cover");
 
+        firstLastBox.setIndeterminate(false);
+        firstLastBox.setAllowIndeterminate(false);
+        firstLastBox.setSelected(false);
+        firstLastBox.setText("Include first and last");
+
         drawCB.setSelected(Draw);//changed true to false george oct 5,2017
         drawCB.setText("Draw"); 
 
@@ -177,6 +183,9 @@ public final class VaryWindowL {
         loadHBox.getChildren().addAll(loadButton, drawCB);
         overrideHBox.getChildren().addAll(overrideBox);
         controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
+
+        if (middle) controlVBox.getChildren().add(firstLastBox);
+
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -241,5 +250,9 @@ public final class VaryWindowL {
     }
     public boolean getOverride() {
         return Override;
+    }
+
+    public boolean getFirstLastSelected() {
+        return this.firstLastBox.isSelected();
     }
 }
