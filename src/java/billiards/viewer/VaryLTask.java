@@ -59,6 +59,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     private final ExecutorService storageExecutor;
     private final ExecutorService shotExecutor;
     private final boolean printMid;
+    private final boolean firstLast;
     //private final ImageView screenImage;
     //private final PixelRadianMap screenMap; 
 
@@ -66,7 +67,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     public VaryLTask(
         final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan, 
         final Array<Integer> max, final ConnectionPool pool, final boolean override, final boolean draw,
-        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo, final boolean printMid) {
+        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo, final boolean printMid, final boolean firstLast) {
         this.coordList = points; // Points are in degrees
         this.coverCodes.addAll(coverCodes);
         this.boyanMenu = boyan;
@@ -83,6 +84,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         this.storageExecutor = eOne;
         this.shotExecutor = eTwo;
         this.printMid = printMid;
+        this.firstLast = firstLast;
     }
 
     @Override
@@ -190,7 +192,26 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                                         .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
 
                                 --i;
+
+                                if (firstLast) {
+                                    if (processedCodesLength.get(codeType).get(oddEvenPattern) >= 2) {
+                                        System.out.println(Utils.standard(
+                                                processedCodes.get(codeType)
+                                                        .get(oddEvenPattern)
+                                                        .get(0), codeNum++));
+                                    }
+                                }
+
                                 System.out.println(Utils.standard(classCodeSeq, codeNum++));
+
+                                if (firstLast) {
+                                    if (processedCodesLength.get(codeType).get(oddEvenPattern) >= 3) {
+                                        System.out.println(Utils.standard(
+                                                processedCodes.get(codeType)
+                                                        .get(oddEvenPattern)
+                                                        .get(processedCodesLength.get(codeType).get(oddEvenPattern) - 1), codeNum++));
+                                    }
+                                }
 
                                 if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
                                     this.updateProgress(progress.incrementAndGet(), todo);

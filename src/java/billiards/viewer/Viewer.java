@@ -574,7 +574,8 @@ public final class Viewer {
         final CoverWindow4 coverWindow4 = new CoverWindow4(
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover2", executor));
-        final VaryWindowL varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt");
+        final VaryWindowL varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt", false);
+        final VaryWindowL middleVaryWindow = new VaryWindowL("MiddleVaryL", "MVaryL", tmpDir + "MiddleVaryPoints4.txt", tmpDir + "MiddleVaryLBounds.txt", true);
         final AutoPolyVaryLoad autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
         final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
 
@@ -1897,7 +1898,7 @@ public final class Viewer {
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
-                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, false);
+                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, false, false);
                 }
             }
         });
@@ -1920,15 +1921,15 @@ public final class Viewer {
                 final String x = textXLockField.getText();
                 final String y = textYLockField.getText();
 
-                if (varyWindow.stage.isShowing()) {
-                    varyWindow.stage.toFront();
+                if (middleVaryWindow.stage.isShowing()) {
+                    middleVaryWindow.stage.toFront();
                     if (!boyanMenu.varyOnePoint.isSelected()) {
                         return;
                     }
                 }
 
                 final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
-                        varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
+                        middleVaryWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
                 if (pointOpt.isPresent()) {
 
                     final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
@@ -1950,7 +1951,8 @@ public final class Viewer {
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
-                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, true);
+                    final boolean firstLastSelected = middleVaryWindow.getFirstLastSelected();
+                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, true, firstLastSelected);
                 }
             }
         });
@@ -4261,12 +4263,12 @@ public final class Viewer {
     private void drawVaryL(final MutableList<Vector2> points, final int[] max,
                            final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
                            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
-                           final boolean printMid) {
+                           final boolean printMid, final boolean firstLast) {
 
         List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
         codeList.replaceAll(Utils::tripleTrimmer);
         // Create the task
-        final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor, printMid);
+        final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor, printMid, firstLast);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
