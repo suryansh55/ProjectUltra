@@ -79,12 +79,13 @@ public class IterateToLimitWindow {
         String fileContent = Utils.readFromFile(contentFileName);
         String[] contents = fileContent.split("-----");
 
+        Button findPatternButton = new Button();
         Button lookupButton = new Button();
         Button runButton = new Button();
         VBox root = new VBox(
                 10,
                 getRoot(),
-                new HBox(10, lookupButton, limitTextField, drawCheckbox, coverCheckbox, runButton)
+                new HBox(10, findPatternButton, lookupButton, limitTextField, drawCheckbox, coverCheckbox, runButton)
         );
 
         if (contents.length > 0) polygonTextArea.setText(contents[0].trim());
@@ -138,6 +139,9 @@ public class IterateToLimitWindow {
         textAreaMap.put("Stables", stablesTextArea);
         textAreaMap.put("Unstables", unstablesTextArea);
         textAreaMap.put("Triples", triplesTextArea);
+
+        findPatternButton.setText("Find Pattern");
+        findPatternButton.setOnAction(event -> findIterationPattern());
 
         lookupButton.setText("Lookup");
         lookupButton.setOnAction(event -> {
@@ -633,5 +637,69 @@ public class IterateToLimitWindow {
                 iterationPattern,
                 "garbage"
         );
+    }
+
+    private void findIterationPattern() {
+        TextArea[] textAreas = {stablesTextArea, unstablesTextArea, triplesTextArea};
+
+        for (TextArea textArea : textAreas) {
+            String content = textArea.getText().trim();
+
+            if (content.isEmpty()) continue;
+
+            StringBuilder newContent = new StringBuilder();
+
+            for (String line : content.split("\n")) {
+                String trimmedLine = Utils.trimCodeLine(line.trim());
+
+                if (trimmedLine.isEmpty()) continue;
+
+                String[] codeAndPattern = trimmedLine.split(";");
+
+                if (codeAndPattern.length > 1) {
+                    newContent.append(line).append("\n");
+                    continue;
+                }
+
+                String[] codeSections = codeAndPattern[0].split(",");
+                StringBuilder iterationPattern = new StringBuilder();
+
+                for (int k = 0; k < codeSections.length; k++) {
+                    String code = codeSections[k].trim();
+
+                    Optional<ImmutableIntList> codeNumbers = Utils.splitString(code);
+
+                    if (!codeNumbers.isPresent()) continue;
+
+                    int min = Integer.MAX_VALUE;
+                    int max = Integer.MIN_VALUE;
+                    int[] codeNumbersArray = codeNumbers.get().toArray();
+
+                    for (Integer codeNumber : codeNumbersArray) {
+                        if (codeNumber < 3) continue;
+
+                        min = Math.min(min, codeNumber);
+                        max = Math.max(max, codeNumber);
+                    }
+
+                    double ratio = Math.ceil((double) max / min);
+
+                    for (int i = 0; i < codeNumbersArray.length; i++) {
+                        int codeNumber = codeNumbersArray[i];
+
+                        if (codeNumber < 3) continue;
+
+                        if (codeNumber / min == 1) iterationPattern.append(i + 1).append(" ");
+                        else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                    }
+
+                    if (k < codeSections.length - 1) iterationPattern.append(",");
+                }
+
+                newContent.append(line).append(";").append(iterationPattern.toString().trim()).append("\n");
+            }
+
+            textArea.setText(newContent.toString());
+        }
     }
 }
