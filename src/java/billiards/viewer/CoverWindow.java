@@ -342,13 +342,29 @@ public final class CoverWindow {
                 throw new RuntimeException("incorrect number of commas: " + line);
             }
 
-            final IntList stableNegList = Utils.splitString(split[0].trim()).get();
-            final IntList unstableList = Utils.splitString(split[1].trim()).get();
-            final IntList stablePosList = Utils.splitString(split[2].trim()).get();
+            final Optional<ImmutableIntList> stableNegListOptional = Utils.splitString(split[0].trim());
+            final Optional<ImmutableIntList> unstableListOptional = Utils.splitString(split[1].trim());
+            final Optional<ImmutableIntList> stablePosListOptional = Utils.splitString(split[2].trim());
 
-            final ClassifiedCodeSequence stableNeg = ClassifiedCodeSequence.create(stableNegList).get();
-            final ClassifiedCodeSequence unstable = ClassifiedCodeSequence.create(unstableList).get();
-            final ClassifiedCodeSequence stablePos = ClassifiedCodeSequence.create(stablePosList).get();
+            if (!stableNegListOptional.isPresent()) throw new RuntimeException(split[0] + " contains invalid code numbers");
+            if (!unstableListOptional.isPresent()) throw new RuntimeException(split[1] + " contains invalid code numbers");
+            if (!stablePosListOptional.isPresent()) throw new RuntimeException(split[2] + " contains invalid code numbers");
+
+            final IntList stableNegList = stableNegListOptional.get();
+            final IntList unstableList = unstableListOptional.get();
+            final IntList stablePosList = stablePosListOptional.get();
+
+            final Either<InvalidCodeSequence, ClassifiedCodeSequence> stableNegEither = ClassifiedCodeSequence.create(stableNegList);
+            final Either<InvalidCodeSequence, ClassifiedCodeSequence> unstableEither = ClassifiedCodeSequence.create(unstableList);
+            final Either<InvalidCodeSequence, ClassifiedCodeSequence> stablePosEither = ClassifiedCodeSequence.create(stablePosList);
+
+            if (stableNegEither.isLeft()) throw new RuntimeException(InvalidCodeSequence.errorMessage(stableNegList, stableNegEither.getLeft()));
+            if (unstableEither.isLeft()) throw new RuntimeException(InvalidCodeSequence.errorMessage(unstableList, unstableEither.getLeft()));
+            if (stablePosEither.isLeft()) throw new RuntimeException(InvalidCodeSequence.errorMessage(stablePosList, stablePosEither.getLeft()));
+
+            final ClassifiedCodeSequence stableNeg = stableNegEither.get();
+            final ClassifiedCodeSequence unstable = unstableEither.get();
+            final ClassifiedCodeSequence stablePos = stablePosEither.get();
 
             if (!stableNeg.stable) {
                 throw new RuntimeException(stableNeg + " is unstable");
