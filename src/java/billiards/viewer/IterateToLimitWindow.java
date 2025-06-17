@@ -25,9 +25,7 @@ import org.eclipse.collections.api.list.primitive.ImmutableIntList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -639,6 +637,12 @@ public class IterateToLimitWindow {
         );
     }
 
+    /**
+     * Jun 16, 2025.
+     * Deterministically finds an iteration pattern for all the code sequences that does not already have one in all the
+     * text areas. For each code sequence, its line in the text area is unchanged if it already has an iteration
+     * pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence.
+     */
     private void findIterationPattern() {
         TextArea[] textAreas = {stablesTextArea, unstablesTextArea, triplesTextArea};
 
@@ -671,29 +675,53 @@ public class IterateToLimitWindow {
 
                     if (!codeNumbers.isPresent()) continue;
 
-                    int min = Integer.MAX_VALUE;
-                    int max = Integer.MIN_VALUE;
+                    Map<Integer, List<Integer>> grouped = new TreeMap<>();
                     int[] codeNumbersArray = codeNumbers.get().toArray();
 
                     for (Integer codeNumber : codeNumbersArray) {
                         if (codeNumber < 3) continue;
 
-                        min = Math.min(min, codeNumber);
-                        max = Math.max(max, codeNumber);
+                        int nearestLargestPlace = roundToLargestPlace(codeNumber);
+
+                        grouped.computeIfAbsent(nearestLargestPlace, k1 -> new ArrayList<>());
+                        grouped.get(nearestLargestPlace).add(codeNumber);
                     }
 
-                    double ratio = Math.ceil((double) max / min);
+                    int minGroup = Integer.MAX_VALUE;
+                    int maxGroup = Integer.MIN_VALUE;
 
-                    for (int i = 0; i < codeNumbersArray.length; i++) {
-                        int codeNumber = codeNumbersArray[i];
-
-                        if (codeNumber < 3) continue;
-
-                        if (codeNumber / min == 1) iterationPattern.append(i + 1).append(" ");
-                        else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                    for (int key : grouped.keySet()) {
+                        minGroup = Math.min(minGroup, key);
+                        maxGroup = Math.max(maxGroup, key);
                     }
 
-                    if (k < codeSections.length - 1) iterationPattern.append(",");
+                    if (grouped.size() == 2) {
+                        int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
+                        int min = grouped.get(minGroup).stream().max(Integer::compareTo).orElse(0);
+                        double ratio = Math.ceil((double) max / min);
+
+                        for (int i = 0; i < codeNumbersArray.length; i++) {
+                            int codeNumber = codeNumbersArray[i];
+
+                            if (codeNumber < 3) continue;
+
+                            if (roundToLargestPlace(codeNumber) == minGroup) iterationPattern.append(i + 1).append(" ");
+                            else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                        }
+
+                        if (k < codeSections.length - 1) iterationPattern.append(",");
+                    } else {
+                        for (int i = 0; i < codeNumbersArray.length; i++) {
+                            int codeNumber = codeNumbersArray[i];
+
+                            if (codeNumber < 3) continue;
+
+                            int group = roundToLargestPlace(codeNumber);
+                            int index = group == minGroup || group == maxGroup ? i + 1 : -(i + 1);
+
+                            iterationPattern.append(index).append(" ");
+                        }
+                    }
                 }
 
                 newContent.append(line).append(";").append(iterationPattern.toString().trim()).append("\n");
@@ -701,5 +729,15 @@ public class IterateToLimitWindow {
 
             textArea.setText(newContent.toString());
         }
+    }
+
+    // ChatGPT, Jun 17, 2025.
+    // Round to the nearest largest digit place.
+    private int roundToLargestPlace(int number) {
+        if (number == 0) return 0;
+
+        int abs = Math.abs(number);
+        int magnitude = (int) Math.pow(10, (int) Math.log10(abs));
+        return Math.round(number / (float) magnitude) * magnitude;
     }
 }
