@@ -654,18 +654,16 @@ public class IterateToLimitWindow {
             StringBuilder newContent = new StringBuilder();
 
             for (String line : content.split("\n")) {
-                String trimmedLine = Utils.trimCodeLine(line.trim());
+                if (line.trim().isEmpty()) continue;
 
-                if (trimmedLine.isEmpty()) continue;
-
-                String[] codeAndPattern = trimmedLine.split(";");
+                String[] codeAndPattern = line.split(";");
 
                 if (codeAndPattern.length > 1) {
                     newContent.append(line).append("\n");
                     continue;
                 }
 
-                String[] codeSections = codeAndPattern[0].split(",");
+                String[] codeSections = Utils.trimCodeLine(codeAndPattern[0]).split(",");
                 StringBuilder iterationPattern = new StringBuilder();
 
                 for (int k = 0; k < codeSections.length; k++) {
