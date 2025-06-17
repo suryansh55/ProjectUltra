@@ -706,8 +706,6 @@ public class IterateToLimitWindow {
                             if (roundToLargestPlace(codeNumber) == minGroup) iterationPattern.append(i + 1).append(" ");
                             else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
                         }
-
-                        if (k < codeSections.length - 1) iterationPattern.append(",");
                     } else {
                         for (int i = 0; i < codeNumbersArray.length; i++) {
                             int codeNumber = codeNumbersArray[i];
@@ -720,8 +718,9 @@ public class IterateToLimitWindow {
                             iterationPattern.append(index).append(" ");
                         }
 
-                        if (k < codeSections.length - 1) iterationPattern.append(",");
                     }
+
+                    if (k < codeSections.length - 1) iterationPattern.append(",");
                 }
 
                 newContent.append(line).append(";").append(iterationPattern.toString().trim()).append("\n");
