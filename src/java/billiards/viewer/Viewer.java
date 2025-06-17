@@ -7738,7 +7738,7 @@ public final class Viewer {
             if (next % step == 0) {
                 assert step == tetrahedronCodes.size();
 
-                System.out.println("// " + finalMode +  " results for (" + originalPoints.get(index / 3)._1 + ", " + originalPoints.get(index / 3)._2 + ")");
+                System.out.println("// " + finalMode +  " results for (" + originalPoints.get(index / step)._1 + ", " + originalPoints.get(index / step)._2 + ")");
 
                 ArrayList<Collection<ClassifiedCodeSequence>> cList = new ArrayList<>();
 
