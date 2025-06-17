@@ -719,6 +719,8 @@ public class IterateToLimitWindow {
 
                             iterationPattern.append(index).append(" ");
                         }
+
+                        if (k < codeSections.length - 1) iterationPattern.append(",");
                     }
                 }
 
