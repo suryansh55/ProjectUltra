@@ -678,6 +678,10 @@ public class IterateToLimitWindow {
      * Deterministically finds an iteration pattern for all the code sequences that does not already have one in all the
      * text areas. For each code sequence, its line in the text area is unchanged if it already has an iteration
      * pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence.
+     * Jun 18, 2025.
+     * The method used to find an iteration pattern for a code sequence is not backed by any theorem; this is simply a
+     * pattern discovery. Based on the code numbers of a given code sequence, all numbers greater than 2 are grouped
+     * based on their nearest largest digit place value.
      */
     private void findIterationPattern() {
         TextArea[] textAreas = {stablesTextArea, unstablesTextArea, triplesTextArea, pmStablesTextArea, pmUnstablesTextArea};
@@ -711,7 +715,7 @@ public class IterateToLimitWindow {
 
                     if (!codeNumbers.isPresent()) continue;
 
-                    Map<Integer, List<Integer>> grouped = new TreeMap<>();
+                    Set<Integer> grouped = new TreeSet<>();  // Sorted set that sorts integer in ascending order
                     int[] codeNumbersArray = codeNumbers.get().toArray();
 
                     for (Integer codeNumber : codeNumbersArray) {
@@ -719,17 +723,12 @@ public class IterateToLimitWindow {
 
                         int nearestLargestPlace = roundToLargestPlace(codeNumber);
 
-                        grouped.computeIfAbsent(nearestLargestPlace, k1 -> new ArrayList<>());
-                        grouped.get(nearestLargestPlace).add(codeNumber);
+                        grouped.add(nearestLargestPlace);
                     }
 
-                    int minGroup = Integer.MAX_VALUE;
-                    int maxGroup = Integer.MIN_VALUE;
-
-                    for (int key : grouped.keySet()) {
-                        minGroup = Math.min(minGroup, key);
-                        maxGroup = Math.max(maxGroup, key);
-                    }
+                    List<Integer> groupList = new ArrayList<>(grouped);  // Preserves ascending order from tree set...
+                    int minGroup = groupList.get(0);  // so the first element is the smallest...
+                    int maxGroup = groupList.get(groupList.size() - 1);  // and the last element is the largest
 
                     if (textAreaIndex <= 3) {
                         long ratio = Math.round((double) maxGroup / minGroup);
