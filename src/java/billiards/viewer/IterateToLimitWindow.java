@@ -44,7 +44,9 @@ public class IterateToLimitWindow {
 
     private final TextArea polygonTextArea = new TextArea();
     private final TextArea stablesTextArea = new TextArea();
+    private final TextArea pmStablesTextArea = new TextArea();  // "pm" stands for +/-
     private final TextArea unstablesTextArea = new TextArea();
+    private final TextArea pmUnstablesTextArea = new TextArea();  // "pm" stands for +/-
     private final TextArea triplesTextArea = new TextArea();
 
     private final HashMap<String, TextArea> textAreaMap = new HashMap<>();
@@ -88,8 +90,10 @@ public class IterateToLimitWindow {
 
         if (contents.length > 0) polygonTextArea.setText(contents[0].trim());
         if (contents.length > 1) stablesTextArea.setText(contents[1].trim());
-        if (contents.length > 2) unstablesTextArea.setText(contents[2].trim());
-        if (contents.length > 3) triplesTextArea.setText(contents[3].trim());
+        if (contents.length > 2) pmStablesTextArea.setText(contents[2].trim());
+        if (contents.length > 3) unstablesTextArea.setText(contents[3].trim());
+        if (contents.length > 4) pmStablesTextArea.setText(contents[4].trim());
+        if (contents.length > 5) triplesTextArea.setText(contents[5].trim());
 
         final Scene scene = new Scene(root);
 
@@ -116,15 +120,31 @@ public class IterateToLimitWindow {
 
         stablesTextArea.setTooltip(getTooltip(
                 "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
-                        "separating the stable and the pattern."
+                        "separating the stable and the pattern. Stables in this text area will be given an " +
+                        "all-positive iteration pattern when you use the \"Find Pattern\" button."
         ));
         stablesTextArea.setWrapText(true);
 
+        pmStablesTextArea.setTooltip(getTooltip(
+                "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
+                        "separating the stable and the pattern. Stables in this text area will be given an " +
+                        "plus-minus iteration pattern when you use the \"Find Pattern\" button."
+        ));
+        pmStablesTextArea.setWrapText(true);
+
         unstablesTextArea.setTooltip(getTooltip(
                 "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
-                        "separating the unstable and the pattern."
+                        "separating the unstable and the pattern. Unstables in this text area will be given an " +
+                        "all-positive iteration pattern when you use the \"Find Pattern\" button."
         ));
         unstablesTextArea.setWrapText(true);
+
+        pmUnstablesTextArea.setTooltip(getTooltip(
+                "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
+                        "separating the unstable and the pattern. Unstables in this text area will be given an " +
+                        "plus-minus iteration pattern when you use the \"Find Pattern\" button."
+        ));
+        pmUnstablesTextArea.setWrapText(true);
 
         triplesTextArea.setTooltip(getTooltip(
                 "Enter each triple - iteration pattern pair in a separate line, with a semicolon " +
@@ -134,8 +154,10 @@ public class IterateToLimitWindow {
         triplesTextArea.setWrapText(true);
 
         textAreaMap.put("Polygon", polygonTextArea);
-        textAreaMap.put("Stables", stablesTextArea);
-        textAreaMap.put("Unstables", unstablesTextArea);
+        textAreaMap.put("+ Stables", stablesTextArea);
+        textAreaMap.put("+/- Stables", pmStablesTextArea);
+        textAreaMap.put("+ Unstables", unstablesTextArea);
+        textAreaMap.put("+/- Unstables", pmUnstablesTextArea);
         textAreaMap.put("Triples", triplesTextArea);
 
         findPatternButton.setText("Find Pattern");
@@ -149,7 +171,7 @@ public class IterateToLimitWindow {
 
         limitTextField.setPrefColumnCount(4);
         limitTextField.setPromptText("Limit");
-        limitTextField.setText(contents.length > 4 ? contents[4].trim() : "2");
+        limitTextField.setText(contents.length > 6 ? contents[6].trim() : "2");
 
         drawCheckbox.setSelected(true);
         drawCheckbox.setText("Draw");
@@ -182,14 +204,18 @@ public class IterateToLimitWindow {
 
     private ScrollPane getRoot() {
         final HBox polygonHBox = getTextAreaHBox("Polygon");
-        final HBox stablesHBox = getTextAreaHBox("Stables");
-        final HBox unstablesHBox = getTextAreaHBox("Unstables");
+        final HBox stablesHBox = getTextAreaHBox("+ Stables");
+        final HBox pmStablesHBox = getTextAreaHBox("+/- Stables");
+        final HBox unstablesHBox = getTextAreaHBox("+ Unstables");
+        final HBox pmUnstablesHBox = getTextAreaHBox("+/- Unstables");
         final HBox triplesHBox = getTextAreaHBox("Triples");
 
         VBox vbox = new VBox(10,
                 polygonHBox, polygonTextArea,
                 stablesHBox, stablesTextArea,
+                pmStablesHBox, pmStablesTextArea,
                 unstablesHBox, unstablesTextArea,
+                pmUnstablesHBox, pmUnstablesTextArea,
                 triplesHBox, triplesTextArea
         );
 
@@ -430,7 +456,9 @@ public class IterateToLimitWindow {
 
         if (polygonTextArea.getText().trim().isEmpty() ||
                 (stablesTextArea.getText().trim().isEmpty()
+                        && pmStablesTextArea.getText().trim().isEmpty()
                         && unstablesTextArea.getText().trim().isEmpty()
+                        && pmUnstablesTextArea.getText().trim().isEmpty()
                         && triplesTextArea.getText().trim().isEmpty())
         ) {
             running = false;
@@ -481,10 +509,7 @@ public class IterateToLimitWindow {
             }
         }
 
-        String[] stablePatterns = stablesTextArea.getText().trim().split("\n");
-        String[] unstablePatterns = unstablesTextArea.getText().trim().split("\n");
-        String[] triplePatterns = triplesTextArea.getText().trim().split("\n");
-        String[][] codePatterns = {stablePatterns, unstablePatterns, triplePatterns};
+        String[][] codePatterns = getPatterns();
 
         ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
         ArrayList<Tuple3<ArrayList<Storage>, ArrayList<ArrayList<Storage>>, ArrayList<ArrayList<Storage>>>> results = new ArrayList<>();
@@ -521,6 +546,15 @@ public class IterateToLimitWindow {
         this.finish.set(true);
 
         return true;
+    }
+
+    private String[][] getPatterns() {
+        String[] stablePatterns = stablesTextArea.getText().trim().split("\n");
+        String[] pmStablePatterns = pmStablesTextArea.getText().trim().split("\n");
+        String[] unstablePatterns = unstablesTextArea.getText().trim().split("\n");
+        String[] pmUnstablePatterns = pmUnstablesTextArea.getText().trim().split("\n");
+        String[] triplePatterns = triplesTextArea.getText().trim().split("\n");
+        return new String[][]{stablePatterns, pmStablePatterns, unstablePatterns, pmUnstablePatterns, triplePatterns};
     }
 
     /**
@@ -578,7 +612,9 @@ public class IterateToLimitWindow {
         Utils.writeToFile(contentFileName,
                 polygonTextArea.getText().trim() + "\n-----\n"
                         + stablesTextArea.getText().trim() + "\n-----\n"
+                        + pmStablesTextArea.getText().trim() + "\n-----\n"
                         + unstablesTextArea.getText().trim() + "\n-----\n"
+                        + pmUnstablesTextArea.getText().trim() + "\n-----\n"
                         + triplesTextArea.getText().trim() + "\n-----\n"
                         + limitTextField.getText().trim());
     }
@@ -644,9 +680,11 @@ public class IterateToLimitWindow {
      * pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence.
      */
     private void findIterationPattern() {
-        TextArea[] textAreas = {stablesTextArea, unstablesTextArea, triplesTextArea};
+        TextArea[] textAreas = {stablesTextArea, unstablesTextArea, triplesTextArea, pmStablesTextArea, pmUnstablesTextArea};
 
+        int textAreaIndex = 0;
         for (TextArea textArea : textAreas) {
+            textAreaIndex++;
             String content = textArea.getText().trim();
 
             if (content.isEmpty()) continue;
@@ -693,18 +731,22 @@ public class IterateToLimitWindow {
                         maxGroup = Math.max(maxGroup, key);
                     }
 
-                    if (grouped.size() == 2) {
-                        int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
-                        int min = grouped.get(minGroup).stream().max(Integer::compareTo).orElse(0);
-                        double ratio = Math.ceil((double) max / min);
+                    if (textAreaIndex <= 3) {
+                        long ratio = Math.round((double) maxGroup / minGroup);
 
                         for (int i = 0; i < codeNumbersArray.length; i++) {
                             int codeNumber = codeNumbersArray[i];
 
                             if (codeNumber < 3) continue;
 
-                            if (roundToLargestPlace(codeNumber) == minGroup) iterationPattern.append(i + 1).append(" ");
-                            else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                            if (ratio == 2) {
+                                if (roundToLargestPlace(codeNumber) == maxGroup)
+                                    for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                                else iterationPattern.append(i + 1).append(" ");
+                            } else {
+                                if (roundToLargestPlace(codeNumber) == minGroup) iterationPattern.append(i + 1).append(" ");
+                                else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                            }
                         }
                     } else {
                         for (int i = 0; i < codeNumbersArray.length; i++) {
@@ -717,7 +759,6 @@ public class IterateToLimitWindow {
 
                             iterationPattern.append(index).append(" ");
                         }
-
                     }
 
                     if (k < codeSections.length - 1) iterationPattern.append(",");
