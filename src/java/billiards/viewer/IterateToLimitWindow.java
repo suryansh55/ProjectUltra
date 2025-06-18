@@ -767,7 +767,8 @@ public class IterateToLimitWindow {
                 newContent.append(line).append(";").append(iterationPattern.toString().trim()).append("\n");
             }
 
-            textArea.setText(newContent.toString());
+            textArea.setText(newContent.toString().trim());  // Trims the trailing newline character
+            textArea.setScrollTop(Double.MAX_VALUE);  // Scroll to the bottom
         }
     }
 
