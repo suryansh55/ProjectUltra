@@ -723,7 +723,7 @@ public class IterateToLimitWindow {
 
                     if (!codeNumbers.isPresent()) continue;
 
-                    Set<Integer> grouped = new TreeSet<>();  // Sorted set that sorts integer in ascending order
+                    Map<Integer, List<Integer>> grouped = new TreeMap<>();
                     int[] codeNumbersArray = codeNumbers.get().toArray();
 
                     for (Integer codeNumber : codeNumbersArray) {
@@ -731,15 +731,18 @@ public class IterateToLimitWindow {
 
                         int nearestLargestPlace = roundToLargestPlace(codeNumber);
 
-                        grouped.add(nearestLargestPlace);
+                        grouped.computeIfAbsent(nearestLargestPlace, k1 -> new ArrayList<>());
+                        grouped.get(nearestLargestPlace).add(codeNumber);
                     }
 
-                    List<Integer> groupList = new ArrayList<>(grouped);  // Preserves ascending order from tree set...
+                    List<Integer> groupList = new ArrayList<>(grouped.keySet());  // Preserves ascending order of keys from tree map...
                     int minGroup = groupList.get(0);  // so the first element is the smallest...
                     int maxGroup = groupList.get(groupList.size() - 1);  // and the last element is the largest
 
                     if (textAreaIndex <= 3) {
-                        long ratio = Math.round((double) maxGroup / minGroup);
+                        int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
+                        int min = grouped.get(minGroup).stream().max(Integer::compareTo).orElse(0);
+                        long ratio = Math.round((double) max / min);
 
                         for (int i = 0; i < codeNumbersArray.length; i++) {
                             int codeNumber = codeNumbersArray[i];
