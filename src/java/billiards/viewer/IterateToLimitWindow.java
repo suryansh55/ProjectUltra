@@ -752,7 +752,7 @@ public class IterateToLimitWindow {
                     if (textAreaIndex <= 3) {
                         int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
                         int min = grouped.get(minGroup).stream().max(Integer::compareTo).orElse(0);
-                        long ratio = Math.round((double) max / min);
+                        long ratio = Math.min(Math.round((double) max / min), 4);
 
                         for (int i = 0; i < codeNumbersArray.length; i++) {
                             int codeNumber = codeNumbersArray[i];
