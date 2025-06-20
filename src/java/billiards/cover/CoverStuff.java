@@ -265,8 +265,7 @@ public final class CoverStuff {
         }
     }
 
-    public static List<Object> parseCover(final String coverString, final Rectangle square, final List<ClassifiedCodeSequence> stables, final List<Triple> triples) {
-        List<Object> list = new ArrayList<Object>();
+    public static Tuple2<MutableMap<Rectangle, ClassifiedCodeSequence>, MutableMap<Rectangle, Triple>> parseCover(final String coverString, final Rectangle square, final List<ClassifiedCodeSequence> stables, final List<Triple> triples) {
         final Iterator<String> tokens = Splitter.on(' ').split(coverString).iterator();
 
         final MutableMap<Rectangle, ClassifiedCodeSequence> stableCover = new UnifiedMap<>();
@@ -277,10 +276,8 @@ public final class CoverStuff {
         if (tokens.hasNext()) {
             throw new RuntimeException("unused tokens when parsing a cover");
         }
-        list.add(stableCover);
-        list.add(tripleCover);
 
-        return list;
+        return Tuple.of(stableCover, tripleCover);
     }
     public static Rectangle calculateRectangle(double x, double y, int magnification) {
         double initXMin = rationalToRadians("0");

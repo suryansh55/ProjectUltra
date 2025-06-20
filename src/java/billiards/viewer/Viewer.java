@@ -59,6 +59,7 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.ImmutableIntList;
 import org.eclipse.collections.api.list.primitive.IntList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
+import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.bimap.mutable.HashBiMap;
 import org.eclipse.collections.impl.list.mutable.FastList;
@@ -7636,11 +7637,11 @@ public final class Viewer {
         final List<ClassifiedCodeSequence> stables = CoverStuff.parseStables(stablesString);
         final List<Triple> triples = CoverStuff.parseTriples(triplesString);
 
-        final List<Object> cover = CoverStuff.parseCover(coverString, square, stables, triples);
+        final Tuple2<MutableMap<Rectangle, ClassifiedCodeSequence>, MutableMap<Rectangle, Triple>> cover = CoverStuff.parseCover(coverString, square, stables, triples);
 
         mrrBounds.clear();
-        coverRects.addStables((Map<Rectangle, ClassifiedCodeSequence>) cover.get(0), Color.BLACK);
-        coverRects.addTriples((Map<Rectangle, Triple>) cover.get(1), Color.BLACK);
+        coverRects.addStables(cover._1, Color.BLACK);
+        coverRects.addTriples(cover._2, Color.BLACK);
         coverArea = Optional.of(polygon);
         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
     }
@@ -7658,11 +7659,11 @@ public final class Viewer {
         final List<ClassifiedCodeSequence> stables = CoverStuff.parseStables(stablesString);
         final List<Triple> triples = CoverStuff.parseTriples(triplesString);
 
-        final List<Object> cover = CoverStuff.parseCover(coverString, square, stables, triples);
+        final Tuple2<MutableMap<Rectangle, ClassifiedCodeSequence>, MutableMap<Rectangle, Triple>> cover = CoverStuff.parseCover(coverString, square, stables, triples);
 
         mrrBounds.clear();
-        coverRects.addStables((Map<Rectangle, ClassifiedCodeSequence>) cover.get(0), Color.BLACK);
-        coverRects.addTriples((Map<Rectangle, Triple>) cover.get(1), Color.BLACK);
+        coverRects.addStables(cover._1, Color.BLACK);
+        coverRects.addTriples(cover._2, Color.BLACK);
         coverArea = Optional.of(polygon);
         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
     }
