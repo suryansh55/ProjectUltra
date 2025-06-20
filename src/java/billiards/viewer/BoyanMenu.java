@@ -1035,7 +1035,9 @@ public class BoyanMenu {
                             processedCodes.get(code.oddEvenPattern).add(code);
                         } else {
                             for (String oddEvenPattern : processedCodesLength.keySet()) {
-                                // Add the first, middle, and the last codes
+                                // Only add the middle one
+                                // Updated Jun 20, 2025.
+                                // Also adds the first and the last codes.
                                 if (processedCodesLength.get(oddEvenPattern) >= 2)
                                     organizedCodes.add(processedCodes.get(oddEvenPattern).get(0));
 
@@ -1058,6 +1060,8 @@ public class BoyanMenu {
                 }
 
                 // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
+                // Updated Jun 20, 2025.
+                // Also prints the first and the last codes.
                 for (String oddEvenPattern : processedCodesLength.keySet()) {
                     if (!processedCodes.get(oddEvenPattern).isEmpty()) {
                         if (processedCodesLength.get(oddEvenPattern) >= 2)
