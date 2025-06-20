@@ -1038,14 +1038,7 @@ public class BoyanMenu {
                                 // Only add the middle one
                                 // Updated Jun 20, 2025.
                                 // Also adds the first and the last codes.
-                                if (processedCodesLength.get(oddEvenPattern) >= 2)
-                                    organizedCodes.add(processedCodes.get(oddEvenPattern).get(0));
-
-                                organizedCodes.add(processedCodes.get(oddEvenPattern)
-                                        .get(processedCodesLength.get(oddEvenPattern) / 2));
-
-                                if (processedCodesLength.get(oddEvenPattern) >= 3)
-                                    organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
+                                addFirstMidLast(organizedCodes, processedCodes, processedCodesLength, oddEvenPattern);
                             }
 
                             // Clear and re-initialize for the next iteration
@@ -1064,14 +1057,7 @@ public class BoyanMenu {
                 // Also prints the first and the last codes.
                 for (String oddEvenPattern : processedCodesLength.keySet()) {
                     if (!processedCodes.get(oddEvenPattern).isEmpty()) {
-                        if (processedCodesLength.get(oddEvenPattern) >= 2)
-                            organizedCodes.add(processedCodes.get(oddEvenPattern).get(0));
-
-                        organizedCodes.add(processedCodes.get(oddEvenPattern)
-                                .get(processedCodesLength.get(oddEvenPattern) / 2));
-
-                        if (processedCodesLength.get(oddEvenPattern) >= 3)
-                            organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
+                        addFirstMidLast(organizedCodes, processedCodes, processedCodesLength, oddEvenPattern);
                     }
                 }
             }
@@ -1134,6 +1120,22 @@ public class BoyanMenu {
             }
 
         }
+    }
+
+    private static void addFirstMidLast(
+            ArrayList<ClassifiedCodeSequence> organizedCodes,
+            Map<String, ArrayList<ClassifiedCodeSequence>> processedCodes,
+            Map<String, Integer> processedCodesLength,
+            String oddEvenPattern)
+    {
+        if (processedCodesLength.get(oddEvenPattern) >= 2)
+            organizedCodes.add(processedCodes.get(oddEvenPattern).get(0));
+
+        organizedCodes.add(processedCodes.get(oddEvenPattern)
+                .get(processedCodesLength.get(oddEvenPattern) / 2));
+
+        if (processedCodesLength.get(oddEvenPattern) >= 3)
+            organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
     }
 
     // a method for printing a set of codes. Can set print to false, which makes this function just write
