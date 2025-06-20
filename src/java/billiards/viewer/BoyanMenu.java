@@ -495,8 +495,8 @@ public class BoyanMenu {
 
             final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
-            System.out.println(String.format(
-                    "//------------------------- " + (printMid ? "Middle " : "") + "Vary %d shots at %d to %d moves -------------------------//", shots, min, max));
+            System.out.printf(
+                    "//------------------------- " + (printMid ? "Middle " : "") + "Vary %d shots at %d to %d moves -------------------------//%n", shots, min, max);
 
             final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
                     = new Task<MutableSortedSet<ClassifiedCodeSequence>>() {
@@ -1035,9 +1035,15 @@ public class BoyanMenu {
                             processedCodes.get(code.oddEvenPattern).add(code);
                         } else {
                             for (String oddEvenPattern : processedCodesLength.keySet()) {
-                                // Only add the middle one
+                                // Add the first, middle, and the last codes
+                                if (processedCodesLength.get(oddEvenPattern) >= 2)
+                                    organizedCodes.add(processedCodes.get(oddEvenPattern).get(0));
+
                                 organizedCodes.add(processedCodes.get(oddEvenPattern)
                                         .get(processedCodesLength.get(oddEvenPattern) / 2));
+
+                                if (processedCodesLength.get(oddEvenPattern) >= 3)
+                                    organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
                             }
 
                             // Clear and re-initialize for the next iteration
@@ -1053,9 +1059,16 @@ public class BoyanMenu {
 
                 // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
                 for (String oddEvenPattern : processedCodesLength.keySet()) {
-                    if (!processedCodes.get(oddEvenPattern).isEmpty())
+                    if (!processedCodes.get(oddEvenPattern).isEmpty()) {
+                        if (processedCodesLength.get(oddEvenPattern) >= 2)
+                            organizedCodes.add(processedCodes.get(oddEvenPattern).get(0));
+
                         organizedCodes.add(processedCodes.get(oddEvenPattern)
                                 .get(processedCodesLength.get(oddEvenPattern) / 2));
+
+                        if (processedCodesLength.get(oddEvenPattern) >= 3)
+                            organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
+                    }
                 }
             }
         }
