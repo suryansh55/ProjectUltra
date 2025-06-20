@@ -682,7 +682,9 @@ public class IterateToLimitWindow {
      * The method used to find an iteration pattern for a code sequence is not backed by any theorem; this is simply a
      * pattern discovery. Based on the code numbers of a given code sequence, all numbers greater than 2 are grouped
      * based on their nearest largest digit place value.
-     * For all-positive iteration patterns, A ratio is calculated between the largest and the smallest number groups:
+     * For all-positive iteration patterns, a double precision floating point is calculated between the smallest number
+     * of from largest number group and the largest number from the smallest number group. Then we obtain the ratio by
+     * rounding that floating point to the nearest integer:
      * - If the ratio is 2: This ratio is how many times we add 2 to all numbers belonging to the largest number group,
      * while only adding 2 once to all other numbers greater than 2.
      * - If the ratio is not 2: This ratio is how many times we add 2 to all numbers belonging to the smallest number
