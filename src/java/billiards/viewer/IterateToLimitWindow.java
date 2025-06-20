@@ -674,23 +674,25 @@ public class IterateToLimitWindow {
     }
 
     /**
-     * Jun 16, 2025.
+     * <b>Jun 16, 2025.</b> <br>
      * Deterministically finds an iteration pattern for all the code sequences that does not already have one in all the
      * text areas. For each code sequence, its line in the text area is unchanged if it already has an iteration
-     * pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence.
-     * Jun 18, 2025.
+     * pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence. <p>
+     * <b>Jun 18, 2025.</b> <br>
      * The method used to find an iteration pattern for a code sequence is not backed by any theorem; this is simply a
      * pattern discovery. Based on the code numbers of a given code sequence, all numbers greater than 2 are grouped
-     * based on their nearest largest digit place value.
+     * based on their nearest largest digit place value. <p>
      * For all-positive iteration patterns, a double precision floating point is calculated between the smallest number
      * of from largest number group and the largest number from the smallest number group. Then we obtain the ratio by
      * rounding that floating point to the nearest integer:
-     * - If the ratio is 2: This ratio is how many times we add 2 to all numbers belonging to the largest number group,
-     * while only adding 2 once to all other numbers greater than 2.
-     * - If the ratio is not 2: This ratio is how many times we add 2 to all numbers belonging to the smallest number
+     * <ul>
+     * <li> If the ratio is 2: This ratio is how many times we add 2 to all numbers belonging to the largest number
      * group, while only adding 2 once to all other numbers greater than 2.
+     * <li> If the ratio is not 2: This ratio is how many times we add 2 to all numbers belonging to the smallest number
+     * group, while only adding 2 once to all other numbers greater than 2.
+     * </ul>
      * For plus/minus patterns: all 2 once to all numbers belonging to the smallest or largest number group, and
-     * subtract 2 from all other numbers greater 2.
+     * subtract 2 from all other numbers greater 2.<p>
      * For triples, we calculate all-positive iteration patterns for all of its components.
      */
     private void findIterationPattern() {
