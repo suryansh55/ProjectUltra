@@ -117,6 +117,7 @@ public class IterateToLimitWindow {
         );
         polygonTextArea.setWrapText(true);
         polygonTextArea.setMaxHeight(130);
+        polygonTextArea.setFont(new Font("monospace", 16));
 
         stablesTextArea.setTooltip(getTooltip(
                 "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
@@ -124,6 +125,7 @@ public class IterateToLimitWindow {
                         "all-positive iteration pattern when you use the \"Find Pattern\" button."
         ));
         stablesTextArea.setWrapText(true);
+        stablesTextArea.setFont(new Font("monospace", 16));
 
         pmStablesTextArea.setTooltip(getTooltip(
                 "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
@@ -131,6 +133,7 @@ public class IterateToLimitWindow {
                         "plus-minus iteration pattern when you use the \"Find Pattern\" button."
         ));
         pmStablesTextArea.setWrapText(true);
+        pmStablesTextArea.setFont(new Font("monospace", 16));
 
         unstablesTextArea.setTooltip(getTooltip(
                 "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
@@ -138,6 +141,7 @@ public class IterateToLimitWindow {
                         "all-positive iteration pattern when you use the \"Find Pattern\" button."
         ));
         unstablesTextArea.setWrapText(true);
+        unstablesTextArea.setFont(new Font("monospace", 16));
 
         pmUnstablesTextArea.setTooltip(getTooltip(
                 "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
@@ -145,6 +149,7 @@ public class IterateToLimitWindow {
                         "plus-minus iteration pattern when you use the \"Find Pattern\" button."
         ));
         pmUnstablesTextArea.setWrapText(true);
+        pmUnstablesTextArea.setFont(new Font("monospace", 16));
 
         triplesTextArea.setTooltip(getTooltip(
                 "Enter each triple - iteration pattern pair in a separate line, with a semicolon " +
@@ -152,6 +157,7 @@ public class IterateToLimitWindow {
                         "separated by a comma."
         ));
         triplesTextArea.setWrapText(true);
+        triplesTextArea.setFont(new Font("monospace", 16));
 
         textAreaMap.put("Polygon", polygonTextArea);
         textAreaMap.put("+ Stables", stablesTextArea);
@@ -249,7 +255,7 @@ public class IterateToLimitWindow {
         // Ignore comments and empty lines
         if (trimmedCodePattern.startsWith("//") || trimmedCodePattern.isEmpty()) return null;
 
-        String[] codeAndPattern = trimmedCodePattern.split(";");
+        String[] codeAndPattern = trimmedCodePattern.split("&");
         codeAndPattern[0] = Utils.trimCodeLine(codeAndPattern[0]);
 
         // The line must be the code and pattern separated by a semicolon
@@ -625,7 +631,7 @@ public class IterateToLimitWindow {
         if (codeComponents.length == 3) {
             triplesTextArea.setText(
                     triplesTextArea.getText().trim() + "\n" +
-                            code.trim() + ";" + pattern.trim()
+                            code.trim() + " & " + pattern.trim()
             );
         }
 
@@ -638,7 +644,7 @@ public class IterateToLimitWindow {
                 if (either.isRight()) {
                     ClassifiedCodeSequence codeSequence = either.get();
                     String coverCodeString = Utils.getCoverCodeString(codeSequence);
-                    String stringToAdd = coverCodeString + ";" + pattern.trim();
+                    String stringToAdd = coverCodeString + " & " + pattern.trim();
 
                     if (codeSequence.stable) {
                         if (!stablesTextArea.getText().trim().isEmpty())
@@ -710,7 +716,7 @@ public class IterateToLimitWindow {
             for (String line : content.split("\n")) {
                 if (line.trim().isEmpty()) continue;
 
-                String[] codeAndPattern = line.split(";");
+                String[] codeAndPattern = line.split("&");
 
                 if (codeAndPattern.length > 1) {
                     newContent.append(line).append("\n");
@@ -778,7 +784,7 @@ public class IterateToLimitWindow {
                     if (k < codeSections.length - 1) iterationPattern.append(",");
                 }
 
-                newContent.append(line).append(";").append(iterationPattern.toString().trim()).append("\n");
+                newContent.append(line).append(" & ").append(iterationPattern.toString().trim()).append("\n");
             }
 
             textArea.setText(newContent.toString().trim());  // Trims the trailing newline character
