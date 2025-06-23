@@ -271,4 +271,12 @@ public final class VaryWindowL {
     public boolean getFirstLastSelected() {
         return this.firstLastBox.isSelected();
     }
+
+    public boolean getAddToAllPositiveSelected() {
+        return this.addToAllPositiveCB.isSelected();
+    }
+
+    public boolean getAddToPlusMinusSelected() {
+        return this.addToPlusMinusCB.isSelected();
+    }
 }
