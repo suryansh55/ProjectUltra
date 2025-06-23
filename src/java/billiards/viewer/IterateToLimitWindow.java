@@ -680,7 +680,7 @@ public class IterateToLimitWindow {
         );
     }
 
-    public String getIterationPattern(String codeString, boolean allPositive) {
+    public static String getIterationPattern(String codeString, boolean allPositive) {
         String[] codeSections = Utils.trimCodeLine(codeString).split(",");
         StringBuilder iterationPattern = new StringBuilder();
 
@@ -800,7 +800,7 @@ public class IterateToLimitWindow {
 
     // ChatGPT, Jun 17, 2025.
     // Round to the nearest largest digit place.
-    private int roundToLargestPlace(int number) {
+    private static int roundToLargestPlace(int number) {
         if (number == 0) return 0;
 
         int abs = Math.abs(number);
