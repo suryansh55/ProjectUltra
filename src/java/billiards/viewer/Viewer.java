@@ -4554,7 +4554,9 @@ public final class Viewer {
 
                         addToOnScreenSequences(storage, color);
 
-                        System.out.println(storage.classCodeSeq);
+                        // Zhao Yu Li, Jun 23, 2025.
+                        // Removed printing to console to save time
+                        // System.out.println(storage.classCodeSeq);
 
                         // Zhao Yu Li, May 09, 2025.
                         // Automatically add stables to cover when loading from DB.
