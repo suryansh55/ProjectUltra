@@ -76,6 +76,8 @@ public final class VaryWindowL {
     public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
+    private final CheckBox addToAllPositiveCB = new CheckBox();
+    private final CheckBox addToPlusMinusCB = new CheckBox();
 
     private Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
@@ -182,16 +184,30 @@ public final class VaryWindowL {
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
         loadHBox.getChildren().addAll(loadButton, drawCB);
         overrideHBox.getChildren().addAll(overrideBox);
-        controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
+        controlVBox.getChildren().addAll(loadHBox, overrideBox);
 
-        if (middle) controlVBox.getChildren().add(firstLastBox);
+        addToAllPositiveCB.setIndeterminate(false);
+        addToAllPositiveCB.setAllowIndeterminate(false);
+        addToAllPositiveCB.setSelected(false);
+        addToAllPositiveCB.setText("Add to all-positive");
+
+        addToPlusMinusCB.setIndeterminate(false);
+        addToPlusMinusCB.setAllowIndeterminate(false);
+        addToPlusMinusCB.setSelected(false);
+        addToPlusMinusCB.setText("Add to plus-minus");
+
+        final HBox controlHBox = new HBox(10, autoCoverBox, addToAllPositiveCB, addToPlusMinusCB);
+
+        if (middle) controlHBox.getChildren().add(1, firstLastBox);
 
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
         bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
-        root.getChildren().addAll(instructHBox, text, bottomHBox);
+        final VBox bottomVBox = new VBox(10, bottomHBox, controlHBox);
+
+        root.getChildren().addAll(instructHBox, text, bottomVBox);
         root.setSpacing(10);
         root.setPadding(new Insets(10));
 
