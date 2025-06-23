@@ -626,6 +626,10 @@ public class IterateToLimitWindow {
     }
 
     public void addToContent(String code, String pattern) {
+        addToContent(code, pattern, true);
+    }
+
+    public void addToContent(String code, String pattern, boolean allPositive) {
         String[] codeComponents = code.trim().split(",");
 
         if (codeComponents.length == 3) {
@@ -646,17 +650,14 @@ public class IterateToLimitWindow {
                     String coverCodeString = Utils.getCoverCodeString(codeSequence);
                     String stringToAdd = coverCodeString + " & " + pattern.trim();
 
-                    if (codeSequence.stable) {
-                        if (!stablesTextArea.getText().trim().isEmpty())
-                            stringToAdd = stablesTextArea.getText().trim() + "\n" + stringToAdd;
+                    final TextArea textArea;
 
-                        stablesTextArea.setText(stringToAdd);
-                    } else {
-                        if (!unstablesTextArea.getText().trim().isEmpty())
-                            stringToAdd = unstablesTextArea.getText().trim() + "\n" + stringToAdd;
+                    if (codeSequence.stable) textArea = allPositive ? stablesTextArea : pmStablesTextArea;
+                    else textArea = allPositive ? unstablesTextArea : pmUnstablesTextArea;
 
-                        unstablesTextArea.setText(stringToAdd);
-                    }
+                    if (!textArea.getText().trim().isEmpty())
+                        stringToAdd = textArea.getText().trim() + "\n" + stringToAdd;
+                    textArea.setText(stringToAdd);
                 }
             }
         }
@@ -677,6 +678,72 @@ public class IterateToLimitWindow {
                 iterationPattern,
                 "garbage"
         );
+    }
+
+    public String getIterationPattern(String codeString, boolean allPositive) {
+        String[] codeSections = Utils.trimCodeLine(codeString).split(",");
+        StringBuilder iterationPattern = new StringBuilder();
+
+        for (int k = 0; k < codeSections.length; k++) {
+            String code = codeSections[k].trim();
+
+            Optional<ImmutableIntList> codeNumbers = Utils.splitString(code);
+
+            if (!codeNumbers.isPresent()) continue;
+
+            Map<Integer, List<Integer>> grouped = new TreeMap<>();
+            int[] codeNumbersArray = codeNumbers.get().toArray();
+
+            for (Integer codeNumber : codeNumbersArray) {
+                if (codeNumber < 3) continue;
+
+                int nearestLargestPlace = roundToLargestPlace(codeNumber);
+
+                grouped.computeIfAbsent(nearestLargestPlace, k1 -> new ArrayList<>());
+                grouped.get(nearestLargestPlace).add(codeNumber);
+            }
+
+            List<Integer> groupList = new ArrayList<>(grouped.keySet());  // Preserves ascending order of keys from tree map...
+            int minGroup = groupList.get(0);  // so the first element is the smallest...
+            int maxGroup = groupList.get(groupList.size() - 1);  // and the last element is the largest
+
+
+            if (allPositive) {  // All-positive iteration pattern
+                int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
+                int min = grouped.get(minGroup).stream().max(Integer::compareTo).orElse(0);
+                long ratio = Math.min(Math.round((double) max / min), 4);
+
+                for (int i = 0; i < codeNumbersArray.length; i++) {
+                    int codeNumber = codeNumbersArray[i];
+
+                    if (codeNumber < 3) continue;
+
+                    if (ratio == 2) {
+                        if (roundToLargestPlace(codeNumber) == maxGroup)
+                            for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                        else iterationPattern.append(i + 1).append(" ");
+                    } else {
+                        if (roundToLargestPlace(codeNumber) == minGroup) iterationPattern.append(i + 1).append(" ");
+                        else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
+                    }
+                }
+            } else {  // Plus-minus iteration pattern
+                for (int i = 0; i < codeNumbersArray.length; i++) {
+                    int codeNumber = codeNumbersArray[i];
+
+                    if (codeNumber < 3) continue;
+
+                    int group = roundToLargestPlace(codeNumber);
+                    int index = group == minGroup || group == maxGroup ? i + 1 : -(i + 1);
+
+                    iterationPattern.append(index).append(" ");
+                }
+            }
+
+            if (k < codeSections.length - 1) iterationPattern.append(",");
+        }
+
+        return iterationPattern.toString().trim();
     }
 
     /**
@@ -723,68 +790,7 @@ public class IterateToLimitWindow {
                     continue;
                 }
 
-                String[] codeSections = Utils.trimCodeLine(codeAndPattern[0]).split(",");
-                StringBuilder iterationPattern = new StringBuilder();
-
-                for (int k = 0; k < codeSections.length; k++) {
-                    String code = codeSections[k].trim();
-
-                    Optional<ImmutableIntList> codeNumbers = Utils.splitString(code);
-
-                    if (!codeNumbers.isPresent()) continue;
-
-                    Map<Integer, List<Integer>> grouped = new TreeMap<>();
-                    int[] codeNumbersArray = codeNumbers.get().toArray();
-
-                    for (Integer codeNumber : codeNumbersArray) {
-                        if (codeNumber < 3) continue;
-
-                        int nearestLargestPlace = roundToLargestPlace(codeNumber);
-
-                        grouped.computeIfAbsent(nearestLargestPlace, k1 -> new ArrayList<>());
-                        grouped.get(nearestLargestPlace).add(codeNumber);
-                    }
-
-                    List<Integer> groupList = new ArrayList<>(grouped.keySet());  // Preserves ascending order of keys from tree map...
-                    int minGroup = groupList.get(0);  // so the first element is the smallest...
-                    int maxGroup = groupList.get(groupList.size() - 1);  // and the last element is the largest
-
-                    if (textAreaIndex <= 3) {
-                        int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
-                        int min = grouped.get(minGroup).stream().max(Integer::compareTo).orElse(0);
-                        long ratio = Math.min(Math.round((double) max / min), 4);
-
-                        for (int i = 0; i < codeNumbersArray.length; i++) {
-                            int codeNumber = codeNumbersArray[i];
-
-                            if (codeNumber < 3) continue;
-
-                            if (ratio == 2) {
-                                if (roundToLargestPlace(codeNumber) == maxGroup)
-                                    for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
-                                else iterationPattern.append(i + 1).append(" ");
-                            } else {
-                                if (roundToLargestPlace(codeNumber) == minGroup) iterationPattern.append(i + 1).append(" ");
-                                else for (int j = 0; j < ratio; j++) iterationPattern.append(i + 1).append(" ");
-                            }
-                        }
-                    } else {
-                        for (int i = 0; i < codeNumbersArray.length; i++) {
-                            int codeNumber = codeNumbersArray[i];
-
-                            if (codeNumber < 3) continue;
-
-                            int group = roundToLargestPlace(codeNumber);
-                            int index = group == minGroup || group == maxGroup ? i + 1 : -(i + 1);
-
-                            iterationPattern.append(index).append(" ");
-                        }
-                    }
-
-                    if (k < codeSections.length - 1) iterationPattern.append(",");
-                }
-
-                newContent.append(line).append(" & ").append(iterationPattern.toString().trim()).append("\n");
+                newContent.append(line).append(" & ").append(getIterationPattern(codeAndPattern[0], textAreaIndex <= 3)).append("\n");
             }
 
             textArea.setText(newContent.toString().trim());  // Trims the trailing newline character
