@@ -3,6 +3,7 @@ package billiards.utils;
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeType;
 import billiards.viewer.Utils;
+import billiards.viewer.VaryLTask;
 
 import java.util.*;
 
@@ -34,15 +35,8 @@ public class PrintMid {
                 currentLength = code.codeLength;
             }
 
-            if (code.codeLength == currentLength) {
-                processedCodesLength.get(code.codeType).compute(code.oddEvenPattern,
-                        (k, lengthCount) -> (lengthCount == null) ? 1 : lengthCount + 1);
-
-                if (!processedCodes.get(code.codeType).containsKey(code.oddEvenPattern)) {
-                    processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
-                }
-                processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
-            } else {
+            if (code.codeLength == currentLength) VaryLTask.addProcessedCode(processedCodes, processedCodesLength, code);
+            else {
                 for (CodeType codeType : codeTypes) {
                     if (i <= 0) break;
 
