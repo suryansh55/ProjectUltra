@@ -540,6 +540,9 @@ public final class Viewer {
 
     final CoverWindow coverWindow;
 
+    VaryWindowL varyWindow =  null;
+    VaryWindowL middleVaryWindow = null;
+
     public Viewer(final Stage primaryStage, final String version, final ExecutorService executor,
                   final ConnectionPool pool, final String dbName) {
         Viewer.dbname=dbName;
@@ -575,8 +578,6 @@ public final class Viewer {
         final CoverWindow4 coverWindow4 = new CoverWindow4(
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover2", executor));
-        final VaryWindowL varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt", false);
-        final VaryWindowL middleVaryWindow = new VaryWindowL("MiddleVaryL", "MVaryL", tmpDir + "MiddleVaryPoints4.txt", tmpDir + "MiddleVaryLBounds.txt", true);
         final AutoPolyVaryLoad autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
         final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
 
@@ -1866,6 +1867,8 @@ public final class Viewer {
                 alert.showAndWait();
             }
             else {
+                if (varyWindow == null) varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt", false);
+
                 final String x = textXLockField.getText();
                 final String y = textYLockField.getText();
 
@@ -1919,6 +1922,8 @@ public final class Viewer {
                 alert.showAndWait();
             }
             else {
+                if (middleVaryWindow == null) middleVaryWindow = new VaryWindowL("MiddleVaryL", "MVaryL", tmpDir + "MiddleVaryPoints4.txt", tmpDir + "MiddleVaryLBounds.txt", true);
+
                 final String x = textXLockField.getText();
                 final String y = textYLockField.getText();
 
@@ -4265,11 +4270,32 @@ public final class Viewer {
                            final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
                            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
                            final boolean printMid, final boolean firstLast) {
+        // Zhao Yu Li, Jun 24, 2025.
+        // Whether to add results to the IterateToLimitWindow Cover
+        boolean addToAllPositive = printMid ? middleVaryWindow.getAddToAllPositiveSelected() : varyWindow.getAddToAllPositiveSelected();
+        boolean addToPlusMinus = printMid ? middleVaryWindow.getAddToPlusMinusSelected() : varyWindow.getAddToPlusMinusSelected();
+
+        if ((addToAllPositive || addToPlusMinus) && iterateToLimitWindow == null) iterateToLimitWindow = new IterateToLimitWindow(pool);
 
         List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
         codeList.replaceAll(Utils::tripleTrimmer);
         // Create the task
-        final VaryLTask task = new VaryLTask(Array.ofAll(points), codeList, boyanMenu, Array.ofAll(max), pool, overrideSS, draw, maxPrint, storageExecutor, shotExecutor, printMid, firstLast);
+        final VaryLTask task = new VaryLTask(
+                Array.ofAll(points),
+                codeList, boyanMenu,
+                Array.ofAll(max),
+                pool,
+                overrideSS,
+                draw,
+                maxPrint,
+                storageExecutor,
+                shotExecutor,
+                printMid,
+                firstLast,
+                addToAllPositive,
+                addToPlusMinus,
+                iterateToLimitWindow
+        );
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
