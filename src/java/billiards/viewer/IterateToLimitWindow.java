@@ -33,11 +33,17 @@ import java.util.concurrent.Future;
 
 /**
  * Zhao Yu Li, Jun 06, 2025.
+ * <p>
  * Iterate to the limit. Given a ConvexPolygon, for each code sequence (single or triple) - iteration pattern pair in a
  * list, we iterate forward (addition) and backward (subtraction) until one of the following two conditions occurred:
- *  1. The number of iterations reached a user specified limit.
- *  2. New code sequences produced from the iteration no longer intersect with the user specified polygon.
+ * </p>
+ * <ol>
+ *     <li>The number of iterations reached a user specified limit.</li>
+ *     <li>New code sequences produced from the iteration no longer intersect with the user specified polygon.</li>
+ * </ol>
+ * <p>
  * All produced codes are (optionally) drawn on the screen and added to the cover.
+ * </p>
  */
 public class IterateToLimitWindow {
     private final String contentFileName = "iterToLimit.txt";
@@ -381,7 +387,7 @@ public class IterateToLimitWindow {
                 if (classCodeSequence.isRight()) classCodeSequences.add(classCodeSequence.get());
             }
 
-            // This code sequence is invalid, we can assume the rest of the code sequences in the iteration will also be
+            // This code sequence is invalid; we can assume the rest of the code sequences in the iteration will also be
             // invalid.
             if (classCodeSequences.size() != codeNumbersList.size()) break;
 
@@ -392,7 +398,7 @@ public class IterateToLimitWindow {
 
             ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(classCodeSequences, pool);
 
-            // ClassifiedCodeSequence reduced to empty set, we have possibly reached the limit.
+            // ClassifiedCodeSequence reduced to an empty set, we have possibly reached the limit.
             if (storages.size() != classCodeSequences.size()) limitNotReached = false;
 
             int numOfIntersects = 0;
@@ -445,7 +451,7 @@ public class IterateToLimitWindow {
     /**
      * Checks all the inputs from the window and runs the iterate-to-limit task for all the code sequence - iteration
      * pattern pairs.
-     * @return True if user input have no errors (the task is running); false if there are errors in the user input.
+     * @return True if user input has no errors (the task is running); false if there are errors in the user input.
      */
     private boolean run() {
         if (running) {
@@ -629,6 +635,16 @@ public class IterateToLimitWindow {
         addToContent(code, pattern, true);
     }
 
+    /**
+     * <b>Jun 24, 2025</b>
+     * <p>
+     *     Adds the CODE sequence - iteration PATTERN pair to the appropriate text area. If the pair to add is a triple,
+     *     then ALLPOSITIVE is ignored.
+     * </p>
+     * @param code The code sequence to add.
+     * @param pattern The corresponding iteration pattern of CODE.
+     * @param allPositive If true, add to the appropriate (stable vs. unstable) all-positive text area; else, add the plus/minus text area.
+     */
     public void addToContent(String code, String pattern, boolean allPositive) {
         String[] codeComponents = code.trim().split(",");
 
@@ -680,9 +696,37 @@ public class IterateToLimitWindow {
         );
     }
 
+    /**
+     * <p>Finds either an all-positive or plus/minus iteration pattern for CODESTRING.</p>
+     * <b>Jun 18, 2025.</b>
+     * <p>
+     * The method used to find an iteration pattern for a code sequence is not backed by any theorem; this is simply a
+     * pattern discovery. Based on the code numbers of a given code sequence, all numbers greater than 2 are grouped
+     * based on their nearest largest digit place value.
+     * </p>
+     * <p>
+     * For all-positive iteration patterns, a double precision floating point is calculated between the smallest number
+     * of from largest number groups and the largest number from the smallest number group. Then we get the ratio by
+     * rounding that floating point to the nearest integer:
+     * </p>
+     * <ul>
+     * <li> If the ratio is 2, this ratio is how many times we add 2 to all numbers belonging to the largest number
+     * group, while only adding 2 once to all other numbers greater than 2.
+     * <li> If the ratio is not 2, this ratio is how many times we add 2 to all numbers belonging to the smallest number
+     * group, while only adding 2 once to all other numbers greater than 2.
+     * </ul>
+     * <p>
+     * For plus/minus patterns: add 2 once to all numbers belonging to the smallest or largest number group, and
+     * subtract 2 from all other numbers greater 2.
+     * </p>
+     * @param codeString The code sequence to find an iteration pattern for.
+     * @param allPositive If true, find an all-positive pattern; else, find a plus/minus pattern.
+     * @return The iteration pattern as a string, or an empty string if no valid iteration pattern can be found.
+     */
     public static String getIterationPattern(String codeString, boolean allPositive) {
         String[] codeSections = Utils.trimCodeLine(codeString).split(",");
         StringBuilder iterationPattern = new StringBuilder();
+        int patternsCreated = 0;  // Keeps track of whether the number of iteration patterns found is the same as the number of code sections.
 
         for (int k = 0; k < codeSections.length; k++) {
             String code = codeSections[k].trim();
@@ -703,10 +747,16 @@ public class IterateToLimitWindow {
                 grouped.get(nearestLargestPlace).add(codeNumber);
             }
 
-            List<Integer> groupList = new ArrayList<>(grouped.keySet());  // Preserves ascending order of keys from tree map...
+            List<Integer> groupList = new ArrayList<>(grouped.keySet());  // Preserves ascending order of keys from the tree map...
+
+            // We may fail to find number groups or very small code sequences (e.g., ones that only contain 1's and 2's)
+            if (groupList.isEmpty()) {
+                // System.out.println("Skipping " + codeString + " because its code numbers are too small to form number groups.");
+                continue;
+            }
+
             int minGroup = groupList.get(0);  // so the first element is the smallest...
             int maxGroup = groupList.get(groupList.size() - 1);  // and the last element is the largest
-
 
             if (allPositive) {  // All-positive iteration pattern
                 int max = grouped.get(maxGroup).stream().min(Integer::compareTo).orElse(0);
@@ -741,32 +791,24 @@ public class IterateToLimitWindow {
             }
 
             if (k < codeSections.length - 1) iterationPattern.append(",");
+            patternsCreated++;
         }
 
-        return iterationPattern.toString().trim();
+        return patternsCreated == codeSections.length ? iterationPattern.toString().trim() : "";
     }
 
     /**
-     * <b>Jun 16, 2025.</b> <br>
-     * Deterministically finds an iteration pattern for all the code sequences that does not already have one in all the
-     * text areas. For each code sequence, its line in the text area is unchanged if it already has an iteration
-     * pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence. <p>
-     * <b>Jun 18, 2025.</b> <br>
-     * The method used to find an iteration pattern for a code sequence is not backed by any theorem; this is simply a
-     * pattern discovery. Based on the code numbers of a given code sequence, all numbers greater than 2 are grouped
-     * based on their nearest largest digit place value. <p>
-     * For all-positive iteration patterns, a double precision floating point is calculated between the smallest number
-     * of from largest number group and the largest number from the smallest number group. Then we obtain the ratio by
-     * rounding that floating point to the nearest integer:
+     * <b>Jun 16, 2025.</b>
+     * <p>
+     *     Deterministically finds an iteration pattern for all the code sequences that does not already have one in all
+     *     the text areas. For each code sequence, its line in the text area is unchanged if it already has an iteration
+     *     pattern. Otherwise, the iteration pattern will be appended at the end of the code sequence.
+     * </p>
      * <ul>
-     * <li> If the ratio is 2: This ratio is how many times we add 2 to all numbers belonging to the largest number
-     * group, while only adding 2 once to all other numbers greater than 2.
-     * <li> If the ratio is not 2: This ratio is how many times we add 2 to all numbers belonging to the smallest number
-     * group, while only adding 2 once to all other numbers greater than 2.
+     *     <li>Code sequences in the all-positive text areas are given all-positive iteration patterns.</li>
+     *     <li>Code sequences in the +/- text areas are given plus/minus iteration patterns.</li>
+     *     <li>All components of a triple are given all-positive iteration patterns.</li>
      * </ul>
-     * For plus/minus patterns: all 2 once to all numbers belonging to the smallest or largest number group, and
-     * subtract 2 from all other numbers greater 2.<p>
-     * For triples, we calculate all-positive iteration patterns for all of its components.
      */
     private void findIterationPattern() {
         TextArea[] textAreas = {stablesTextArea, unstablesTextArea, triplesTextArea, pmStablesTextArea, pmUnstablesTextArea};
@@ -790,7 +832,20 @@ public class IterateToLimitWindow {
                     continue;
                 }
 
-                newContent.append(line).append(" & ").append(getIterationPattern(codeAndPattern[0], textAreaIndex <= 3)).append("\n");
+                newContent.append(line);
+
+                final String iterationPattern = getIterationPattern(codeAndPattern[0], textAreaIndex <= 3);
+
+                // Zhao Yu Li, Jun 24, 2025.
+                // Post a warning for code sequences that we cannot find a valid iteration pattern for.
+                if (iterationPattern.isEmpty()) {
+                    System.out.println(
+                            "WARNING: We cannot find a valid iteration pattern for " + codeAndPattern[0] + "."
+                    );
+                }
+                else newContent.append(" & ").append(iterationPattern);
+
+                newContent.append("\n");
             }
 
             textArea.setText(newContent.toString().trim());  // Trims the trailing newline character
