@@ -35,7 +35,7 @@ If only the final result is required, you can just call get() on this task after
  * */
 public final class VaryLTask extends Task<ObservableList<Storage>> {
     // Expose task property representing partial results
-    private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
+    private final ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
             new ReadOnlyObjectWrapper<>(
                     this, 
                     "partialResults",
@@ -60,14 +60,16 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     private final ExecutorService shotExecutor;
     private final boolean printMid;
     private final boolean firstLast;
-    //private final ImageView screenImage;
-    //private final PixelRadianMap screenMap; 
+    private final boolean addToAllPositive;
+    private final boolean addToPlusMinus;
+    private final IterateToLimitWindow iterateToLimitWindow;
 
     // Constructor takes a list of points to vary at
     public VaryLTask(
         final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan, 
         final Array<Integer> max, final ConnectionPool pool, final boolean override, final boolean draw,
-        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo, final boolean printMid, final boolean firstLast) {
+        final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo, final boolean printMid,
+        final boolean firstLast, boolean addToAllPositive, boolean addToPlusMinus, IterateToLimitWindow iterateToLimitWindow) {
         this.coordList = points; // Points are in degrees
         this.coverCodes.addAll(coverCodes);
         this.boyanMenu = boyan;
@@ -85,6 +87,12 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         this.shotExecutor = eTwo;
         this.printMid = printMid;
         this.firstLast = firstLast;
+
+        // Zhao Yu Li, Jun 24, 2025.
+        // Variables for adding content to the IterateToLimitWindow Cover
+        this.addToAllPositive = addToAllPositive;
+        this.addToPlusMinus = addToPlusMinus;
+        this.iterateToLimitWindow = iterateToLimitWindow;
     }
 
     @Override
@@ -121,34 +129,30 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
             }
             // We draw the first i codes we found
 			int i = this.maxPrint == 0 ? localCodes.size() : this.maxPrint;
-            int codeNum = 1;
+
+            // Zhao Yu Li, Jun 24, 2025.
+            // Changed from a primitive integer to an AtomicInteger so it can be incremented inside functions
+            AtomicInteger codeNum = new AtomicInteger(1);
+
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
             totalCodes += localCodes.size();
             if (!printMid) {
                 for(ClassifiedCodeSequence classCodeSeq: localCodes) {
                     if(i <= 0) break;
                     --i;
-                    System.out.println(Utils.standard(classCodeSeq, codeNum++));
+
+                    System.out.println(Utils.standard(classCodeSeq, codeNum.getAndIncrement()));
+
+                    addToIterToLimitCover(classCodeSeq.toString());
+
                     if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
                         this.updateProgress(progress.incrementAndGet(), todo);
                         continue;
                     }
-                    usedCodes.add(classCodeSeq);
-                    // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
-                    futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
-                                @Override
-                                public Either<String, Storage> call() {
-                                    Either<String, Storage> result = loadStorage(classCodeSeq);
-                                    VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
-                                    return result;
-                                }
 
-                                @Override
-                                public int getPriority() {
-                                    return classCodeSeq.length();
-                                }
-                            })
-                    );
+                    // Zhao Yu Li, Jun 24, 2025.
+                    // Replaced code block with function call
+                    loadStorage(usedCodes, todo, futures, progress, classCodeSeq);
                 }
             } else {
                 // Zhao Yu Li, May 06, 2025.
@@ -171,71 +175,31 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                         currentLength = code.codeLength;
                     }
 
-                    if (code.codeLength == currentLength) {
-                        processedCodesLength.get(code.codeType).compute(code.oddEvenPattern,
-                                (k, lengthCount) -> (lengthCount == null) ? 1 : lengthCount + 1);
-
-                        if (!processedCodes.get(code.codeType).containsKey(code.oddEvenPattern)) {
-                            processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
-                        }
-                        processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
-                    } else {
+                    // Zhao Yu Li, Jun 24, 2025.
+                    // Replaced code block with function call
+                    if (code.codeLength == currentLength) addProcessedCode(processedCodes, processedCodesLength, code);
+                    else {
                         for (CodeType codeType : codeTypes) {
                             if (i <= 0) break;
 
                             for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
                                 if (i <= 0) break;
 
-                                // Only print the middle one
-                                final ClassifiedCodeSequence classCodeSeq = processedCodes.get(codeType)
-                                        .get(oddEvenPattern)
-                                        .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
-
                                 --i;
-
-                                if (firstLast) {
-                                    if (processedCodesLength.get(codeType).get(oddEvenPattern) >= 2) {
-                                        System.out.println(Utils.standard(
-                                                processedCodes.get(codeType)
-                                                        .get(oddEvenPattern)
-                                                        .get(0), codeNum++));
-                                    }
-                                }
-
-                                System.out.println(Utils.standard(classCodeSeq, codeNum++));
-
-                                if (firstLast) {
-                                    if (processedCodesLength.get(codeType).get(oddEvenPattern) >= 3) {
-                                        System.out.println(Utils.standard(
-                                                processedCodes.get(codeType)
-                                                        .get(oddEvenPattern)
-                                                        .get(processedCodesLength.get(codeType).get(oddEvenPattern) - 1), codeNum++));
-                                    }
-                                }
-
-                                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
-                                    this.updateProgress(progress.incrementAndGet(), todo);
-                                    continue;
-                                }
-                                usedCodes.add(classCodeSeq);
-                                // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
-                                futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
-                                            @Override
-                                            public Either<String, Storage> call() {
-                                                Either<String, Storage> result = loadStorage(classCodeSeq);
-                                                VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
-                                                return result;
-                                            }
-
-                                            @Override
-                                            public int getPriority() {
-                                                return classCodeSeq.length();
-                                            }
-                                        })
+                                printAndLoadStorage(
+                                        processedCodes,
+                                        processedCodesLength,
+                                        codeType,
+                                        oddEvenPattern,
+                                        codeNum,
+                                        usedCodes,
+                                        todo,
+                                        futures,
+                                        progress
                                 );
                             }
 
-                            // Clear and re-initialize for the next iteration
+                            // Clear and re-initialize the maps for the next iteration
                             processedCodes.get(codeType).clear();
                             processedCodesLength.get(codeType).clear();
                         }
@@ -254,35 +218,20 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                     for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
                         if (i <= 0) break;
 
+                        // Zhao Yu Li, Jun 24, 2025.
+                        // Replaced code block with function call
                         if (!processedCodes.get(codeType).get(oddEvenPattern).isEmpty()) {
-                            ClassifiedCodeSequence codeToPrint = processedCodes.get(codeType)
-                                    .get(oddEvenPattern)
-                                    .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
                             --i;
-                            System.out.println(Utils.standard(codeToPrint, codeNum++));
-
-                            // Zhao Yu Li, May 16, 2025.
-                            // This is needed so that the last found code will be drawn and printed in the list of
-                            // drawn codes
-                            if(usedCodes.contains(codeToPrint) || !this.draw) { // Update in the case of not drawing this code
-                                this.updateProgress(progress.incrementAndGet(), todo);
-                                continue;
-                            }
-                            usedCodes.add(codeToPrint);
-                            // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
-                            futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
-                                        @Override
-                                        public Either<String, Storage> call() {
-                                            Either<String, Storage> result = loadStorage(codeToPrint);
-                                            VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
-                                            return result;
-                                        }
-
-                                        @Override
-                                        public int getPriority() {
-                                            return codeToPrint.length();
-                                        }
-                                    })
+                            printAndLoadStorage(
+                                    processedCodes,
+                                    processedCodesLength,
+                                    codeType,
+                                    oddEvenPattern,
+                                    codeNum,
+                                    usedCodes,
+                                    todo,
+                                    futures,
+                                    progress
                             );
                         }
                     }
@@ -308,11 +257,28 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
             checkStatus(future, except);
         }
 
-        if (except.isPresent()) {
-            throw new RuntimeException(except.get());
-        }
-
         return this.partialResults.get();
+    }
+
+    /**
+     * Adds <code>code</code> to the appropriate (code type, odd-even pattern) group in <code>processedCodes</code>
+     * and increments the size of that group.
+     * @param processedCodes Stores all (code type, odd-even pattern) groups. All codes are of the same code length.
+     * @param processedCodesLength Stores the size of each (code type, odd-even pattern group) in <code>processedCodes</code>.
+     * @param code The <code>ClassifiedCodeSequence</code> to add.
+     */
+    public static void addProcessedCode(
+            Map<CodeType, Map<String, ArrayList<ClassifiedCodeSequence>>> processedCodes,
+            Map<CodeType, Map<String, Integer>> processedCodesLength,
+            ClassifiedCodeSequence code
+    ) {
+        processedCodesLength.get(code.codeType).compute(code.oddEvenPattern,
+                (k, lengthCount) -> (lengthCount == null) ? 1 : lengthCount + 1);
+
+        if (!processedCodes.get(code.codeType).containsKey(code.oddEvenPattern)) {
+            processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
+        }
+        processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
     }
 
     // Cancel or detect execution errors; This is where we do checking to see if we were cancelled
@@ -325,12 +291,6 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         } else {
             try {
                 future.get();
-                /*
-                final Either<String, Storage> either = future.get();
-                if (either.isLeft()) { // Print things like empty sets 
-                    if(!either.left().get().equals("")) System.out.println(either.left().get());
-                }
-                */
             } catch (final ExecutionException e) {
                 // One of the futures threw an exception during its calculation,
                 // so we need to cancel the rest of the futures
@@ -400,5 +360,168 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         return this.partialResults.getReadOnlyProperty();
     }
 
-    
+    /**
+     * Finds an all-positive and a plus/minus iteration pattern for <code>classCodeSeq</code> and add the pairs to the
+     * appropriate text areas of the <code>IterateToLimitWindow</code> instance that was passed as an argument at the
+     * construction of this task.
+     * @param classCodeSeq The <code>ClassifiedCodeSequence</code> to add to the <code>IterateToLimitWindow</code> Cover
+     */
+    private void addToIterToLimitCover(String classCodeSeq) {
+        if (addToAllPositive) {
+            String iterationPattern = IterateToLimitWindow.getIterationPattern(classCodeSeq, true);
+
+            if (iterationPattern.isEmpty()) {
+                System.out.println("Skip adding "
+                        + classCodeSeq
+                        + " to the IterateToLimitWindow Cover (all-positive) because we cannot find a valid iteration pattern");
+            } else iterateToLimitWindow.addToContent(classCodeSeq, iterationPattern, true);
+        }
+
+        if (addToPlusMinus) {
+            String iterationPattern = IterateToLimitWindow.getIterationPattern(classCodeSeq, false);
+
+            if (iterationPattern.isEmpty()) {
+                System.out.println("Skip adding "
+                        + classCodeSeq
+                        + " to the IterateToLimitWindow Cover (+/-) because we cannot find a valid iteration pattern");
+            } else iterateToLimitWindow.addToContent(classCodeSeq, iterationPattern, false);
+        }
+    }
+
+    /**
+     * <p>
+     *     Prints the middle code of the (<code>codeType</code>, code length, <code>oddEvenPattern</code>) group to the
+     *     terminal. Optionally also prints the first and last of each group.
+     * </p>
+     * <p>
+     *     <b>NOTE</b>: Assumes all <code>ClassifiedCodeSequence</code> in <code>processedCodes</code> are of the same
+     *     code length.
+     * </p>
+     * @param processedCodes Stores all (code type, odd-even pattern) groups. All codes are of the same code length.
+     * @param processedCodesLength Stores the size of each (code type, odd-even pattern group) in <code>processedCodes</code>.
+     * @param codeType The type of <code>ClassifiedCodeSequence</code> we are printing.
+     * @param oddEvenPattern The odd-even pattern of the codes we are printing.
+     * @param codeNum Within the context of the whole task, we will print the <code>codeNum</code>'th code and onwards.
+     * @return The array of codes we printed, in the order that we printed them.
+     */
+    private ArrayList<ClassifiedCodeSequence> printMidFirstLast(
+            Map<CodeType, Map<String, ArrayList<ClassifiedCodeSequence>>> processedCodes,
+            Map<CodeType, Map<String, Integer>> processedCodesLength,
+            CodeType codeType,
+            String oddEvenPattern,
+            AtomicInteger codeNum
+    ) {
+        ArrayList<ClassifiedCodeSequence> codesPrinted = new ArrayList<>();
+
+        final ClassifiedCodeSequence codeToPrint = processedCodes.get(codeType)
+                .get(oddEvenPattern)
+                .get(processedCodesLength.get(codeType).get(oddEvenPattern) / 2);
+
+        if (firstLast) {
+            if (processedCodesLength.get(codeType).get(oddEvenPattern) >= 2) {
+                final ClassifiedCodeSequence firstCode = processedCodes
+                        .get(codeType)
+                        .get(oddEvenPattern)
+                        .get(0);
+                addToIterToLimitCover(firstCode.toString());
+                System.out.println(Utils.standard(firstCode, codeNum.getAndIncrement()));
+                codesPrinted.add(firstCode);
+            }
+        }
+
+        addToIterToLimitCover(codeToPrint.toString());
+        System.out.println(Utils.standard(codeToPrint, codeNum.getAndIncrement()));
+        codesPrinted.add(codeToPrint);
+
+        if (firstLast) {
+            if (processedCodesLength.get(codeType).get(oddEvenPattern) >= 3) {
+                final ClassifiedCodeSequence lastCode = processedCodes
+                        .get(codeType)
+                        .get(oddEvenPattern)
+                        .get(processedCodesLength
+                                .get(codeType)
+                                .get(oddEvenPattern) - 1);
+                addToIterToLimitCover(lastCode.toString());
+                System.out.println(Utils.standard(lastCode, codeNum.getAndIncrement()));
+                codesPrinted.add(lastCode);
+            }
+        }
+
+        return codesPrinted;
+    }
+
+    /**
+     * Loads the <code>Storage</code> for <code>codePrinted</code> and updates the <code>progress</code>.
+     * @param usedCodes The set of codes we have already loaded a <code>Storage</code> for.
+     * @param todo The total number of codes to load <code>Storage</code> for.
+     * @param futures Since loading <code>Storage</code> can take some time, we will launch each load as a task, and store its <code>Future</code> in this list.
+     * @param progress The number of loads we have finished.
+     * @param codePrinted The <code>ClassifiedCodeSequence</code> to load a <code>Storage</code> for.
+     */
+    private void loadStorage(
+            MutableSortedSet<ClassifiedCodeSequence> usedCodes,
+            int todo,
+            MutableList<Future<Either<String, Storage>>> futures,
+            AtomicInteger progress,
+            ClassifiedCodeSequence codePrinted
+    ) {
+        usedCodes.add(codePrinted);
+        // Submit the custom PriorityCallable for this code (Node that PriorityCallable is a custom interface)
+        futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
+                    @Override
+                    public Either<String, Storage> call() {
+                        Either<String, Storage> result = loadStorage(codePrinted);
+                        VaryLTask.this.updateProgress(progress.incrementAndGet(), todo);
+                        return result;
+                    }
+
+                    @Override
+                    public int getPriority() {
+                        return codePrinted.length();
+                    }
+                })
+        );
+    }
+
+    /**
+     * <code>printMidFirstLast</code> and <code>loadStorage</code> wrapped in one function.
+     * @param processedCodes Stores all (code type, odd-even pattern) groups. All codes are of the same code length.
+     * @param processedCodesLength Stores the size of each (code type, odd-even pattern group) in <code>processedCodes</code>.
+     * @param codeType The type of <code>ClassifiedCodeSequence</code> we are printing.
+     * @param oddEvenPattern The odd-even pattern of the codes we are printing.
+     * @param codeNum Within the context of the whole task, we will print the <code>codeNum</code>'th code and onwards.
+     * @param usedCodes The set of codes we have already loaded a <code>Storage</code> for.
+     * @param todo The total number of codes to load <code>Storage</code> for.
+     * @param futures Since loading <code>Storage</code> can take some time, we will launch each load as a task, and store its <code>Future</code> in this list.
+     * @param progress The number of loads we have finished.
+     */
+    private void printAndLoadStorage(
+            Map<CodeType, Map<String, ArrayList<ClassifiedCodeSequence>>> processedCodes,
+            Map<CodeType, Map<String, Integer>> processedCodesLength,
+            CodeType codeType,
+            String oddEvenPattern,
+            AtomicInteger codeNum,
+            MutableSortedSet<ClassifiedCodeSequence> usedCodes,
+            int todo,
+            MutableList<Future<Either<String, Storage>>> futures,
+            AtomicInteger progress
+
+    ) {
+        ArrayList<ClassifiedCodeSequence> codesPrinted = printMidFirstLast(
+                processedCodes,
+                processedCodesLength,
+                codeType,
+                oddEvenPattern,
+                codeNum
+        );
+
+        for (ClassifiedCodeSequence codePrinted : codesPrinted) {
+            if(usedCodes.contains(codePrinted) || !this.draw) { // Update in the case of not drawing this code
+                this.updateProgress(progress.incrementAndGet(), todo);
+                continue;
+            }
+
+            loadStorage(usedCodes, todo, futures, progress, codePrinted);
+        }
+    }
 }
