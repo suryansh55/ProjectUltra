@@ -7070,8 +7070,10 @@ public final class Viewer {
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
 
-        final boolean addToAllPositive = autoPolyVaryWindow.allPositiveIsSelected();
-        final boolean addToPlusMinus = autoPolyVaryWindow.plusMinusIsSelected();
+        // Zhao Yu Li, Jun 25, 2025.
+        // Determines whether to add vary results to the IterateToLimitWindow Cover
+        final boolean addToAllPositive = autoPolyVaryWindow.allPositiveIsSelected();  // Add code with all-positive iteration patterns
+        final boolean addToPlusMinus = autoPolyVaryWindow.plusMinusIsSelected();  // Add code with plus/minus patterns
 
         if ((addToAllPositive || addToPlusMinus) && iterateToLimitWindow == null) iterateToLimitWindow = new IterateToLimitWindow(pool);
 
@@ -7109,6 +7111,9 @@ public final class Viewer {
                         msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                         System.out.println(msg);
                         if(autoCover) coverWindow.appendStablesInfo(msg);
+
+                        // Zhao Yu Li, Jun 25, 2025.
+                        // Add code sequence - iteration pattern pair to the IterateToLimitWindow Cover
                         addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
                     }
                 });
@@ -7148,6 +7153,9 @@ public final class Viewer {
                     msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                     System.out.println(msg);
                     if(autoCover) coverWindow.appendStablesInfo(msg);
+
+                    // Zhao Yu Li, Jun 25, 2025.
+                    // Add code sequence - iteration pattern pair to the IterateToLimitWindow Cover
                     addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
                 }
             });
