@@ -542,6 +542,7 @@ public final class Viewer {
 
     VaryWindowL varyWindow =  null;
     VaryWindowL middleVaryWindow = null;
+    AutoPolyVaryLoad autoPolyVaryWindow = null;
 
     public Viewer(final Stage primaryStage, final String version, final ExecutorService executor,
                   final ConnectionPool pool, final String dbName) {
@@ -578,7 +579,6 @@ public final class Viewer {
         final CoverWindow4 coverWindow4 = new CoverWindow4(
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover2", executor));
-        final AutoPolyVaryLoad autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
         final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
 
         executorService = executor;
@@ -2054,6 +2054,9 @@ public final class Viewer {
             }
             // Ask the user to input a polygon, similar to PolyVary:
             //final Optional<ConvexPolygon> polyOpt = new PolyLoad("AutoPolyVary", "AutoVary", tmpDir + "PolyAutoVary.txt", screen).getPolyLoad();
+
+            if (autoPolyVaryWindow == null) autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
+
             if (autoPolyVaryWindow.stage.isShowing()) {
                 autoPolyVaryWindow.stage.toFront();
             }
@@ -7067,6 +7070,10 @@ public final class Viewer {
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
 
+        final boolean addToAllPositive = autoPolyVaryWindow.allPositiveIsSelected();
+        final boolean addToPlusMinus = autoPolyVaryWindow.plusMinusIsSelected();
+
+        if ((addToAllPositive || addToPlusMinus) && iterateToLimitWindow == null) iterateToLimitWindow = new IterateToLimitWindow(pool);
 
         // Update screen when change detected
         partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -7102,6 +7109,7 @@ public final class Viewer {
                         msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                         System.out.println(msg);
                         if(autoCover) coverWindow.appendStablesInfo(msg);
+                        addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
                     }
                 });
             }
@@ -7140,6 +7148,7 @@ public final class Viewer {
                     msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                     System.out.println(msg);
                     if(autoCover) coverWindow.appendStablesInfo(msg);
+                    addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
                 }
             });
             overallProgress.increment(Math.abs(stepIdx));
@@ -7859,6 +7868,36 @@ public final class Viewer {
                 String tripleString = storages.get(0) + "," + storages.get(1) + "," + storages.get(2);
                 coverWindow.appendTriplesInfo(tripleString);
             }
+        }
+    }
+
+    /**
+     * Finds an all-positive and a plus/minus iteration pattern for <code>classCodeSeq</code> and add the pairs to the
+     * appropriate text areas of the <code>iterateToLimitWindow</code>.
+     * @param classCodeSeq The <code>ClassifiedCodeSequence</code> to add to the <code>iterateToLimitWindow</code> Cover.
+     * @param addToAllPositive If true, <code>classCodeSeq</code> and its iteration pattern will be added to the appropriate all-positive text area of <code>iterateToLimitWindow</code>.
+     * @param addToPlusMinus If true, <code>classCodeSeq</code> and its iteration pattern will be added to the appropriate plus/minus text area of <code>iterateToLimitWindow</code>.
+     * @param iterateToLimitWindow The <code>IterateToLimitWindow</code> to add <code>classCodeSeq</code> and its iteration pattern to.
+     */
+    public static void addToIterToLimitCover(String classCodeSeq, boolean addToAllPositive, boolean addToPlusMinus, IterateToLimitWindow iterateToLimitWindow) {
+        if (addToAllPositive) {
+            String iterationPattern = IterateToLimitWindow.getIterationPattern(classCodeSeq, true);
+
+            if (iterationPattern.isEmpty()) {
+                System.out.println("Skip adding "
+                        + classCodeSeq
+                        + " to the IterateToLimitWindow Cover (all-positive) because we cannot find a valid iteration pattern");
+            } else iterateToLimitWindow.addToContent(classCodeSeq, iterationPattern, true);
+        }
+
+        if (addToPlusMinus) {
+            String iterationPattern = IterateToLimitWindow.getIterationPattern(classCodeSeq, false);
+
+            if (iterationPattern.isEmpty()) {
+                System.out.println("Skip adding "
+                        + classCodeSeq
+                        + " to the IterateToLimitWindow Cover (+/-) because we cannot find a valid iteration pattern");
+            } else iterateToLimitWindow.addToContent(classCodeSeq, iterationPattern, false);
         }
     }
 }
