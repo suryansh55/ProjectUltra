@@ -607,6 +607,10 @@ public class IterateToLimitWindow {
         return this.stage.isShowing();
     }
 
+    public void toFront() {
+        this.stage.toFront();
+    }
+
     private Alert getInfoAlertDialogue(String header, String content) {
         Text alertText = new Text(content);
         alertText.setWrappingWidth(350);

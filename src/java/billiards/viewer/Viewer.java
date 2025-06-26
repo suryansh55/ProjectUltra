@@ -1633,10 +1633,9 @@ public final class Viewer {
             // Lazy initialization
             if (iterateToLimitWindow == null) this.iterateToLimitWindow = new IterateToLimitWindow(pool);
 
-            // Allow only one instance to run at any time.
-            if (iterateToLimitWindow.isShowing()) return;
+            if (iterateToLimitWindow.isShowing()) iterateToLimitWindow.toFront();
 
-            // Obtain the finish flag from the IterateToLimitWindow.
+            // Get the finish flag from the IterateToLimitWindow.
             AtomicReference<SimpleBooleanProperty> finish = new AtomicReference<>(iterateToLimitWindow.execute());
 
             // Once the iterate-to-limit task is finish, we draw the codes and add the codes to the cover.
