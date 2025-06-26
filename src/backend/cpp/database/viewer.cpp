@@ -78,7 +78,9 @@ bool database::in(const CodeSequence& code_seq, const CodeType& code_type, sqlit
 template <typename T>
 void save_impl(const CodeSequence& code_seq, const CodeType& code_type, const T& info, sqlite::Database& db) {
 
-    const std::string sql = "insert into " + database::serialize(code_type) + "(code_sequence, initial_angles, points, equations, left_rights, lr_code_sequence, polygon, sin_equations, cos_equations) values (?, ?, ?, ?, ?, ?, ?, ?, ?);";
+    // Zhao Yu Li, Jun 26, 2025.
+    // Added "on conflict do nothing". This clause handles the case where more than one threads save the exact same thing concurrently.
+    const std::string sql = "insert into " + database::serialize(code_type) + "(code_sequence, initial_angles, points, equations, left_rights, lr_code_sequence, polygon, sin_equations, cos_equations) values (?, ?, ?, ?, ?, ?, ?, ?, ?) on conflict do nothing;";
 
     db.prepare(sql)
         .bind(
