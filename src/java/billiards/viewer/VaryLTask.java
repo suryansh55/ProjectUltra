@@ -63,13 +63,18 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     private final boolean addToAllPositive;
     private final boolean addToPlusMinus;
     private final IterateToLimitWindow iterateToLimitWindow;
+    private final int idx;
+    private final int step;
+    private final int end;
+    private final int codesFound;
 
     // Constructor takes a list of points to vary at
     public VaryLTask(
-        final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan, 
+        final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan,
         final Array<Integer> max, final ConnectionPool pool, final boolean override, final boolean draw,
         final Integer maxPrint, final ExecutorService eOne, final ExecutorService eTwo, final boolean printMid,
-        final boolean firstLast, boolean addToAllPositive, boolean addToPlusMinus, IterateToLimitWindow iterateToLimitWindow) {
+        final boolean firstLast, boolean addToAllPositive, boolean addToPlusMinus, IterateToLimitWindow iterateToLimitWindow,
+        final int idx, final int step, final int end, final int codesFound) {
         this.coordList = points; // Points are in degrees
         this.coverCodes.addAll(coverCodes);
         this.boyanMenu = boyan;
@@ -93,6 +98,12 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         this.addToAllPositive = addToAllPositive;
         this.addToPlusMinus = addToPlusMinus;
         this.iterateToLimitWindow = iterateToLimitWindow;
+
+        // Zhao Yu Li, Jun 27, 2025.
+        this.idx = idx;
+        this.step = step;
+        this.end = end;
+        this.codesFound = codesFound;
     }
 
     @Override
@@ -109,118 +120,85 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
 
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement varyL since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
-        int count = 1;
         int totalCodes = 0;
 
-        for(Vector2 coord: this.coordList) {
-            MutableSortedSet<ClassifiedCodeSequence> localCodes;
-			System.out.println();
-			System.out.println("//------------- working on point " + count++ + " -------------"); // george added // sept 27,2017
-            // The BoyanCodes method vary3() called by varyTrianglesL() can throw exceptions. We need to catch them
-            try {
-                localCodes = autoCodesFiltered(coord, shotExecutor);
-            } catch(RuntimeException e) {
-                if(this.isCancelled() || Thread.interrupted()) {
-                    break;
-                } else {
-                    System.err.println("Terminating because of uncaught exception when finding codeSet");
-                    throw e;
-                }
-            }
-            // We draw the first i codes we found
-			int i = this.maxPrint == 0 ? localCodes.size() : this.maxPrint;
+        // Zhao Yu Li, Jun 27, 2025.
+        // Removed for loop inside the task; we use a recursion of this task instead (similar to AustinMaxVary, which
+        // uses PolyVaryTask). This is to facilitate moving the screen from one point to the next.
+        Vector2 coord = this.coordList.get(idx);
 
-            // Zhao Yu Li, Jun 24, 2025.
-            // Changed from a primitive integer to an AtomicInteger so it can be incremented inside functions
-            AtomicInteger codeNum = new AtomicInteger(1);
-
-            // Take the first code not already drawn, and submit it to the storageExecutor for processing 
-            totalCodes += localCodes.size();
-            if (!printMid) {
-                for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                    if(i <= 0) break;
-                    --i;
-
-                    System.out.println(Utils.standard(classCodeSeq, codeNum.getAndIncrement()));
-
-                    addToIterToLimitCover(classCodeSeq.toString());
-
-                    if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
-                        this.updateProgress(progress.incrementAndGet(), todo);
-                        continue;
-                    }
-
-                    // Zhao Yu Li, Jun 24, 2025.
-                    // Replaced code block with function call
-                    loadStorage(usedCodes, todo, futures, progress, classCodeSeq);
-                }
+        MutableSortedSet<ClassifiedCodeSequence> localCodes;
+        System.out.println();
+        System.out.println("//------------- working on point " + (idx + 1) + " -------------"); // george added // sept 27,2017
+        // The BoyanCodes method vary3() called by varyTrianglesL() can throw exceptions. We need to catch them
+        try {
+            localCodes = autoCodesFiltered(coord, shotExecutor);
+        } catch(RuntimeException e) {
+            if(this.isCancelled() || Thread.interrupted()) {
+                return this.partialResults.get();
             } else {
-                // Zhao Yu Li, May 06, 2025.
-                // Prints only the middle code of each (code type, code length, and odd-even pattern) group
-                final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
+                System.err.println("Terminating because of uncaught exception when finding codeSet");
+                throw e;
+            }
+        }
+        // We draw the first i codes we found
+        int i = this.maxPrint == 0 ? localCodes.size() : this.maxPrint;
 
-                long currentLength = -1;
-                Map<CodeType, Map<String, ArrayList<ClassifiedCodeSequence>>> processedCodes = new HashMap<>();
-                Map<CodeType, Map<String, Integer>> processedCodesLength = new HashMap<>();
+        // Zhao Yu Li, Jun 24, 2025.
+        // Changed from a primitive integer to an AtomicInteger so it can be incremented inside functions
+        AtomicInteger codeNum = new AtomicInteger(1);
 
-                for (CodeType codeType : codeTypes) {
-                    processedCodes.put(codeType, new HashMap<>());
-                    processedCodesLength.put(codeType, new HashMap<>());
+        // Take the first code not already drawn, and submit it to the storageExecutor for processing
+        totalCodes += localCodes.size();
+        if (!printMid) {
+            for(ClassifiedCodeSequence classCodeSeq: localCodes) {
+                if(i <= 0) break;
+                --i;
+
+                System.out.println(Utils.standard(classCodeSeq, codeNum.getAndIncrement()));
+
+                addToIterToLimitCover(classCodeSeq.toString());
+
+                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
+                    this.updateProgress(progress.incrementAndGet(), todo);
+                    continue;
                 }
 
-                for(ClassifiedCodeSequence code: localCodes) {
-                    if (i <= 0) break;
+                // Zhao Yu Li, Jun 24, 2025.
+                // Replaced code block with function call
+                loadStorage(usedCodes, todo, futures, progress, classCodeSeq);
+            }
+        } else {
+            // Zhao Yu Li, May 06, 2025.
+            // Prints only the middle code of each (code type, code length, and odd-even pattern) group
+            final CodeType[] codeTypes = {CodeType.CS, CodeType.OSO, CodeType.OSNO, CodeType.CNS, CodeType.ONS};
 
-                    if (currentLength == -1) {
-                        currentLength = code.codeLength;
-                    }
+            long currentLength = -1;
+            Map<CodeType, Map<String, ArrayList<ClassifiedCodeSequence>>> processedCodes = new HashMap<>();
+            Map<CodeType, Map<String, Integer>> processedCodesLength = new HashMap<>();
 
-                    // Zhao Yu Li, Jun 24, 2025.
-                    // Replaced code block with function call
-                    if (code.codeLength == currentLength) addProcessedCode(processedCodes, processedCodesLength, code);
-                    else {
-                        for (CodeType codeType : codeTypes) {
-                            if (i <= 0) break;
+            for (CodeType codeType : codeTypes) {
+                processedCodes.put(codeType, new HashMap<>());
+                processedCodesLength.put(codeType, new HashMap<>());
+            }
 
-                            for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
-                                if (i <= 0) break;
+            for(ClassifiedCodeSequence code: localCodes) {
+                if (i <= 0) break;
 
-                                --i;
-                                printAndLoadStorage(
-                                        processedCodes,
-                                        processedCodesLength,
-                                        codeType,
-                                        oddEvenPattern,
-                                        codeNum,
-                                        usedCodes,
-                                        todo,
-                                        futures,
-                                        progress
-                                );
-                            }
-
-                            // Clear and re-initialize the maps for the next iteration
-                            processedCodes.get(codeType).clear();
-                            processedCodesLength.get(codeType).clear();
-                        }
-
-                        currentLength = code.codeLength;
-                        processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
-                        processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
-                        processedCodesLength.get(code.codeType).put(code.oddEvenPattern, 1);
-                    }
+                if (currentLength == -1) {
+                    currentLength = code.codeLength;
                 }
 
-                for (CodeType codeType : codeTypes) {
-                    if (i <= 0) break;
-
-                    // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
-                    for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                // Zhao Yu Li, Jun 24, 2025.
+                // Replaced code block with function call
+                if (code.codeLength == currentLength) addProcessedCode(processedCodes, processedCodesLength, code);
+                else {
+                    for (CodeType codeType : codeTypes) {
                         if (i <= 0) break;
 
-                        // Zhao Yu Li, Jun 24, 2025.
-                        // Replaced code block with function call
-                        if (!processedCodes.get(codeType).get(oddEvenPattern).isEmpty()) {
+                        for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                            if (i <= 0) break;
+
                             --i;
                             printAndLoadStorage(
                                     processedCodes,
@@ -234,19 +212,54 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                                     progress
                             );
                         }
+
+                        // Clear and re-initialize the maps for the next iteration
+                        processedCodes.get(codeType).clear();
+                        processedCodesLength.get(codeType).clear();
                     }
+
+                    currentLength = code.codeLength;
+                    processedCodes.get(code.codeType).put(code.oddEvenPattern, new ArrayList<>());
+                    processedCodes.get(code.codeType).get(code.oddEvenPattern).add(code);
+                    processedCodesLength.get(code.codeType).put(code.oddEvenPattern, 1);
                 }
             }
 
-            for(int p = 0; p < i; ++p) { // Update in the case of < i codes
-                this.updateProgress(progress.incrementAndGet(), todo);
+            for (CodeType codeType : codeTypes) {
+                if (i <= 0) break;
+
+                // We reached the end of the iteration, add the middle of last (code type, code length, odd-even) group
+                for (String oddEvenPattern : processedCodesLength.get(codeType).keySet()) {
+                    if (i <= 0) break;
+
+                    // Zhao Yu Li, Jun 24, 2025.
+                    // Replaced code block with function call
+                    if (!processedCodes.get(codeType).get(oddEvenPattern).isEmpty()) {
+                        --i;
+                        printAndLoadStorage(
+                                processedCodes,
+                                processedCodesLength,
+                                codeType,
+                                oddEvenPattern,
+                                codeNum,
+                                usedCodes,
+                                todo,
+                                futures,
+                                progress
+                        );
+                    }
+                }
             }
         }
 
-		System.out.println("//~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + totalCodes
-		+ " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
-        // The shot executor is no longer needed
-        shotExecutor.shutdown();
+        for(int p = 0; p < i; ++p) { // Update in the case of < i codes
+            this.updateProgress(progress.incrementAndGet(), todo);
+        }
+
+		if (idx + step >= end) {
+            System.out.println("//~~~~~~~~~~~~~~~~~~~~~~~~~~~ " + (totalCodes + codesFound)
+                    + " codes found total ~~~~~~~~~~~~~~~~~~~~~~~~~~~");//added // george sept27,2017
+        }
 
         Optional<ExecutionException> except = Optional.empty();
 
