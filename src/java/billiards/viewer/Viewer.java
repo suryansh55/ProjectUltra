@@ -1880,13 +1880,19 @@ public final class Viewer {
 
                 final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
                         varyWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
-                if (pointOpt.isPresent()) {
 
+                if (pointOpt.isPresent()) {
                     final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
+                    final MutableList<Vector2> pointList = point._1;
+
+                    // Zhao Yu Li, Jun 27, 2025.
+                    // Attempt to read start, step, and end from the user
+                    Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd(pointList.size());
+                    if (startStepEnd._1 == null) return;
+
                     System.out.println(
                             "//~~~~~~~~~~~~~~~~~~~~~~~ varyL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
 
-                    final MutableList<Vector2> pointList = point._1;
                     // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
                     final int[] maximums = {point._2, point._3, point._4, point._5, point._6, point._7};
                     final boolean draw = VaryWindowL.Draw;
@@ -1935,13 +1941,19 @@ public final class Viewer {
 
                 final Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> pointOpt =
                         middleVaryWindow.getPoints(x, y, boyanMenu.varyOnePoint.isSelected());
-                if (pointOpt.isPresent()) {
 
+                if (pointOpt.isPresent()) {
                     final Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer> point = pointOpt.get();
+                    final MutableList<Vector2> pointList = point._1;
+
+                    // Zhao Yu Li, Jun 27, 2025.
+                    // Attempt to read start, step, and end from the user
+                    Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd(pointList.size());
+                    if (startStepEnd._1 == null) return;
+
                     System.out.println(
                             "//~~~~~~~~~~~~~~~~~~~~~~~ middleVaryL with " + point._1.size() + " points ~~~~~~~~~~~~~~~~~~~~~~~"); //added // george sept27,2017
 
-                    final MutableList<Vector2> pointList = point._1;
                     // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
                     final int[] maximums = {point._2, point._3, point._4, point._5, point._6, point._7};
                     final boolean draw = VaryWindowL.Draw;
@@ -1974,7 +1986,7 @@ public final class Viewer {
         autoPolyVaryBtn.setTooltip(Utils.toolTip("Automatically Call PolyVary on existing holes."));
         Utils.colorButton(autoPolyVaryBtn, Color.GREEN, Color.GOLD);
         autoPolyVaryBtn.setOnAction(event -> {
-            if (fileCodeSequences.size() == 0) {
+            if (fileCodeSequences.isEmpty()) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("AutoPolyVary");
                 alert.setHeaderText("No OBO File Loaded");
@@ -1990,49 +2002,12 @@ public final class Viewer {
                 alert.showAndWait();
                 return;
             }
-            final String lineStartText = lineStartField.getText();
-            final String lineStepText = lineStepField.getText();
-            final String lineEndText = lineEndField.getText();
-            // The indexes that the user sees (will be converted later)
-            int startIdxUser = 0;
-            int stepIdxUser = 0;
-            int endIdxUser = 0;
-            // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
-            if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
-                startIdxUser = 1;
-                stepIdxUser = 1;
-                endIdxUser = fileCodeSequences.size();
-            } else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
-                showEnterLineNumberErrorAutoVary();
-                return;
-            } else { // All fields filled
-                try {
-                    startIdxUser = Integer.parseInt(lineStartText);
-                } catch (final NumberFormatException e) {
-                    showInvalidNumberError(lineStartText);
-                    return;
-                }
-                try {
-                    endIdxUser = Integer.parseInt(lineEndText);
-                } catch (final NumberFormatException e) {
-                    showInvalidNumberError(lineEndText);
-                    return;
-                }
-                try {
-                    stepIdxUser = Math.min(fileCodeSequences.size(), Integer.parseInt(lineStepText)); // Max step is all elements
-                } catch (final NumberFormatException e) {
-                    showInvalidNumberError(lineStepText);
-                    return;
-                }
-                if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= fileCodeSequences.size())) {
-                    showInvalidLineRangeError(fileCodeSequences.size());
-                    return;
-                }
-                if(stepIdxUser < 1) {
-                    showStepErrorAutoVary();
-                    return;
-                }
-            }
+
+            // Zhao Yu Li, Jun 27, 2025.
+            // Replaced code block with function call.
+            Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd();
+            if (startStepEnd._1 == null) return;
+
             // The following block was ripped from the polyAutoBtn's action event.
             if (!boyanMenu.CScb.isSelected() && !boyanMenu.CNScb.isSelected() && !boyanMenu.ONScb.isSelected()
                     && !boyanMenu.OSNOcb.isSelected() && !boyanMenu.OSOcb.isSelected() && !AutoPolyVaryLoad.Override) {
@@ -4268,19 +4243,22 @@ public final class Viewer {
         return todo;
     }
 
-    private void drawVaryL(final MutableList<Vector2> points, final int[] max,
-                           final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
-                           final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
-                           final boolean printMid, final boolean firstLast) {
-        // Zhao Yu Li, Jun 24, 2025.
-        // Whether to add results to the IterateToLimitWindow Cover
-        boolean addToAllPositive = printMid ? middleVaryWindow.getAddToAllPositiveSelected() : varyWindow.getAddToAllPositiveSelected();
-        boolean addToPlusMinus = printMid ? middleVaryWindow.getAddToPlusMinusSelected() : varyWindow.getAddToPlusMinusSelected();
+    // Zhao Yu Li, Jun 27, 2025.
+    // Structure is similar to drawAutoPolyVary. It uses recursion, so that we can jump to the next point before
+    // starting the Vary task. May cause a slight performance overhead because we are drawing more often (after
+    // finishing the vary task of the current point and before starting the next one).
+    private void recurseDrawVaryL(final MutableList<Vector2> points, final int[] max, List<String> codeList,
+                                  final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
+                                  final ExecutorService executor, final ExecutorService storageExecutor,
+                                  final ExecutorService shotExecutor, final boolean printMid, final boolean firstLast,
+                                  final boolean addToAllPositive, final boolean addToPlusMinus, final int idx,
+                                  final int step, final int end, final int codesFound, final ProgressMultiTask overallProgress) {
 
-        if ((addToAllPositive || addToPlusMinus) && iterateToLimitWindow == null) iterateToLimitWindow = new IterateToLimitWindow(pool);
+        // Zhao Yu Li, Jun 27, 2025.
+        // Move the screen to the point we are working on
+        Vector2 point = points.get(idx);
+        moveScreen(point.x, point.y);
 
-        List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
-        codeList.replaceAll(Utils::tripleTrimmer);
         // Create the task
         final VaryLTask task = new VaryLTask(
                 Array.ofAll(points),
@@ -4296,11 +4274,11 @@ public final class Viewer {
                 firstLast,
                 addToAllPositive,
                 addToPlusMinus,
-                iterateToLimitWindow
+                iterateToLimitWindow,
+                idx, step, end, codesFound
         );
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
-        final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
-        final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
+        //final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
         // Count the number of holes we start with
         if(autoCover) coverWindow.appendStablesInfo("// Start " + (printMid ? "MiddleVaryL" : "VaryL"));
 
@@ -4327,14 +4305,13 @@ public final class Viewer {
                         codeStr += " ";
                     }
                     final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
-                    codeStrings.add(msg);
+                    //codeStrings.add(msg);
                     if(autoCover) coverWindow.appendStablesInfo(msg);
                 });
             }
         });
 
         task.setOnSucceeded(e -> {
-
             final ObservableList<Storage> storages;
             try {
                 storages = task.get();
@@ -4348,29 +4325,47 @@ public final class Viewer {
                     final int index = cycle.get();
                     color = comboBoxColors.get(index);
                     addToOnScreenSequences(storage, color);
+
+                    if (autoCover && storage.classCodeSeq.stable) coverWindow.appendStablesInfo(getCoverCodeString(storage));
                 }
             });
 
-            Utils.safeShutdownExecutor(storageExecutor);
-            Utils.safeShutdownExecutor(shotExecutor);
+            overallProgress.increment(Math.abs(step));
 
-            progress.close();
-
-            // only render the screen after everything has been loaded
-            renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-
-
-            if(draw) {
-                System.out.println("Printing drawn Codes:");
-                codeStrings.forEach(System.out::println);
-            }
-            if(autoCover) {
-                coverWindow.show();
-                System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN COVER; ----+");
-                System.out.println();
+            if (overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
+                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                Utils.safeShutdownExecutor(storageExecutor);
+                Utils.safeShutdownExecutor(shotExecutor);
+                overallProgress.close();
+                if(autoCover) coverWindow.show();
+            } else if (idx + step < end) {
+                recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
+                        shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, idx + step, step, end,
+                        storages.size() + codesFound, overallProgress);
             } else {
-                System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed; --------------+");
-                System.out.println();
+                overallProgress.close();
+
+                Utils.safeShutdownExecutor(storageExecutor);
+                Utils.safeShutdownExecutor(shotExecutor);
+
+                // only render the screen after everything has been loaded
+                renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+
+                /*
+                if(draw) {
+                    System.out.println("Printing drawn Codes:");
+                    codeStrings.forEach(System.out::println);
+                }
+                 */
+
+                if(autoCover) {
+                    coverWindow.show();
+                    System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN COVER ----+");
+                    System.out.println();
+                } else {
+                    System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed --------------+");
+                    System.out.println();
+                }
             }
         });
 
@@ -4384,34 +4379,69 @@ public final class Viewer {
                 }
             });
 
+            overallProgress.close();
+
             // Wait for orderly cancellation of unfinished tasks
             Utils.safeShutdownExecutor(shotExecutor);
             Utils.safeShutdownExecutor(storageExecutor);
 
-            progress.close();
             // only render the screen after everything has been loaded
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
+            /*
             if(draw) {
                 System.out.println("Printing drawn Codes:");
                 codeStrings.forEach(System.out::println);
             }
+             */
+
             if(autoCover) {
                 coverWindow.show();
-                System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled, CODES ARE IN COVER; ----+");
+                System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled, CODES ARE IN COVER ----+");
             } else {
-                System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled; --------------+");
+                System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled --------------+");
 
             }
         });
 
         task.setOnFailed(e -> {
-            progress.close();
+            overallProgress.close();
             throw new RuntimeException(task.getException());
         });
 
         executor.execute(task);
+    }
+
+    private void drawVaryL(final MutableList<Vector2> points, final int[] max,
+                           final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
+                           final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
+                           final boolean printMid, final boolean firstLast) {
+        // Zhao Yu Li, Jun 27, 2025.
+        // Attempt to read start, step, and end from the user.
+        Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd(points.size());
+        if (startStepEnd._1 == null) return;
+        final int start = startStepEnd._1;
+        final int step = startStepEnd._2;
+        final int end = startStepEnd._3;
+
+        // Zhao Yu Li, Jun 24, 2025.
+        // Whether to add results to the IterateToLimitWindow Cover
+        boolean addToAllPositive = printMid ? middleVaryWindow.getAddToAllPositiveSelected() : varyWindow.getAddToAllPositiveSelected();
+        boolean addToPlusMinus = printMid ? middleVaryWindow.getAddToPlusMinusSelected() : varyWindow.getAddToPlusMinusSelected();
+
+        if ((addToAllPositive || addToPlusMinus) && iterateToLimitWindow == null) iterateToLimitWindow = new IterateToLimitWindow(pool);
+
+        List <String> codeList = Arrays.asList(readFromFile(Viewer.tmpDir + "/cover_stables.txt").split(System.lineSeparator()));
+        codeList.replaceAll(Utils::tripleTrimmer);
+
+        final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, start, end);
         progress.show();
+
+        // Zhao Yu Li, Jun 27, 2025.
+        // Changed from a single call to a recursive call. This is to facilitate moving the screen from one point to the
+        // next.
+        recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
+                shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, start-1, step, end, 0, progress);
     }
 
     private void LoadFileAction(
@@ -6755,72 +6785,35 @@ public final class Viewer {
                                       final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
                                       final boolean overrideSS, final boolean autoCover, final ExecutorService executor
     ) {
-        final String lineStartText = lineStartField.getText();
-        final String lineStepText = lineStepField.getText();
-        final String lineEndText = lineEndField.getText();
-        // The indexes that the user sees (will be converted later)
-        int startIdxUser = 0;
-        int stepIdxUser = 0;
-        int endIdxUser = 0;
-        // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
-        if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
-            startIdxUser = 1;
-            stepIdxUser = 1;
-            endIdxUser = fileCodeSequences.size();
-        } else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
-            showEnterLineNumberErrorAutoVary();
-            return;
-        } else { // All fields filled
-            try {
-                startIdxUser = Integer.parseInt(lineStartText);
-            } catch (final NumberFormatException e) {
-                showInvalidNumberError(lineStartText);
-                return;
-            }
-            try {
-                endIdxUser = Integer.parseInt(lineEndText);
-            } catch (final NumberFormatException e) {
-                showInvalidNumberError(lineEndText);
-                return;
-            }
-            try {
-                stepIdxUser = Math.min(fileCodeSequences.size(), Integer.parseInt(lineStepText)); // Max step is all elements
-            } catch (final NumberFormatException e) {
-                showInvalidNumberError(lineStepText);
-                return;
-            }
-            if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= fileCodeSequences.size())) {
-                showInvalidLineRangeError(fileCodeSequences.size());
-                return;
-            }
-            if(stepIdxUser < 1) {
-                showStepErrorAutoVary();
-                return;
-            }
-        }
+
+        // Zhao Yu Li, Jun 27, 2025.
+        // Replaced code block with function call.
+        Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd();
+        if (startStepEnd._1 == null) return;
+
         autoVaryArea = Optional.of(polyVals._1);
         // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
         final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         ConvexPolygon area = polyVals._1;
         // Go through all the holes in the specified range
-        final int startIdx = startIdxUser - 1;
-        final int stepIdx = stepIdxUser;
-        final int endIdx = endIdxUser - 1;
+        final int startIdx = startStepEnd._1 - 1;
+        final int stepIdx = startStepEnd._2;
+        final int endIdx = startStepEnd._3 - 1;
         // Run the AutoPolyVary algorithm parallel to the application so that the screen can be rendered in real time instead
         // of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
         // _is_ updating, but the user is unable to see this happen).
         final int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
-        System.out.println(String.format(
-                "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+",
+        System.out.printf(
+                "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+%n",
                 endIdx - startIdx + 1,
                 shots,
                 subdivisions,
                 maxMoves
-        ));
+        );
         if(overrideSS) {
-            System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", maxList[3], maxList[4], maxList[5]));
+            System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
         }
         final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         progress.show();
@@ -6967,21 +6960,22 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
             if(overrideSS) {
-                System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
             if(autoCover) {
                 coverWindow.show();
-                System.out.println(String.format(
-                        "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
-                        startHoles, startHoles - endHoles, endHoles));
-                System.out.println("");
+                System.out.printf(
+                        "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
+                        startHoles, startHoles - endHoles, endHoles);
+                System.out.println();
             } else {
-                System.out.println(String.format(
-                        "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+",
-                        startHoles, startHoles - endHoles, endHoles));
-                System.out.println("");
+                System.out.printf(
+                        "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+%n",
+                        startHoles, startHoles - endHoles, endHoles);
+                System.out.println();
             }
-            if(step.isPresent()) step.get().setValue(step.get().getValue() + 1); // Increment for superPoly
+            // Increment for superPoly
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
         });
 
         task.setOnCancelled(e -> {
@@ -7005,25 +6999,27 @@ public final class Viewer {
             final int endHoles = findHoles(area).size();
 
             if(overrideSS) {
-                System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
             if(autoCover) {
                 coverWindow.show();
-                System.out.println(String.format(
-                        "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+",
-                        startHoles, startHoles - endHoles, endHoles));
+                System.out.printf(
+                        "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
+                        startHoles, startHoles - endHoles, endHoles);
             } else {
-                System.out.println(String.format(
-                        "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+",
-                        startHoles, startHoles - endHoles, endHoles));
+                System.out.printf(
+                        "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+%n",
+                        startHoles, startHoles - endHoles, endHoles);
 
             }
-            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
+            // Propagate cancellation for Super
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
         });
 
         task.setOnFailed(e -> {
             progress.close();
-            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
+            // Propagate cancellation for Super
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             throw new RuntimeException(task.getException());
         });
 
@@ -7165,12 +7161,13 @@ public final class Viewer {
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
                 if(overrideSS) {
-                    System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                    System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
                 System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
                 overallProgress.close();
                 if(autoCover) coverWindow.show();
-                if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
+                // Propagate cancellation for Super
+                step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
                 drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
             } else {
@@ -7178,7 +7175,7 @@ public final class Viewer {
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
                 if(overrideSS) {
-                    System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                    System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
                 if(autoCover) {
                     coverWindow.show();
@@ -7188,7 +7185,8 @@ public final class Viewer {
 
                 }
                 overallProgress.close();
-                if(step.isPresent()) step.get().setValue(step.get().getValue() + 1); // Increment for superPoly
+                // Increment for superPoly
+                step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
             }
         });
 
@@ -7222,12 +7220,13 @@ public final class Viewer {
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
             if(overrideSS) {
-                System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", max[3], max[4], max[5]));
+                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
             System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
             overallProgress.close();
             if(autoCover) coverWindow.show();
-            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
+            // Propagate cancellation for Super
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
         });
 
         task.setOnFailed(e -> {
@@ -7235,7 +7234,8 @@ public final class Viewer {
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
             overallProgress.close();
-            if(step.isPresent()) step.get().setValue(-1); // Propagate cancellation for Super
+            // Propagate cancellation for Super
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             throw new RuntimeException(task.getException());
         });
         drawExecutor.execute(task);
@@ -7906,5 +7906,63 @@ public final class Viewer {
                         + " to the IterateToLimitWindow Cover (+/-) because we cannot find a valid iteration pattern");
             } else iterateToLimitWindow.addToContent(classCodeSeq, iterationPattern, false);
         }
+    }
+
+    private Tuple3<Integer, Integer, Integer> getStartStepEnd() {
+        return getStartStepEnd(fileCodeSequences.size());
+    }
+
+    private Tuple3<Integer, Integer, Integer> getStartStepEnd(int defaultEnd) {
+        final String lineStartText = lineStartField.getText();
+        final String lineStepText = lineStepField.getText();
+        final String lineEndText = lineEndField.getText();
+        // The indexes that the user sees (will be converted later)
+        int startIdxUser;
+        int stepIdxUser;
+        int endIdxUser;
+        // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
+        if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
+            startIdxUser = 1;
+            stepIdxUser = 1;
+            endIdxUser = defaultEnd;
+        } else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
+            showEnterLineNumberErrorAutoVary();
+            return Tuple.of(null, null, null);
+        } else { // All fields filled
+            try {
+                startIdxUser = Integer.parseInt(lineStartText);
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineStartText);
+                return Tuple.of(null, null, null);
+            }
+            try {
+                endIdxUser = Integer.parseInt(lineEndText);
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineEndText);
+                return Tuple.of(null, null, null);
+            }
+            try {
+                stepIdxUser = Math.min(defaultEnd, Integer.parseInt(lineStepText)); // Max step is all elements
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineStepText);
+                return Tuple.of(null, null, null);
+            }
+            if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= defaultEnd)) {
+                showInvalidLineRangeError(defaultEnd);
+                return Tuple.of(null, null, null);
+            }
+            if(stepIdxUser < 1) {
+                showStepErrorAutoVary();
+                return Tuple.of(null, null, null);
+            }
+        }
+
+        return Tuple.of(startIdxUser, stepIdxUser, endIdxUser);
+    }
+
+    public void moveScreen(double x, double y) {
+        final double xRad = Math.toRadians(x);
+        final double yRad = Math.toRadians(y);
+        zoom(xRad, xRad, yRad, yRad, executorService);
     }
 }
