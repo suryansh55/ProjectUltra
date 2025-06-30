@@ -2,6 +2,7 @@ package billiards.viewer;
 
 import billiards.geometry.Vector2;
 
+import javafx.scene.text.Text;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
@@ -78,10 +79,19 @@ public final class VaryWindowL {
     private final Label instruct = new Label();
     private final CheckBox addToAllPositiveCB = new CheckBox();
     private final CheckBox addToPlusMinusCB = new CheckBox();
+    final TextField lineNumTextField = new TextField();
+    private final HBox controlHBox;
+    private final Viewer viewer;
+    private final String windowTitle;
+    private Integer lineNumber = null;
 
     private Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
-    public VaryWindowL(final String windowTitle, final String buttonText, final String fileName, final String varyBoundFileName, final boolean middle) {
+    public VaryWindowL(final String windowTitle, final String buttonText, final String fileName,
+                       final String varyBoundFileName, final boolean middle, final Viewer viewer) {
+        this.viewer = viewer;
+        this.windowTitle = windowTitle;
+
         fullContent = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(varyBoundFileName).trim().split(" ");
     	if (boundTokens.length >= 6) {
@@ -196,7 +206,7 @@ public final class VaryWindowL {
         addToPlusMinusCB.setSelected(false);
         addToPlusMinusCB.setText("Add to plus-minus");
 
-        final HBox controlHBox = new HBox(10, autoCoverBox, addToAllPositiveCB, addToPlusMinusCB);
+        controlHBox = new HBox(10, autoCoverBox, addToAllPositiveCB, addToPlusMinusCB);
 
         if (middle) controlHBox.getChildren().add(1, firstLastBox);
 
@@ -205,7 +215,7 @@ public final class VaryWindowL {
 
         bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
-        final VBox bottomVBox = new VBox(10, bottomHBox, controlHBox);
+        final VBox bottomVBox = getBottomVBox();
 
         root.getChildren().addAll(instructHBox, text, bottomVBox);
         root.setSpacing(10);
@@ -252,6 +262,65 @@ public final class VaryWindowL {
         });
     }
 
+    // Zhao Yu Li, Jun 29, 2025.
+    // These buttons implement moving the screen from one coordinate to the next.
+    private VBox getBottomVBox() {
+        final Button backwardButton = new Button("Backward");
+        final Button forwardButton = new Button("Forward");
+        final Button goToLineButton = new Button("Go");
+
+        lineNumTextField.setPromptText("Line");
+        lineNumTextField.setPrefColumnCount(4);
+
+        backwardButton.setOnAction(event -> {
+            if (text.getText().trim().isEmpty()) {
+                showMoveScreenAlert("Please enter at least one coordinate.");
+                return;
+            }
+
+            if (lineNumber == null) lineNumber = 1;
+            else lineNumber -= 1;
+
+            if (lineNumber < 1) lineNumber = text.getText().trim().split("\n").length;
+
+            lineNumTextField.setText(Integer.toString(lineNumber));
+            moveScreenToLine(lineNumber - 1);
+        });
+
+        forwardButton.setOnAction(event -> {
+            if (text.getText().trim().isEmpty()) {
+                showMoveScreenAlert("Please enter at least one coordinate.");
+                return;
+            }
+
+            if (lineNumber == null) lineNumber = 1;
+            else lineNumber += 1;
+
+            if (lineNumber > text.getText().trim().split("\n").length) lineNumber = 1;
+
+            lineNumTextField.setText(Integer.toString(lineNumber));
+            moveScreenToLine(lineNumber - 1);
+        });
+
+        goToLineButton.setOnAction(event -> {
+            if (text.getText().trim().isEmpty()) {
+                showMoveScreenAlert("Please enter at least one coordinate.");
+                return;
+            }
+
+            int userLineNumber = getLineNumber();
+
+            lineNumber = userLineNumber;
+
+            lineNumTextField.setText(Integer.toString(userLineNumber));
+            moveScreenToLine(userLineNumber - 1);
+        });
+
+        final HBox lineNavigateHBox = new HBox(10, backwardButton, lineNumTextField, goToLineButton, forwardButton);
+
+        return new VBox(10, bottomHBox, controlHBox, lineNavigateHBox);
+    }
+
     public Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> 
     	   getPoints(final String x, final String y, final boolean onePoint) {
     	if (onePoint) {
@@ -278,5 +347,89 @@ public final class VaryWindowL {
 
     public boolean getAddToPlusMinusSelected() {
         return this.addToPlusMinusCB.isSelected();
+    }
+
+    /**
+     * <b>Zhao Yu Li</b><br>
+     * <b>Jun 29, 2025</b>
+     * <p>
+     *     Gets the user entered line number. Defaults to 1 if the user did not enter anything.
+     * </p>
+     * @return The line number entered by the user, or 1 if the user did not enter anything.
+     */
+    private int getLineNumber() {
+        int userLineNumber;
+        String lineNumberString = lineNumTextField.getText().trim();
+
+        if (lineNumberString.isEmpty()) lineNumberString = "1";
+
+        try {
+            userLineNumber = Integer.parseInt(lineNumberString);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException();
+        }
+
+        return userLineNumber;
+    }
+
+    /**
+     * <b>Zhao Yu Li</b><br>
+     * <b>Jun 29, 2025</b>
+     * <p>
+     *     Displays an information alert dialogue with <code>content</code>.
+     * </p>
+     * @param content The message to display to the user.
+     */
+    private void showMoveScreenAlert(String content) {
+        final Text alertText = new  Text(content);
+        alertText.setWrappingWidth(350);
+
+        final Alert alert = new Alert(AlertType.INFORMATION);
+        alert.setTitle(windowTitle);
+        alert.setHeaderText("Move Screen");
+        alert.getDialogPane().setContent(alertText);
+        alert.getDialogPane().setPadding(new Insets(10));
+        alert.getDialogPane().setMaxWidth(400);
+
+        alert.showAndWait();
+    }
+
+    /**
+     * <b>Zhao Yu Li</b><br>
+     * <b>Jun 29, 2025</b>
+     * <p>
+     *     Center the screen to the <code>index</code>'th coordinate.
+     * </p>
+     * @param index The index of the coordinate to move to.
+     */
+    private void moveScreenToLine(int index) {
+        if (index < 0) {
+            showMoveScreenAlert("Line number must be a non-zero positive integer.");
+            return;
+        }
+
+        String[] coordinateStrings =  text.getText().trim().split("\n");
+
+        if (coordinateStrings.length <= index) {
+            showMoveScreenAlert("Line number must be between 1 and " + coordinateStrings.length);
+            return;
+        }
+
+        String[] coordinateString = coordinateStrings[index].trim().split(" ");
+
+        viewer.moveScreen(coordinateString[0], coordinateString[1]);
+    }
+
+    /**
+     * <b>Zhao Yu Li</b><br>
+     * <b>Jun 29, 2025</b>
+     * <p>
+     *     Sets the line number text field and the internal state to <code>lineNumber</code>.
+     * </p>
+     * @param lineNumber The line number to set to.
+     */
+    public void setLineNumber(int lineNumber) {
+        this.lineNumber = lineNumber;
+        lineNumTextField.setText(Integer.toString(lineNumber));
     }
 }
