@@ -1866,7 +1866,7 @@ public final class Viewer {
                 alert.showAndWait();
             }
             else {
-                if (varyWindow == null) varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt", false);
+                if (varyWindow == null) varyWindow = new VaryWindowL("varyL", "varyL", tmpDir + "VaryPoints4.txt", tmpDir + "VaryLBounds.txt", false, this);
 
                 final String x = textXLockField.getText();
                 final String y = textYLockField.getText();
@@ -1927,7 +1927,7 @@ public final class Viewer {
                 alert.showAndWait();
             }
             else {
-                if (middleVaryWindow == null) middleVaryWindow = new VaryWindowL("MiddleVaryL", "MVaryL", tmpDir + "MiddleVaryPoints4.txt", tmpDir + "MiddleVaryLBounds.txt", true);
+                if (middleVaryWindow == null) middleVaryWindow = new VaryWindowL("MiddleVaryL", "MVaryL", tmpDir + "MiddleVaryPoints4.txt", tmpDir + "MiddleVaryLBounds.txt", true, this);
 
                 final String x = textXLockField.getText();
                 final String y = textYLockField.getText();
@@ -4244,8 +4244,8 @@ public final class Viewer {
     }
 
     // Zhao Yu Li, Jun 27, 2025.
-    // Structure is similar to drawAutoPolyVary. It uses recursion, so that we can jump to the next point before
-    // starting the Vary task. May cause a slight performance overhead because we are drawing more often (after
+    // The Structure is similar to drawAutoPolyVary. It uses recursion, so that we can jump to the next point before
+    // starting the Vary task. It May cause a slight performance overhead because we are drawing more often (after
     // finishing the vary task of the current point and before starting the next one).
     private void recurseDrawVaryL(final MutableList<Vector2> points, final int[] max, List<String> codeList,
                                   final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
@@ -4258,6 +4258,11 @@ public final class Viewer {
         // Move the screen to the point we are working on
         Vector2 point = points.get(idx);
         moveScreen(point.x, point.y);
+
+        // Zhao Yu Li, Jun 29, 2025.
+        // Set the line number of (Middle)VaryWindowL
+        if (printMid) middleVaryWindow.setLineNumber(idx + 1);
+        else varyWindow.setLineNumber(idx + 1);
 
         // Create the task
         final VaryLTask task = new VaryLTask(
@@ -4838,14 +4843,14 @@ public final class Viewer {
 
         if (((xMin == xMax) && (yMin == yMax)) || boyanRdoBtn.isSelected()) {
             final double size = map.pixelSize();
-            map.setTranslateX(xMin - (SIDE / 2) * size);
-            map.setTranslateY(yMin - (SIDE / 2) * size);
+            map.setTranslateX(xMin - (SIDE / 2.0) * size);
+            map.setTranslateY(yMin - (SIDE / 2.0) * size);
 
         } else {
             final double width = xMax - xMin;
             final double height = yMax - yMin;
 
-            final double largest = height > width ? height : width;
+            final double largest = Math.max(height, width);
 
             // a scale of 1 gives us a width of pi
             final double scale = Math.PI / largest;
@@ -4853,8 +4858,8 @@ public final class Viewer {
             map.setScale(scale);
 
             final double size = map.pixelSize();
-            map.setTranslateX((xMax + xMin) / 2 - (SIDE / 2) * size);
-            map.setTranslateY((yMax + yMin) / 2 - (SIDE / 2) * size);
+            map.setTranslateX((xMax + xMin) / 2 - (SIDE / 2.0) * size);
+            map.setTranslateY((yMax + yMin) / 2 - (SIDE / 2.0) * size);
         }
         viewRectangleBF.add(map.getViewRectangle());
         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -7958,6 +7963,24 @@ public final class Viewer {
         }
 
         return Tuple.of(startIdxUser, stepIdxUser, endIdxUser);
+    }
+
+    public void moveScreen(String xString, String yString) {
+        double x;
+        try {
+            x = Double.parseDouble(xString);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException();
+        }
+
+        double y;
+        try {
+            y = Double.parseDouble(yString);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException();
+        }
+
+        moveScreen(x, y);
     }
 
     public void moveScreen(double x, double y) {
