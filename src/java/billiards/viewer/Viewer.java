@@ -7917,7 +7917,7 @@ public final class Viewer {
         return getStartStepEnd(fileCodeSequences.size());
     }
 
-    private Tuple3<Integer, Integer, Integer> getStartStepEnd(int defaultEnd) {
+    public Tuple3<Integer, Integer, Integer> getStartStepEnd(int defaultEnd) {
         final String lineStartText = lineStartField.getText();
         final String lineStepText = lineStepField.getText();
         final String lineEndText = lineEndField.getText();
