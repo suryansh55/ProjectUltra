@@ -3,6 +3,7 @@ package billiards.viewer;
 import billiards.geometry.Vector2;
 
 import javafx.scene.text.Text;
+import javaslang.Tuple3;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
@@ -270,7 +271,7 @@ public final class VaryWindowL {
         final Button goToLineButton = new Button("Go");
 
         lineNumTextField.setPromptText("Line");
-        lineNumTextField.setPrefColumnCount(4);
+        lineNumTextField.setPrefColumnCount(3);
 
         backwardButton.setOnAction(event -> {
             if (text.getText().trim().isEmpty()) {
@@ -279,9 +280,18 @@ public final class VaryWindowL {
             }
 
             if (lineNumber == null) lineNumber = 1;
-            else lineNumber -= 1;
+            else {
+                Tuple3<Integer, Integer, Integer> startStepEnd = viewer.getStartStepEnd(getCoordinatesListLength());
+                Integer start = startStepEnd._1;
+                Integer step = startStepEnd._2;
+                Integer end = startStepEnd._3;
 
-            if (lineNumber < 1) lineNumber = text.getText().trim().split("\n").length;
+                if (start == null || step == null || end == null) return;
+
+                lineNumber -= step;
+
+                if (lineNumber < start) lineNumber = end;
+            }
 
             lineNumTextField.setText(Integer.toString(lineNumber));
             moveScreenToLine(lineNumber - 1);
@@ -294,9 +304,18 @@ public final class VaryWindowL {
             }
 
             if (lineNumber == null) lineNumber = 1;
-            else lineNumber += 1;
+            else {
+                Tuple3<Integer, Integer, Integer> startStepEnd = viewer.getStartStepEnd(getCoordinatesListLength());
+                Integer start = startStepEnd._1;
+                Integer step = startStepEnd._2;
+                Integer end = startStepEnd._3;
 
-            if (lineNumber > text.getText().trim().split("\n").length) lineNumber = 1;
+                if (start == null || step == null || end == null) return;
+
+                lineNumber += step;
+
+                if (lineNumber > end) lineNumber = start;
+            }
 
             lineNumTextField.setText(Integer.toString(lineNumber));
             moveScreenToLine(lineNumber - 1);
@@ -351,6 +370,31 @@ public final class VaryWindowL {
 
     /**
      * <b>Zhao Yu Li</b><br>
+     * <b>Jul 2, 2025</b>
+     * <p>
+     *     Extracts the integer entered in <code>textField</code>. Throws a <code>NumberFormatException</code> if what
+     *     was entered cannot be parsed as an integer.
+     * </p>
+     * @param textField The <code>TextField</code> to extract the integer from.
+     * @return The extracted integer from <code>textField</code>.
+     */
+    private int extractNumberFromTextField(TextField textField) {
+        int userNumber;
+        String numberString = textField.getText().trim();
+
+        if (numberString.isEmpty()) numberString = "1";
+
+        try {
+            userNumber = Integer.parseInt(numberString);
+        } catch (NumberFormatException e) {
+            throw new NumberFormatException();
+        }
+
+        return userNumber;
+    }
+
+    /**
+     * <b>Zhao Yu Li</b><br>
      * <b>Jun 29, 2025</b>
      * <p>
      *     Gets the user entered line number. Defaults to 1 if the user did not enter anything.
@@ -358,18 +402,7 @@ public final class VaryWindowL {
      * @return The line number entered by the user, or 1 if the user did not enter anything.
      */
     private int getLineNumber() {
-        int userLineNumber;
-        String lineNumberString = lineNumTextField.getText().trim();
-
-        if (lineNumberString.isEmpty()) lineNumberString = "1";
-
-        try {
-            userLineNumber = Integer.parseInt(lineNumberString);
-        } catch (NumberFormatException e) {
-            throw new NumberFormatException();
-        }
-
-        return userLineNumber;
+        return extractNumberFromTextField(lineNumTextField);
     }
 
     /**
@@ -404,7 +437,7 @@ public final class VaryWindowL {
      */
     private void moveScreenToLine(int index) {
         if (index < 0) {
-            showMoveScreenAlert("Line number must be a non-zero positive integer.");
+            showMoveScreenAlert("Line number must be a positive, non-zero integer.");
             return;
         }
 
@@ -431,5 +464,9 @@ public final class VaryWindowL {
     public void setLineNumber(int lineNumber) {
         this.lineNumber = lineNumber;
         lineNumTextField.setText(Integer.toString(lineNumber));
+    }
+
+    private int getCoordinatesListLength() {
+        return text.getText().trim().split("\n").length;
     }
 }
