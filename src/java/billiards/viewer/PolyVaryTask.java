@@ -132,22 +132,24 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 continue;
             }
 
+            // Zhao Yu Li, Jul 03, 2025.
+            // Do not invalidate all results just because only one code was used previously
             // Check if any of the codes found were previously used
-            boolean used = false;
-            for(ClassifiedCodeSequence code: usedCodes) {
-                used = used || localCodes.contains(code);
-            }
-            for(ClassifiedCodeSequence code: this.onScreenCodes) {
-                used = used || localCodes.contains(code);
-            }
-            if(used) {
-                this.updateProgress(progress.incrementAndGet(), todo);
-                continue;
-            }
+//            boolean used = false;
+//            for(ClassifiedCodeSequence code: usedCodes) {
+//                used = used || localCodes.contains(code);
+//            }
+//            for(ClassifiedCodeSequence code: this.onScreenCodes) {
+//                used = used || localCodes.contains(code);
+//            }
+//            if(used) {
+//                this.updateProgress(progress.incrementAndGet(), todo);
+//                continue;
+//            }
             // Take the first code not already drawn, and submit it to the storageExecutor for processing 
             for(ClassifiedCodeSequence classCodeSeq: localCodes) {
                 // If we find that a code in the list is already being processed, we can assume that this pixel is colored
-                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) break;
+                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
 
                 usedCodes.add(classCodeSeq); 
                 noCodes = false;
