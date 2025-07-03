@@ -80,7 +80,9 @@ void save_impl(const CodeSequence& code_seq, const CodeType& code_type, const T&
 
     // Zhao Yu Li, Jun 26, 2025.
     // Added "on conflict do nothing". This clause handles the case where more than one threads save the exact same thing concurrently.
-    const std::string sql = "insert into " + database::serialize(code_type) + "(code_sequence, initial_angles, points, equations, left_rights, lr_code_sequence, polygon, sin_equations, cos_equations) values (?, ?, ?, ?, ?, ?, ?, ?, ?) on conflict do nothing;";
+    // Jul 3, 2025.
+    // Replace "on conflict do nothing" with "or ignore" for backward compatibility.
+    const std::string sql = "insert or ignore into " + database::serialize(code_type) + "(code_sequence, initial_angles, points, equations, left_rights, lr_code_sequence, polygon, sin_equations, cos_equations) values (?, ?, ?, ?, ?, ?, ?, ?, ?);";
 
     db.prepare(sql)
         .bind(
