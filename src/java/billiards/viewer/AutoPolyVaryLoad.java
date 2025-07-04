@@ -1,9 +1,6 @@
 package billiards.viewer;
 
-import billiards.geometry.Vector2;
-
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.list.mutable.FastList;
+import javafx.scene.control.*;
 
 import java.util.Optional;
 
@@ -11,18 +8,13 @@ import billiards.geometry.ConvexPolygon;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.TextArea;
-import javafx.scene.control.TextField;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.Text;
 import javafx.stage.Stage;
 import javaslang.Tuple;
 import javaslang.Tuple7;
@@ -75,6 +67,11 @@ public class AutoPolyVaryLoad {
     public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
+	private final RadioButton regularModeRadioButton = new RadioButton("Regular");
+	private final RadioButton middleModeRadioButton = new RadioButton("Middle");
+	private final RadioButton firstMidLastModeRadioButton = new RadioButton("First, Middle, Last");
+	private final ToggleGroup modesToggleGroup = new ToggleGroup();
+	private final TextField numToPrintTextField = new TextField();
 
 	// Zhao Yu Li, Jun 25, 2025.
 	// Two new checkboxes for adding codes to the IterateToLimitWindow Cover
@@ -195,7 +192,7 @@ public class AutoPolyVaryLoad {
 
         bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
-		final VBox bottomVBox = new VBox(10, bottomHBox, controlHBox);
+		final VBox bottomVBox = new VBox(10, bottomHBox, getModesHBox(), controlHBox);
 
     	root.getChildren().addAll(instructHBox, text, bottomVBox);
     	root.setSpacing(10);
@@ -246,5 +243,63 @@ public class AutoPolyVaryLoad {
 
 	public boolean plusMinusIsSelected() {
 		return this.addToPlusMinusCheckbox.isSelected();
+	}
+
+	private HBox getModesHBox() {
+		regularModeRadioButton.setToggleGroup(modesToggleGroup);
+		middleModeRadioButton.setToggleGroup(modesToggleGroup);
+		firstMidLastModeRadioButton.setToggleGroup(modesToggleGroup);
+
+		regularModeRadioButton.setSelected(true);
+
+		numToPrintTextField.setPrefColumnCount(3);
+		numToPrintTextField.setText("2");
+
+		return new HBox(10, regularModeRadioButton, middleModeRadioButton, firstMidLastModeRadioButton, numToPrintTextField);
+	}
+
+	public int getMode() {
+		if (regularModeRadioButton.isSelected()) return 0;
+		if (middleModeRadioButton.isSelected()) return 1;
+		if (firstMidLastModeRadioButton.isSelected()) return 2;
+		return -1;
+	}
+
+	public Integer getNumGroupToPrint() {
+		if (numToPrintTextField.getText().trim().isEmpty()) {
+			Text text = new Text("Please enter a non-negative integer");
+			text.setWrappingWidth(350);
+
+			Alert alert = new Alert(AlertType.INFORMATION);
+			alert.setTitle("AutoPolyVary Error");
+			alert.setHeaderText("Empty field");
+			alert.getDialogPane().setContent(text);
+			alert.getDialogPane().setPrefWidth(400);
+			alert.showAndWait();
+			return null;
+		}
+
+		int numGroupToPrint;
+
+		try {
+			numGroupToPrint =  Integer.parseInt(numToPrintTextField.getText());
+		} catch (NumberFormatException e) {
+			throw new NumberFormatException();
+        }
+
+		if (numGroupToPrint < 0) {
+			Text text = new Text("Please enter a non-negative integer");
+			text.setWrappingWidth(350);
+
+			Alert alert = new Alert(AlertType.INFORMATION);
+			alert.setTitle("AutoPolyVary Error");
+			alert.setHeaderText("Negative integer value for the number of groups to print");
+			alert.getDialogPane().setContent(text);
+			alert.getDialogPane().setPrefWidth(400);
+			alert.showAndWait();
+			return null;
+		}
+
+		return numGroupToPrint;
 	}
 }
