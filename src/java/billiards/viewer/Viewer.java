@@ -6895,7 +6895,7 @@ public final class Viewer {
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
         // Create the task
-        final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
+        final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map, 0, 0);
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         // Count the number of holes we start with
@@ -7064,8 +7064,14 @@ public final class Viewer {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
+
+        int mode = autoPolyVaryWindow.getMode();
+        Integer numGroupToPrint = autoPolyVaryWindow.getNumGroupToPrint();
+
+        if (numGroupToPrint == null) return -1;
+
         // Create the task
-        final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map);
+        final PolyVaryTask task = new PolyVaryTask(pointsFiltered, onScreenCodes, boyanMenu, Array.ofAll(max), pool, overrideSS, storageExecutor, shotExecutor, regionsImageView, map, mode, numGroupToPrint);
         final ObservableList<Storage> partials = task.getPartials();
         //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
         overallProgress.changeTask(task);
@@ -7095,25 +7101,28 @@ public final class Viewer {
                         addToOnScreenSequences(storage, color);
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
-                        // print the code
-                        final String msg;
-                        final CodeType type = storage.codeType();
+                        if (mode == 0 || autoCover) {
+                            // print the code
+                            final String msg;
+                            final CodeType type = storage.codeType();
 
-                        String codeStr = "" + type;
-                        // String codeStr = "xxx " + type; //george july 26 2017 -
-                        // type whatever you want between the quotes in the line above
-                        // make sure to add a space after the xxx
-                        if (type.equals(CodeType.CS)) {
-                            codeStr += "  ";
-                        } else if (!type.equals(OSNO)) {
-                            codeStr += " ";
+                            String codeStr = "" + type;
+                            // String codeStr = "xxx " + type; //george july 26 2017 -
+                            // type whatever you want between the quotes in the line above
+                            // make sure to add a space after the xxx
+                            if (type.equals(CodeType.CS)) {
+                                codeStr += "  ";
+                            } else if (!type.equals(OSNO)) {
+                                codeStr += " ";
+                            }
+                            msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+
+                            if (mode == 0) System.out.println(msg);
+                            if(autoCover) coverWindow.appendStablesInfo(msg);
                         }
-                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
-                        System.out.println(msg);
-                        if(autoCover) coverWindow.appendStablesInfo(msg);
 
                         // Zhao Yu Li, Jun 25, 2025.
-                        // Add code sequence - iteration pattern pair to the IterateToLimitWindow Cover
+                        // Add the code sequence - iteration pattern pair to the IterateToLimitWindow Cover
                         addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
                     }
                 });
@@ -7137,25 +7146,28 @@ public final class Viewer {
                     color = comboBoxColors.get(index);
                     addToOnScreenSequences(storage, color);
 
-                    // print the code
-                    final String msg;
-                    final CodeType type = storage.codeType();
+                    if (mode == 0 || autoCover) {
+                        // print the code
+                        final String msg;
+                        final CodeType type = storage.codeType();
 
-                    String codeStr = "" + type;
-                    // String codeStr = "xxx " + type; //george july 26 2017 -
-                    // type whatever you want between the quotes in the line above
-                    // make sure to add a space after the xxx
-                    if (type.equals(CodeType.CS)) {
-                        codeStr += "  ";
-                    } else if (!type.equals(OSNO)) {
-                        codeStr += " ";
+                        String codeStr = "" + type;
+                        // String codeStr = "xxx " + type; //george july 26 2017 -
+                        // type whatever you want between the quotes in the line above
+                        // make sure to add a space after the xxx
+                        if (type.equals(CodeType.CS)) {
+                            codeStr += "  ";
+                        } else if (!type.equals(OSNO)) {
+                            codeStr += " ";
+                        }
+                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+
+                        if (mode == 0) System.out.println(msg);
+                        if(autoCover) coverWindow.appendStablesInfo(msg);
                     }
-                    msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
-                    System.out.println(msg);
-                    if(autoCover) coverWindow.appendStablesInfo(msg);
 
                     // Zhao Yu Li, Jun 25, 2025.
-                    // Add code sequence - iteration pattern pair to the IterateToLimitWindow Cover
+                    // Add the code sequence - iteration pattern pair to the IterateToLimitWindow Cover
                     addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
                 }
             });
