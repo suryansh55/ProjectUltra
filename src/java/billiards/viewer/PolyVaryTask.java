@@ -5,6 +5,7 @@ import billiards.codeseq.CodeType;
 import billiards.codeseq.Storage;
 import billiards.database.Database;
 import billiards.geometry.Vector2;
+import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
 
 import javaslang.collection.Array;
@@ -29,6 +30,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelReader;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.list.mutable.FastList;
@@ -63,13 +65,16 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     private final ExecutorService storageExecutor;
     private final ExecutorService shotExecutor;
     private final ImageView screenImage;
-    private final PixelRadianMap screenMap; 
+    private final PixelRadianMap screenMap;
+    private final int mode;
+    private final int numGroupToPrint;
 
     // Constructor takes a list of points to vary at
     public PolyVaryTask(
         final MutableList<Double> points, final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes, final BoyanMenu boyan, 
-        final Array<Integer> max, final ConnectionPool pool, final boolean override, 
-        final ExecutorService eOne, final ExecutorService eTwo, final ImageView screen, final PixelRadianMap map) {
+        final Array<Integer> max, final ConnectionPool pool, final boolean override, final ExecutorService eOne,
+        final ExecutorService eTwo, final ImageView screen, final PixelRadianMap map, final int mode,
+        final int numGroupToPrint) {
         this.coordList = toCoords(points);
         this.onScreenCodes = onScreenCodes;
         this.boyanMenu = boyan;
@@ -85,6 +90,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         this.shotExecutor = eTwo;
         this.screenImage = screen;
         this.screenMap = map;
+        this.mode = mode;
+        this.numGroupToPrint = numGroupToPrint;
     }
 
     @Override
@@ -121,8 +128,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 }
             }
             // We want to know if we submitted a task that will update the progress for us.
-            boolean noCodes = true;
-            if(localCodes.size() == 0) {
+            if(localCodes.isEmpty()) {
                 ++empty;
                 if(empty >= emptyMax) {
                     System.out.println("Finish Vary due to too many empty pixels");
@@ -146,32 +152,28 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 //                this.updateProgress(progress.incrementAndGet(), todo);
 //                continue;
 //            }
-            // Take the first code not already drawn, and submit it to the storageExecutor for processing 
-            for(ClassifiedCodeSequence classCodeSeq: localCodes) {
-                // If we find that a code in the list is already being processed, we can assume that this pixel is colored
-                if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
+            if (mode == 0) {
+                boolean noCodes = true;
 
-                usedCodes.add(classCodeSeq); 
-                noCodes = false;
-                // Submit the runnable for this code
-                futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
-                        @Override
-                        public Either<String, Storage> call() {
-                            Either<String, Storage> result = loadStorage(classCodeSeq);
-                            if(!PolyVaryTask.this.isCancelled()) PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
-                            return result;
-                        }
+                // Take the first code not already drawn, and submit it to the storageExecutor for processing
+                for(ClassifiedCodeSequence classCodeSeq: localCodes) {
+                    if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
 
-                        @Override
-                        public int getPriority() {
-                            return classCodeSeq.length();
-                        }
-                    })
-                );
-                break;
-            }
-            if(noCodes) { // Still need to update progress even if nothing found
-                this.updateProgress(progress.incrementAndGet(), todo);
+                    noCodes = loadStorageFromDB(classCodeSeq, usedCodes, futures, progress, todo);
+                    break;
+                }
+
+                if(noCodes) { // Still need to update progress even if nothing found
+                    this.updateProgress(progress.incrementAndGet(), todo);
+                }
+            } else if (mode == 1) {
+                ArrayList<ClassifiedCodeSequence> printedCodes = PrintMid.printMid(localCodes, numGroupToPrint);
+                loadPrintedCodesStorage(usedCodes, futures, progress, todo, printedCodes);
+            } else if (mode == 2) {
+                ArrayList<ClassifiedCodeSequence> printedCodes = PrintMid.printFirstMidLast(localCodes, numGroupToPrint, true);
+                loadPrintedCodesStorage(usedCodes, futures, progress, todo, printedCodes);
+            } else {
+                throw new NotImplementedException("Invalid mode value for PolyVaryTask");
             }
         }
 
@@ -308,5 +310,40 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         return this.partialResults.getReadOnlyProperty();
     }
 
-    
+    private boolean loadStorageFromDB(ClassifiedCodeSequence classCodeSeq, MutableSortedSet<ClassifiedCodeSequence> usedCodes,
+                                      MutableList<Future<Either<String, Storage>>> futures, AtomicInteger progress,
+                                      int todo) {
+        usedCodes.add(classCodeSeq);
+        // Submit the runnable for this code
+        futures.add(storageExecutor.submit(new PriorityCallable<Either<String, Storage>>() {
+                    @Override
+                    public Either<String, Storage> call() {
+                        Either<String, Storage> result = loadStorage(classCodeSeq);
+                        if(!PolyVaryTask.this.isCancelled()) PolyVaryTask.this.updateProgress(progress.incrementAndGet(), todo); // updateProgress is thread safe
+                        return result;
+                    }
+
+                    @Override
+                    public int getPriority() {
+                        return classCodeSeq.length();
+                    }
+                })
+        );
+
+        return false;
+    }
+
+
+    private void loadPrintedCodesStorage(MutableSortedSet<ClassifiedCodeSequence> usedCodes, MutableList<Future<Either<String, Storage>>> futures, AtomicInteger progress, int todo, ArrayList<ClassifiedCodeSequence> printedCodes) {
+        boolean atLeastOneCode = false;
+
+        for(ClassifiedCodeSequence classCodeSeq: printedCodes) {
+            boolean skipped = !loadStorageFromDB(classCodeSeq, usedCodes, futures, progress, todo);
+            atLeastOneCode = atLeastOneCode || skipped;
+        }
+
+        if(!atLeastOneCode) { // Still need to update progress even if nothing found
+            this.updateProgress(progress.incrementAndGet(), todo);
+        }
+    }
 }
