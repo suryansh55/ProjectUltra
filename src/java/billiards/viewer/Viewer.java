@@ -6776,6 +6776,26 @@ public final class Viewer {
                 overallProgress.close();
                 return;
             }
+
+            // Zhao Yu Li, Jul 7, 2025.
+            // Scale after every rep
+            Interval oldXInterval = map.getViewRectangle().intervalX;
+            Interval oldYInterval = map.getViewRectangle().intervalY;
+            double oldCenterX = (oldXInterval.min + oldXInterval.max) / 2;
+            double oldCenterY = (oldYInterval.min + oldYInterval.max) / 2;
+
+            map.scaleBy(2);
+
+            Interval newXInterval = map.getViewRectangle().intervalX;
+            Interval newYInterval = map.getViewRectangle().intervalY;
+            double newCenterX = (newXInterval.min + newXInterval.max) / 2;
+            double newCenterY = (newYInterval.min + newYInterval.max) / 2;
+
+            map.translateXBy(oldCenterX - newCenterX);
+            map.translateYBy(oldCenterY - newCenterY);
+
+            viewRectangleBF.add(map.getViewRectangle());
+
             overallProgress.increment(1);
             final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> curVals = Tuple.of(polyVals._1, polyVals._2, polyVals._3, polyVals._4,
                     Math.max(0, polyVals._5 + SuperPolyVaryLoad.BoundCSstep * newVal),
