@@ -12,6 +12,13 @@ import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
+/**
+ * <b>Zhao Yu Li</b><br>
+ * <b>Jul 07, 2025</b>
+ * <p>
+ *     Calculates the iteration pattern between two code sequences.
+ * </p>
+ */
 public class PatternCalculator {
     public PatternCalculator() {
         final Stage stage = new Stage();
