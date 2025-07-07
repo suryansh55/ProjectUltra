@@ -7096,6 +7096,7 @@ public final class Viewer {
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
 
+        if (autoPolyVaryWindow == null) autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
         int mode = autoPolyVaryWindow.getMode();
         Integer numGroupToPrint = autoPolyVaryWindow.getNumGroupToPrint();
 
