@@ -8,6 +8,7 @@ import billiards.geometry.ConvexPolygon;
 import billiards.utils.BatchLoadStorage;
 import billiards.utils.Polygon;
 import billiards.wrapper.ConnectionPool;
+import javafx.animation.PauseTransition;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -18,6 +19,7 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 import javaslang.Tuple3;
 import javaslang.control.Either;
 import org.eclipse.collections.api.list.MutableList;
@@ -118,14 +120,14 @@ public class IterateToLimitWindow {
 
         root.setPadding(new Insets(10));
 
-        polygonTextArea.setTooltip(new Tooltip(
+        setUpTooltip(polygonTextArea, new Tooltip(
                 "Enter each (x,y) coordinate in a separate line, with a whitespace separating the x and y coordinates.")
         );
         polygonTextArea.setWrapText(true);
         polygonTextArea.setMaxHeight(130);
         polygonTextArea.setFont(new Font("monospace", 16));
 
-        stablesTextArea.setTooltip(getTooltip(
+        setUpTooltip(stablesTextArea, getTooltip(
                 "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
                         "separating the stable and the pattern. Stables in this text area will be given an " +
                         "all-positive iteration pattern when you use the \"Find Pattern\" button."
@@ -133,7 +135,7 @@ public class IterateToLimitWindow {
         stablesTextArea.setWrapText(true);
         stablesTextArea.setFont(new Font("monospace", 16));
 
-        pmStablesTextArea.setTooltip(getTooltip(
+        setUpTooltip(pmStablesTextArea, getTooltip(
                 "Enter each stable - iteration pattern pair in a separate line, with a semicolon " +
                         "separating the stable and the pattern. Stables in this text area will be given an " +
                         "plus-minus iteration pattern when you use the \"Find Pattern\" button."
@@ -141,7 +143,7 @@ public class IterateToLimitWindow {
         pmStablesTextArea.setWrapText(true);
         pmStablesTextArea.setFont(new Font("monospace", 16));
 
-        unstablesTextArea.setTooltip(getTooltip(
+        setUpTooltip(unstablesTextArea, getTooltip(
                 "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
                         "separating the unstable and the pattern. Unstables in this text area will be given an " +
                         "all-positive iteration pattern when you use the \"Find Pattern\" button."
@@ -149,7 +151,7 @@ public class IterateToLimitWindow {
         unstablesTextArea.setWrapText(true);
         unstablesTextArea.setFont(new Font("monospace", 16));
 
-        pmUnstablesTextArea.setTooltip(getTooltip(
+        setUpTooltip(pmUnstablesTextArea, getTooltip(
                 "Enter each unstable - iteration pattern pair in a separate line, with a semicolon " +
                         "separating the unstable and the pattern. Unstables in this text area will be given an " +
                         "plus-minus iteration pattern when you use the \"Find Pattern\" button."
@@ -157,7 +159,7 @@ public class IterateToLimitWindow {
         pmUnstablesTextArea.setWrapText(true);
         pmUnstablesTextArea.setFont(new Font("monospace", 16));
 
-        triplesTextArea.setTooltip(getTooltip(
+        setUpTooltip(triplesTextArea, getTooltip(
                 "Enter each triple - iteration pattern pair in a separate line, with a semicolon " +
                         "separating the triple and the pattern. Different components of the triple should be" +
                         "separated by a comma."
@@ -202,6 +204,23 @@ public class IterateToLimitWindow {
         tooltip.setWrapText(true);
         tooltip.setPrefWidth(400);
         return tooltip;
+    }
+
+    private static void setUpTooltip(Control element, Tooltip tooltip) {
+        Tooltip.install(element, tooltip);
+
+        // Set up a timer to hide the tooltip
+        element.setOnMouseEntered(event -> {
+            tooltip.show(element,
+                    element.localToScreen(element.getBoundsInLocal()).getMinX(),
+                    element.localToScreen(element.getBoundsInLocal()).getMinY() - 30);
+
+            PauseTransition delay = new PauseTransition(Duration.seconds(5));
+            delay.setOnFinished(e -> tooltip.hide());
+            delay.play();
+        });
+
+        element.setOnMouseExited(event -> tooltip.hide());
     }
 
     private HBox getTextAreaHBox(String labelText) {
