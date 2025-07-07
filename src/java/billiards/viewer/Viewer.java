@@ -544,6 +544,10 @@ public final class Viewer {
     VaryWindowL middleVaryWindow = null;
     AutoPolyVaryLoad autoPolyVaryWindow = null;
 
+    // Zhao Yu Li, Jul 7, 2025.
+    // Pattern calculator
+    final Button patternCalculatorBtn = new Button();
+
     public Viewer(final Stage primaryStage, final String version, final ExecutorService executor,
                   final ConnectionPool pool, final String dbName) {
         Viewer.dbname=dbName;
@@ -1742,6 +1746,13 @@ public final class Viewer {
         lineNumberTxt.setStyle(textBoxColor);
         lineNumberTxt.setPrefWidth(45);
         lineNumberTxt.setPrefColumnCount(8);
+
+        // Zhao Yu Li, Jul 7, 2025.
+        // Pattern Calculator
+        patternCalculatorBtn.setText("Pattern Calculator");
+        patternCalculatorBtn.setTooltip(Utils.toolTip("Opens the Pattern Calculator"));
+        Utils.colorButton(patternCalculatorBtn, Color.SKYBLUE, clickColor);
+        patternCalculatorBtn.setOnAction(event -> new PatternCalculator());
 
         btnLoadOBOFile.setText("Load One By One File");
         btnLoadOBOFile.setTooltip(Utils.toolTip("Load a file, and go through the contents one by one"));
@@ -3721,7 +3732,7 @@ public final class Viewer {
         zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
         backForthHBox.getChildren().addAll(
                 zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
-        oboHBox.getChildren().addAll(btnLoadOBOFile, lineNumberTxt, btnGo);
+        oboHBox.getChildren().addAll(patternCalculatorBtn, btnLoadOBOFile, lineNumberTxt, btnGo);
         //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, cboxRegionColor2, clearBtn, resetBtn);//george may 2,2019
         colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
 
