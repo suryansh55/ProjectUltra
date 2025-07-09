@@ -543,6 +543,8 @@ public final class Viewer {
     VaryWindowL varyWindow =  null;
     VaryWindowL middleVaryWindow = null;
     AutoPolyVaryLoad autoPolyVaryWindow = null;
+    SuperPolyVaryLoad superPolyVaryWindow = null;
+
 
     // Zhao Yu Li, Jul 7, 2025.
     // Pattern calculator
@@ -583,7 +585,6 @@ public final class Viewer {
         final CoverWindow4 coverWindow4 = new CoverWindow4(
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover2", executor));
-        final SuperPolyVaryLoad superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
 
         executorService = executor;
 
@@ -2102,9 +2103,15 @@ public final class Viewer {
                 alert.showAndWait();
                 // return;  <-- Don't exit from this call, because PolyVary can still run with
             }
+
+            // Zhao Yu Li, Jul 08, 2025.
+            // Lazy initialization of superPolyVaryWindow.
+            if (superPolyVaryWindow == null) superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
+
             if (superPolyVaryWindow.stage.isShowing()) {
                 superPolyVaryWindow.stage.toFront();
             }
+
             final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = superPolyVaryWindow.getLoad();
             if (!polyOpt.isPresent()) {
 //        		final Alert alert = new Alert(AlertType.ERROR);
@@ -2115,7 +2122,6 @@ public final class Viewer {
                 return;
             }
             superPolyVaryFunction(polyOpt.get(), executor);
-
         });
 
 
@@ -6777,24 +6783,34 @@ public final class Viewer {
                 return;
             }
 
-            // Zhao Yu Li, Jul 7, 2025.
-            // Scale after every rep
-            Interval oldXInterval = map.getViewRectangle().intervalX;
-            Interval oldYInterval = map.getViewRectangle().intervalY;
-            double oldCenterX = (oldXInterval.min + oldXInterval.max) / 2;
-            double oldCenterY = (oldYInterval.min + oldYInterval.max) / 2;
+            // Zhao Yu Li, Jul 08, 2025.
+            // Scale only if the user selected to scale
+            boolean magnificationIsSelected = superPolyVaryWindow != null && superPolyVaryWindow.getMagnificationIsSelected();
 
-            map.scaleBy(2);
+            if (magnificationIsSelected) {
+                // Zhao Yu Li, Jul 08, 2025.
+                // Try to get the user enter scale factor
+                double scaleFactor = superPolyVaryWindow.getMagnification();
 
-            Interval newXInterval = map.getViewRectangle().intervalX;
-            Interval newYInterval = map.getViewRectangle().intervalY;
-            double newCenterX = (newXInterval.min + newXInterval.max) / 2;
-            double newCenterY = (newYInterval.min + newYInterval.max) / 2;
+                // Zhao Yu Li, Jul 7, 2025.
+                // Scale after every rep
+                Interval oldXInterval = map.getViewRectangle().intervalX;
+                Interval oldYInterval = map.getViewRectangle().intervalY;
+                double oldCenterX = (oldXInterval.min + oldXInterval.max) / 2;
+                double oldCenterY = (oldYInterval.min + oldYInterval.max) / 2;
 
-            map.translateXBy(oldCenterX - newCenterX);
-            map.translateYBy(oldCenterY - newCenterY);
+                map.scaleBy(scaleFactor);
 
-            viewRectangleBF.add(map.getViewRectangle());
+                Interval newXInterval = map.getViewRectangle().intervalX;
+                Interval newYInterval = map.getViewRectangle().intervalY;
+                double newCenterX = (newXInterval.min + newXInterval.max) / 2;
+                double newCenterY = (newYInterval.min + newYInterval.max) / 2;
+
+                map.translateXBy(oldCenterX - newCenterX);
+                map.translateYBy(oldCenterY - newCenterY);
+
+                viewRectangleBF.add(map.getViewRectangle());
+            }
 
             overallProgress.increment(1);
             final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> curVals = Tuple.of(polyVals._1, polyVals._2, polyVals._3, polyVals._4,
