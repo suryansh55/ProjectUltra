@@ -2,6 +2,7 @@ package billiards.viewer;
 
 import billiards.geometry.Vector2;
 
+import javafx.scene.text.Text;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
@@ -88,6 +89,8 @@ public class SuperPolyVaryLoad {
     public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
+	private final CheckBox magnifyCheckBox = new CheckBox();
+	private final TextField magnifyTextField = new TextField();
     
     private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
     
@@ -219,6 +222,17 @@ public class SuperPolyVaryLoad {
         repVBox.getChildren().addAll(repl, repBox);
         loadHBox.getChildren().addAll(loadButton, repVBox);
         loadHBox.setAlignment(Pos.CENTER);
+
+		// Zhao Yu Li, Jul 8, 2025.
+		// Optional magnification after every rep, and arbitrary magnification
+		magnifyTextField.setPrefColumnCount(3);
+		magnifyTextField.setText("2");
+
+		magnifyCheckBox.setText("Magnification:");
+
+		HBox magnifyHBox = new HBox(10, magnifyCheckBox, magnifyTextField);
+		magnifyHBox.setAlignment(Pos.CENTER_LEFT);
+
         //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
         controlVBox.getChildren().addAll(loadHBox, autoCoverBox, colorCycleBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
@@ -226,7 +240,7 @@ public class SuperPolyVaryLoad {
 
         bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
-    	root.getChildren().addAll(instructHBox, text, bottomHBox);
+    	root.getChildren().addAll(instructHBox, text, bottomHBox, magnifyHBox);
     	root.setSpacing(10);
     	root.setPadding(new Insets(10));
     
@@ -268,4 +282,32 @@ public class SuperPolyVaryLoad {
     	stage.showAndWait();
     	return this.result;
     }
+
+	public boolean getMagnificationIsSelected() {
+		return this.magnifyCheckBox.isSelected();
+	}
+
+	public Double getMagnification() {
+		double magnification;
+
+		try {
+			magnification = Double.parseDouble(magnifyTextField.getText().trim());
+		} catch (NumberFormatException e) {
+			throw new RuntimeException(e);
+        }
+
+		if (magnification <= 0) {
+			Text alertText = new Text("Magnification must be a positive value.");
+			alertText.setWrappingWidth(350);
+
+			Alert alert = new Alert(AlertType.INFORMATION);
+			alert.getDialogPane().setContent(alertText);
+			alert.getDialogPane().setPadding(new Insets(10));
+			alert.getDialogPane().setPrefWidth(400);
+			alert.showAndWait();
+			return null;
+		}
+
+		return magnification;
+	}
 }
