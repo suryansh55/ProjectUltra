@@ -19,6 +19,8 @@ public final class VaryCS {
     private static final double OFFSET = 0.0005;
     private static final double SMALLOFFSET = 0.0000000000005;
 
+    // Zhao Yu Li, Jul 10, 2025.
+    // Restructured the recursion into a while loop. Uses multiple ArrayLists to simulate the stack.
     private static void iterateFireAway(
             final int min, final int max, final double specMax, final SideSum sideSum,
             final TriangleBilliard billiard, final MutableIntList code,
