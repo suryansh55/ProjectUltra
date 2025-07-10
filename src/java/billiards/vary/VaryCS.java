@@ -1,10 +1,13 @@
 package billiards.vary;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.FastList;
+import org.eclipse.collections.impl.list.mutable.primitive.BooleanArrayList;
+import org.eclipse.collections.impl.list.mutable.primitive.DoubleArrayList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import billiards.codeseq.ClassifiedCodeSequence;
@@ -20,61 +23,133 @@ public final class VaryCS {
             final int min, final int max, final double specMin, final double specMax,
             final int depth, final SideSum sideSum, final TriangleBilliard billiard, final MutableIntList code,
             final MutableList<ClassifiedCodeSequence> codesFound) {
-    	
-		if (depth >= max) return;
-		if (Thread.currentThread().isInterrupted()) return;
-		
-		if (depth > min) {
-			// here we check if we have reached a periodic path
 
-		    if (Math.abs(sideSum.sum()) < OFFSET) {
-		    	// we do an additional check meant to reduce the number of empty sets due to 
-		    	// rounding error. It is not very effective at large numbers of moves.
-		    	if (specMax - specMin > SMALLOFFSET) {
-			    	final MutableIntList code2 = new IntArrayList();
-			    	code2.addAll(code);
-			    	code2.addAll(code.toReversed());
-			        final Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(code2);
-			        if (codeSeq.isPresent()) {
-			        	codesFound.add(codeSeq.get());
-			        }
-		    	}
-		    }
-		}
-		
-		final double specialPos = billiard.vertexC.x;
-		
-		if (specMin < specialPos) {
-		    // go left
-		    final TriangleBilliard leftBilliard = billiard.getNext(true);
-		    final int leftSwap = 3 - billiard.side - leftBilliard.side;
+        IntArrayList sideSumArray = new IntArrayList();
+        DoubleArrayList specMinArray = new DoubleArrayList();
+        specMinArray.add(specMin);
 
-		    sideSum.add(leftSwap);
-		    code.add(leftSwap);
+        DoubleArrayList specMaxArray = new DoubleArrayList();
+        specMaxArray.add(specMax);
 
-		    recurseFireAway(min, max, specMin, Math.min(specialPos, specMax),
-		                    depth + 1, sideSum, leftBilliard, code, codesFound);
+        BooleanArrayList leftArray = new BooleanArrayList();
+        leftArray.add(false);
 
-		    code.removeAtIndex(code.size() - 1);
-		    sideSum.sub(leftSwap);
-		}
+        BooleanArrayList rightArray = new BooleanArrayList();
+        rightArray.add(false);
 
-		if (specMax > specialPos) {
-		    // go right
-		    final TriangleBilliard rightBilliard = billiard.getNext(false);
-		    final int rightSwap = 3 - billiard.side - rightBilliard.side;
+        ArrayList<TriangleBilliard> billiards = new ArrayList<>();
+        billiards.add(billiard);
 
-		    sideSum.sub(rightSwap);
-		    code.add(rightSwap);
+        int iterationDepth = depth;
 
-		    recurseFireAway(min, max, Math.max(specialPos, specMin), specMax,
-		                    depth + 1, sideSum, rightBilliard, code, codesFound);
+        while (true) {
+            if (iterationDepth >= max || Thread.currentThread().isInterrupted()) {
+                iterationDepth = doneIteration(code, sideSumArray, specMinArray, specMaxArray, leftArray, rightArray, billiards, iterationDepth, sideSum);
+                continue;
+            }
 
-		    code.removeAtIndex(code.size() - 1);
-		    sideSum.add(rightSwap);
-		}
+            if (iterationDepth > min) {
+                // here we check if we have reached a periodic path
+
+                if (Math.abs(sideSum.sum()) < OFFSET) {
+                    // we do an additional check meant to reduce the number of empty sets due to
+                    // rounding error. It is not very effective at large numbers of moves.
+                    if (specMaxArray.getLast() - specMinArray.getLast() > SMALLOFFSET) {
+                        final MutableIntList code2 = new IntArrayList();
+                        code2.addAll(code);
+                        code2.addAll(code.toReversed());
+                        final Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(code2);
+                        codeSeq.ifPresent(codesFound::add);
+                    }
+                }
+            }
+
+            boolean currentLeft = leftArray.getLast();
+            boolean currentRight = rightArray.getLast();
+            TriangleBilliard currentBilliard = billiards.get(billiards.size() - 1);
+            final double specialPos = currentBilliard.vertexC.x;
+
+            if (!currentLeft && !currentRight) {
+                if (specMinArray.getLast() < specialPos) {
+                    // go left
+                    final TriangleBilliard leftBilliard = currentBilliard.getNext(true);
+                    final int leftSwap = 3 - currentBilliard.side - leftBilliard.side;
+
+                    sideSum.add(leftSwap);
+                    sideSumArray.add(leftSwap);
+                    code.add(leftSwap);
+
+                    specMinArray.add(specMinArray.getLast());
+                    specMaxArray.add(Math.min(specialPos, specMaxArray.getLast()));
+                    leftArray.add(false);
+                    rightArray.add(false);
+                    billiards.add(leftBilliard);
+
+                    iterationDepth++;
+                } else {
+                    leftArray.set(leftArray.size() - 1, true);
+                }
+            }
+
+            if (currentLeft && !currentRight) {
+                if (specMaxArray.getLast() > specialPos) {
+                    // go right
+                    final TriangleBilliard rightBilliard = currentBilliard.getNext(false);
+                    final int rightSwap = 3 - currentBilliard.side - rightBilliard.side;
+
+                    sideSum.sub(rightSwap);
+                    sideSumArray.add(rightSwap);
+                    code.add(rightSwap);
+
+                    specMinArray.add(Math.max(specialPos, specMinArray.getLast()));
+                    specMaxArray.add(specMaxArray.getLast());
+                    leftArray.add(false);
+                    rightArray.add(false);
+                    billiards.add(rightBilliard);
+
+                    iterationDepth++;
+                } else {
+                    rightArray.set(rightArray.size() - 1, true);
+                }
+            }
+
+            if (currentLeft && currentRight) {
+                iterationDepth = doneIteration(code, sideSumArray, specMinArray, specMaxArray, leftArray, rightArray, billiards, iterationDepth, sideSum);
+            }
+
+            if (leftArray.isEmpty() && rightArray.isEmpty()) break;
+        }
     }
-	
+
+    private static int doneIteration(MutableIntList code, IntArrayList sideSumArray, DoubleArrayList specMinArray, DoubleArrayList specMaxArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard> billiards, int iterationDepth, SideSum sideSum) {
+        boolean sideSumArrayIsEmpty = sideSumArray.isEmpty();
+        int sideSumDelta = sideSumArrayIsEmpty ? 0 : sideSumArray.getLast();
+
+        removeLast(code, sideSumArray, specMinArray, specMaxArray, leftArray, rightArray, billiards);
+
+        if (!leftArray.isEmpty() && !rightArray.isEmpty()) {
+            if (!sideSumArrayIsEmpty) {
+                if (!leftArray.getLast() && !rightArray.getLast()) sideSum.sub(sideSumDelta);
+                else if (leftArray.getLast() && !rightArray.getLast()) sideSum.add(sideSumDelta);
+            }
+
+            if (!leftArray.getLast() && !rightArray.getLast()) leftArray.set(leftArray.size() - 1, true);
+            else if (leftArray.getLast() && !rightArray.getLast()) rightArray.set(rightArray.size() - 1, true);
+        }
+
+        return iterationDepth - 1;
+    }
+
+    private static void removeLast(MutableIntList code, IntArrayList sideSumArray, DoubleArrayList specMinArray, DoubleArrayList specMaxArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard> billiards) {
+        if (!code.isEmpty()) code.removeAtIndex(code.size() - 1);
+        if (!sideSumArray.isEmpty()) sideSumArray.removeAtIndex(sideSumArray.size() - 1);
+        if (!specMinArray.isEmpty()) specMinArray.removeAtIndex(specMinArray.size() - 1);
+        if (!specMaxArray.isEmpty()) specMaxArray.removeAtIndex(specMaxArray.size() - 1);
+        if (!leftArray.isEmpty()) leftArray.removeAtIndex(leftArray.size() - 1);
+        if (!rightArray.isEmpty()) rightArray.removeAtIndex(rightArray.size() - 1);
+        if (!billiards.isEmpty()) billiards.remove(billiards.size() - 1);
+    }
+
     public static MutableList<ClassifiedCodeSequence> fireAway(final int movesMin, final int movesMax,
             final double xAngle, final double yAngle) {
 
