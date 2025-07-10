@@ -19,14 +19,14 @@ public final class VaryCS {
     private static final double OFFSET = 0.0005;
     private static final double SMALLOFFSET = 0.0000000000005;
 
-    private static void recurseFireAway(
-            final int min, final int max, final double specMin, final double specMax,
-            final int depth, final SideSum sideSum, final TriangleBilliard billiard, final MutableIntList code,
+    private static void iterateFireAway(
+            final int min, final int max, final double specMax, final SideSum sideSum,
+            final TriangleBilliard billiard, final MutableIntList code,
             final MutableList<ClassifiedCodeSequence> codesFound) {
 
         IntArrayList sideSumArray = new IntArrayList();
         DoubleArrayList specMinArray = new DoubleArrayList();
-        specMinArray.add(specMin);
+        specMinArray.add(0);
 
         DoubleArrayList specMaxArray = new DoubleArrayList();
         specMaxArray.add(specMax);
@@ -40,7 +40,7 @@ public final class VaryCS {
         ArrayList<TriangleBilliard> billiards = new ArrayList<>();
         billiards.add(billiard);
 
-        int iterationDepth = depth;
+        int iterationDepth = 0;
 
         while (true) {
             if (iterationDepth >= max || Thread.currentThread().isInterrupted()) {
@@ -161,7 +161,7 @@ public final class VaryCS {
 		final SideSum sideSum = SideSum.create(xAngle, yAngle);
 		final MutableIntList foundCode = new IntArrayList();
 		
-		recurseFireAway(movesMin/2, movesMax/2, 0, billiard.vertexB.x, 0, sideSum, billiard, foundCode, codes);
+		iterateFireAway(movesMin/2, movesMax/2, billiard.vertexB.x, sideSum, billiard, foundCode, codes);
 
 		return codes;
     }
