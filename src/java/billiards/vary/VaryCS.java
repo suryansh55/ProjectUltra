@@ -48,7 +48,10 @@ public final class VaryCS {
                 continue;
             }
 
-            if (iterationDepth > min) {
+            boolean currentLeft = leftArray.getLast();
+            boolean currentRight = rightArray.getLast();
+
+            if (iterationDepth > min && !currentLeft && !currentRight) {
                 // here we check if we have reached a periodic path
 
                 if (Math.abs(sideSum.sum()) < OFFSET) {
@@ -64,8 +67,6 @@ public final class VaryCS {
                 }
             }
 
-            boolean currentLeft = leftArray.getLast();
-            boolean currentRight = rightArray.getLast();
             TriangleBilliard currentBilliard = billiards.get(billiards.size() - 1);
             final double specialPos = currentBilliard.vertexC.x;
 
@@ -87,6 +88,7 @@ public final class VaryCS {
 
                     iterationDepth++;
                 } else {
+                    currentLeft = true;
                     leftArray.set(leftArray.size() - 1, true);
                 }
             }
@@ -109,6 +111,7 @@ public final class VaryCS {
 
                     iterationDepth++;
                 } else {
+                    currentRight = true;
                     rightArray.set(rightArray.size() - 1, true);
                 }
             }
