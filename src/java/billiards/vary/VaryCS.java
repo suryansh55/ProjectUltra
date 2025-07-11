@@ -126,7 +126,7 @@ public final class VaryCS {
         }
     }
 
-    private static int doneIteration(MutableIntList code, IntArrayList sideSumArray, DoubleArrayList specMinArray, DoubleArrayList specMaxArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard> billiards, int iterationDepth, SideSum sideSum) {
+    public static int doneIteration(MutableIntList code, IntArrayList sideSumArray, DoubleArrayList specMinArray, DoubleArrayList specMaxArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard> billiards, int iterationDepth, SideSum sideSum) {
         boolean sideSumArrayIsEmpty = sideSumArray.isEmpty();
         int sideSumDelta = sideSumArrayIsEmpty ? 0 : sideSumArray.getLast();
 
@@ -145,7 +145,7 @@ public final class VaryCS {
         return iterationDepth - 1;
     }
 
-    private static void removeLast(MutableIntList code, IntArrayList sideSumArray, DoubleArrayList specMinArray, DoubleArrayList specMaxArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard> billiards) {
+    public static void removeLast(MutableIntList code, IntArrayList sideSumArray, DoubleArrayList specMinArray, DoubleArrayList specMaxArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard> billiards) {
         if (!code.isEmpty()) code.removeAtIndex(code.size() - 1);
         if (!sideSumArray.isEmpty()) sideSumArray.removeAtIndex(sideSumArray.size() - 1);
         if (!specMinArray.isEmpty()) specMinArray.removeAtIndex(specMinArray.size() - 1);
