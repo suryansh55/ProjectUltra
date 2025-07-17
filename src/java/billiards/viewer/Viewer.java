@@ -527,6 +527,10 @@ public final class Viewer {
     // New MiddleVaryL button.
     final Button middleVaryLBtn = new Button();
 
+    // Zhao Yu Li, Jul 17, 2025.
+    final Button cycleVaryButton = new Button();
+    CycleVaryWindow cycleVaryWindow = null;
+
     // Fields for the AutoPolyVary button
     final TextField lineStartField = new TextField();
     final TextField lineStepField = new TextField(); // 2024-05-06 Step interval for auto
@@ -536,7 +540,7 @@ public final class Viewer {
     final Button superPolyVaryBtn = new Button();
     final CheckBox superAutoCb = new CheckBox();
 
-    final BoyanMenu boyanMenu = new BoyanMenu(middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
+    final BoyanMenu boyanMenu = new BoyanMenu(cycleVaryButton, middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
 
     final CoverWindow coverWindow;
 
@@ -544,7 +548,6 @@ public final class Viewer {
     VaryWindowL middleVaryWindow = null;
     AutoPolyVaryLoad autoPolyVaryWindow = null;
     SuperPolyVaryLoad superPolyVaryWindow = null;
-
 
     // Zhao Yu Li, Jul 7, 2025.
     // Pattern calculator
@@ -1922,6 +1925,16 @@ public final class Viewer {
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, false, false);
                 }
             }
+        });
+
+        // Zhao Yu Li, Jul 17, 2025.
+        cycleVaryButton.setText("CycleVary");
+        Utils.colorButton(cycleVaryButton, Color.PALEVIOLETRED, Color.GOLD);
+        cycleVaryButton.setOnAction(event -> {
+            if (cycleVaryWindow == null) cycleVaryWindow = new CycleVaryWindow("CycleVary", "CycleVary", tmpDir + "cover_polygon.txt", tmpDir + "CycleVaryBounds.txt", tmpDir + "CycleVaryStep.txt", tmpDir + "CycleVaryCoords.txt", this);
+
+            if (cycleVaryWindow.stage.isShowing()) cycleVaryWindow.stage.toFront();
+            else cycleVaryWindow.show();
         });
 
         middleVaryLBtn.setText("MVL");
@@ -6530,7 +6543,7 @@ public final class Viewer {
         }
     }
 
-    private static ArrayList<String> parseOBOFile(final Path path) {
+    public static ArrayList<String> parseOBOFile(final Path path) {
         final ArrayList<String> list = new ArrayList<>();
 
         try (final Stream<String> stream = Files.lines(path)) {

@@ -117,7 +117,7 @@ public class BoyanMenu {
 
     final TextField maxPrinting = new TextField();
 
-	public BoyanMenu(final Button middleVaryLButton, final Button polyAutoBtn, final Button varyLBtn,
+	public BoyanMenu(final Button cycleVaryButton, final Button middleVaryLButton, final Button polyAutoBtn, final Button varyLBtn,
                      final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField, final TextField lineEndField,
                      final Button superPolyVaryBtn, final CheckBox superAutoCb, final double TipOpenDelay, final double TipCloseDelay) {
 
@@ -438,7 +438,7 @@ public class BoyanMenu {
         // Moved buildPolyCheckBox from to Viewr.java.
         // Added new MiddleVaryL button.
         final HBox vary3HBox =
-        		new HBox(10, middleVaryLButton, varyLBtn, maxPrinting,polyAutoBtn,autoCycleText);
+        		new HBox(10, cycleVaryButton, middleVaryLButton, varyLBtn, maxPrinting, polyAutoBtn,autoCycleText);
            // new HBox(10, vary4Btn, varyLBtn, hitsLabel, autoVaryButton, autoCycleText, //george june 18,2019 replaced vary3Btn with vary4Btn
             		//maxPrinting); //, autoIterText, autoStepText
 
