@@ -1,10 +1,25 @@
 package billiards.viewer;
 
+import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeType;
+import billiards.codeseq.Storage;
+import billiards.geometry.Interval;
+import billiards.wrapper.Wrapper;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.PixelReader;
+import javafx.scene.image.WritableImage;
 import javafx.scene.text.Text;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Optional;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import billiards.geometry.ConvexPolygon;
 import javafx.geometry.Insets;
@@ -19,11 +34,19 @@ import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javaslang.Tuple;
+import javaslang.Tuple2;
 import javaslang.Tuple3;
+import javaslang.Tuple7;
+import javaslang.collection.Array;
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.api.set.sorted.MutableSortedSet;
+import org.eclipse.collections.impl.list.mutable.FastList;
+import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
+import static billiards.codeseq.CodeType.OSNO;
 import static billiards.utils.Polygon.cleanPolygon;
 import static billiards.utils.Polygon.createConvexPolygon;
 import static billiards.viewer.Viewer.parseOBOFile;
@@ -41,9 +64,8 @@ public class CycleVaryWindow {
     public static Integer BoundCSstep = 0;
     public static Integer BoundOSOstep = 0;
     public static Integer BoundOSNOstep = 0;
-    public static Integer Reps = 0;
+    public static Integer Reps = 1;
     public static Boolean ColorCycle = true;
-    public static Boolean AutoCover = true;
     // ------------------------------------------------------------
 
     private final TextArea polygonText = new TextArea();
@@ -57,7 +79,6 @@ public class CycleVaryWindow {
     private final TextField OSOstepbox = new TextField();
     private final TextField OSNOstepbox = new TextField();
     private final CheckBox colorCycleBox = new CheckBox();
-    private final CheckBox autoCoverBox = new CheckBox();
     private final TextField repBox = new TextField();
     public final Stage stage = new Stage();
     private final CheckBox magnifyCheckBox = new CheckBox();
@@ -83,6 +104,18 @@ public class CycleVaryWindow {
     private final TextField endTextField = new TextField();
 
     private final TextField cyclesTextfield = new TextField();
+    private final TextField emptySquaresTextfield = new TextField();
+
+    private final CheckBox CSCb = new CheckBox("CS");
+    private final CheckBox OSNOCb = new CheckBox("OSNO");
+    private final CheckBox OSOCb = new CheckBox("OSO");
+
+    private final TextField subdivisionsTextfield = new TextField();
+    private final TextField subdivisionsStepTextfield = new TextField();
+    private final TextField shotsText = new TextField();
+
+    private final TextField changeDigitsText = new TextField();
+    private final TextField changeMagnificationText = new TextField();
 
     private final Viewer viewer;
 
@@ -214,11 +247,6 @@ public class CycleVaryWindow {
         colorCycleBox.setSelected(ColorCycle);
         colorCycleBox.setText("Cycle colors");
 
-        autoCoverBox.setIndeterminate(false);
-        autoCoverBox.setAllowIndeterminate(false);
-        autoCoverBox.setSelected(AutoCover);
-        autoCoverBox.setText("Add codes to cover");
-
         addToAllPositiveCheckbox.setIndeterminate(false);
         addToAllPositiveCheckbox.setAllowIndeterminate(false);
         addToAllPositiveCheckbox.setSelected(false);
@@ -259,7 +287,14 @@ public class CycleVaryWindow {
 
         magnifyCheckBox.setText("Magnification:");
 
-        HBox repsHBox = new HBox(10, useRepsCheckBox, repl, repBox, magnifyCheckBox, magnifyTextField);
+        Label subdivisionsLabel = new Label("Subdivisions:");
+        Label subdivisionsStepLabel = new Label("Subdivisions Step:");
+        subdivisionsTextfield.setPrefColumnCount(3);
+        subdivisionsTextfield.setText("3");
+        subdivisionsStepTextfield.setPrefColumnCount(3);
+        subdivisionsStepTextfield.setText("1");
+
+        HBox repsHBox = new HBox(10, useRepsCheckBox, repl, repBox, magnifyCheckBox, magnifyTextField, subdivisionsLabel, subdivisionsTextfield, subdivisionsStepLabel, subdivisionsStepTextfield);
         repsHBox.setAlignment(Pos.CENTER_LEFT);
 
         Label superAustinControlLabel = new Label("Super Austin Vary Controls");
@@ -271,19 +306,37 @@ public class CycleVaryWindow {
 
         //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
         HBox controlHBox = new HBox(20);
-        controlHBox.getChildren().addAll(autoCoverBox, colorCycleBox, addToAllPositiveCheckbox, addToPlusMinusCheckbox);
+        controlHBox.getChildren().addAll(colorCycleBox, addToAllPositiveCheckbox, addToPlusMinusCheckbox);
         controlHBox.setPadding(new Insets(0, 10, 10, 0));
         controlHBox.setAlignment(Pos.CENTER_LEFT);
 
         Label cyclesLabel = new Label("Cycles:");
         cyclesTextfield.setPromptText("Cycles");
-        cyclesTextfield.setPrefWidth(60);
+        cyclesTextfield.setPrefWidth(40);
         cyclesTextfield.setText("1");
 
-        HBox cyclesHBox = new  HBox(10, cyclesLabel, cyclesTextfield, loadButton);
+        Label emptySquaresLabel = new Label("Empty Squares Per Cycle:");
+        emptySquaresTextfield.setPrefWidth(40);
+        emptySquaresTextfield.setText("10");
+
+        Label changeDigitsLabel = new Label("Change Digits By:");
+        changeDigitsText.setPrefWidth(40);
+        changeDigitsText.setText("-1");
+
+        Label changeMagnificationLabel = new Label("Change Magnification By:");
+        changeMagnificationText.setPrefWidth(40);
+        changeMagnificationText.setText("2");
+
+        CSCb.setSelected(true);
+        shotsText.setPrefWidth(35);
+        shotsText.setText("4");
+        HBox codeTypeHBox = new HBox(10, CSCb, OSNOCb, OSOCb, shotsText, new Label("Shots"));
+        codeTypeHBox.setAlignment(Pos.CENTER_LEFT);
+
+        HBox cyclesHBox = new HBox(10, cyclesLabel, cyclesTextfield, emptySquaresLabel, emptySquaresTextfield, changeDigitsLabel, changeDigitsText, changeMagnificationLabel, changeMagnificationText, loadButton);
         cyclesHBox.setAlignment(Pos.CENTER_LEFT);
 
-        root.getChildren().addAll(instructHBox, polygonText, coordinatesHBox, vsPane, getLineNavigateHBox(), maxVBox, getModesHBox(), controlHBox, cyclesHBox);
+        root.getChildren().addAll(instructHBox, polygonText, coordinatesHBox, vsPane, getLineNavigateHBox(), maxVBox, getModesHBox(), controlHBox, codeTypeHBox, cyclesHBox);
         root.setSpacing(10);
         root.setPadding(new Insets(10));
 
@@ -291,7 +344,6 @@ public class CycleVaryWindow {
         Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
         loadButton.setOnAction(event -> {
             ColorCycle = colorCycleBox.isSelected();
-            AutoCover = autoCoverBox.isSelected();
             try {
                 Reps = Integer.parseInt(repBox.getText().trim());
                 BoundCSMax = Integer.parseInt(CSbox.getText().trim());
@@ -317,6 +369,9 @@ public class CycleVaryWindow {
             //Utils.writeToFile(fileName, polygonString);
             Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, BoundCSstep, BoundOSOstep, BoundOSNOstep));
             Utils.writeToFile(coordsFileName, coordinateCodeArea.getText());
+
+            CycleVaryFunction(poly);
+
             stage.close();
         });
     }
@@ -337,7 +392,7 @@ public class CycleVaryWindow {
                     content.append(line).append('\n');
                 }
 
-                coordinateCodeArea.replaceText(content.toString() + coordinateCodeArea.getText());
+                coordinateCodeArea.replaceText(content + coordinateCodeArea.getText());
             }
         });
 
@@ -405,7 +460,10 @@ public class CycleVaryWindow {
         numToPrintTextField.setPrefColumnCount(3);
         numToPrintTextField.setText("2");
 
-        return new HBox(10, regularModeRadioButton, middleModeRadioButton, firstMidLastModeRadioButton, numToPrintTextField);
+        HBox modesHBox = new HBox(10, regularModeRadioButton, middleModeRadioButton, firstMidLastModeRadioButton, numToPrintTextField);
+        modesHBox.setAlignment(Pos.CENTER_LEFT);
+
+        return modesHBox;
     }
 
     public int getMode() {
@@ -726,5 +784,381 @@ public class CycleVaryWindow {
         alert.setHeaderText("Invalid Number");
         alert.setContentText(String.format("Input %s is an invalid number.", invalidNumber));
         alert.showAndWait();
+    }
+
+    private void CycleVaryFunction(ConvexPolygon polygon) {
+        final int cycles = extractNumberFromTextField(cyclesTextfield);
+        final int originalSubdivision = extractNumberFromTextField(subdivisionsTextfield);
+        final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
+        final ProgressMultiTask cyclesProgress = new ProgressMultiTask("CycleVary Cycles %d out of %d", false, 0, cycles);
+        final ProgressMultiTask repsProgress = new ProgressMultiTask("CycleVary Reps %d out of %d", false, 0, useRepsCheckBox.isSelected() ? Reps : 1);
+        final Array<Color> cycleColors = Array.of(
+                Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA,
+                Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME,
+                Color.PURPLE, Color.TURQUOISE);
+
+        final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
+        final double originalScale = viewer.map.getScale();
+
+        step.setValue(-1);
+        step.addListener((o, oldVal, newVal) -> {
+            if (newVal >= Reps * cycles || newVal == -1) {
+                cyclesProgress.close();
+                repsProgress.close();
+                return;
+            }
+
+            final int rep = newVal % Reps;
+
+            if (newVal != 0 && rep == 0) {
+                cyclesProgress.increment(1);
+                repsProgress.resetProgress();
+                viewer.map.setScale(originalScale);
+                subdivisionsTextfield.setText(originalSubdivision + "");
+                final int empties = extractNumberFromTextField(emptySquaresTextfield);
+                final int deltaDigits = extractNumberFromTextField(changeDigitsText);
+                final int deltaMagnification = extractNumberFromTextField(changeMagnificationText);
+
+                viewer.coverWindow.saveToFile();
+
+                final int digits;
+                final int magnifications;
+                try {
+                    digits = Integer.parseInt(CoverWindow.digitsString);
+                    magnifications = Integer.parseInt(CoverWindow.magnificationsString);
+                } catch (final NumberFormatException e) {
+                    throw new RuntimeException(e);
+                }
+
+                final String cleanedPolygon = cleanPolygon(polygonString);
+                final String cleanedStablesPre = CoverWindow.cleanStables(CoverWindow.stablesString, viewer.pool);
+                final Tuple2<String, String> cleanedTriplesPre = CoverWindow.cleanTriples(CoverWindow.triplesString, viewer.pool);
+
+                final String cleanedTriples = cleanedTriplesPre._1;
+                final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
+
+                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer);
+
+                coordinateCodeArea.replaceText(newCoordinates);
+                viewer.coverWindow.digitsTextField.setText(digits + deltaDigits + "");
+                viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
+
+                viewer.coverWindow.saveToFile();
+            }
+
+            repsProgress.increment(1);
+            final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> curVals = Tuple.of(polygon, BoundCSMax, BoundOSOMax, BoundOSNOMax,
+                    Math.max(0, BoundCSMaxSS + BoundCSstep * rep),
+                    Math.max(0, BoundOSOMaxSS + BoundOSOstep * rep),
+                    Math.max(0, BoundOSNOMaxSS + BoundOSNOstep * rep));
+            final Optional<Color> curCol;
+
+            if(ColorCycle) curCol = Optional.of(cycleColors.get(rep % cycleColors.length()));
+            else curCol = Optional.empty();
+
+            autoCycleVaryFunction(curVals, Optional.of(step), curCol, true, true, executor);
+        });
+        repsProgress.show();
+        step.setValue(0);
+    }
+
+    public void autoCycleVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
+                                      final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                                      final boolean overrideSS, final boolean autoCover, final ExecutorService executor
+    ) {
+
+        // Zhao Yu Li, Jun 27, 2025.
+        // Replaced code block with function call.
+        Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd(getCoordinatesListLength());
+        if (startStepEnd._1 == null) return;
+
+        // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
+        final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
+        ConvexPolygon area = polyVals._1;
+
+        final int startIdx = startStepEnd._1 - 1;
+        final int stepIdx = startStepEnd._2;
+        final int endIdx = startStepEnd._3 - 1;
+
+        final int subdivisions = Integer.parseInt(subdivisionsTextfield.getText());
+        final int subdivisionsStep = Integer.parseInt(subdivisionsStepTextfield.getText());
+        subdivisionsTextfield.setText((subdivisions + subdivisionsStep) + "");
+        final int shots = Integer.parseInt(shotsText.getText());
+        System.out.printf(
+                "+---------- AutoPolyVary running on %d hole(s): %d shots, and %d subdivisions----------+%n",
+                (int) Math.ceil((double) (endIdx - startIdx + 1) / stepIdx),
+                shots,
+                subdivisions
+        );
+        if(overrideSS) {
+            System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
+        }
+        final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
+        progress.show();
+        final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
+        final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
+
+        if(autoCover) viewer.coverWindow.appendStablesInfo("// Start AutoPolyVary");
+
+        drawCycleVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+    }
+
+    private void drawCycleVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
+                               final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
+                               final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                               final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+        // Move the screen
+        lineNumTextField.setText(Integer.toString(currIdx + 1));
+        moveScreenToLine(currIdx);
+
+        final double xMin = Math.max(area.projectX().min, viewer.map.getViewRectangle().intervalX.min);
+        final double xMax = Math.min(area.projectX().max, viewer.map.getViewRectangle().intervalX.max);
+        final double yMin = Math.max(area.projectY().min, viewer.map.getViewRectangle().intervalY.min);
+        final double yMax = Math.min(area.projectY().max, viewer.map.getViewRectangle().intervalY.max);
+
+        final MutableList<Double> points = new FastList<>();
+        final MutableList<Double> pointsFiltered = new FastList<>();
+        viewer.autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
+        final Image image = viewer.regionsImageView.getImage();
+        final PixelReader reader = image.getPixelReader();
+
+        // Filter out filled pixels
+        for(int i = 0; i < points.size(); i += 2) {
+            final int midX = (int) viewer.map.pixelX(points.get(i));
+            final int midY = (int) viewer.map.pixelY(points.get(i+1));
+            int color = reader.getArgb(midX, midY);
+            if(color == 0) {
+                pointsFiltered.add(points.get(i));
+                pointsFiltered.add(points.get(i+1));
+            }
+        }
+
+        // We want to filter the codes to avoid recalculating any codes that are already drawn on the screen
+        final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
+        viewer.onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});
+
+        int mode = getMode();
+        Integer numGroupToPrint = getNumGroupToPrint();
+
+        if (numGroupToPrint == null) return;
+
+        // Create the task
+        final CycleVaryTask task = new CycleVaryTask(pointsFiltered, onScreenCodes, Array.ofAll(max), viewer.pool, storageExecutor, extractNumberFromTextField(shotsText), shotExecutor, viewer.regionsImageView, viewer.map, mode, numGroupToPrint, CSCb.isSelected(), OSOCb.isSelected(), OSNOCb.isSelected());
+        final ObservableList<Storage> partials = task.getPartials();
+        //final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
+        overallProgress.changeTask(task);
+
+        // Zhao Yu Li, Jun 25, 2025.viewer.
+        // Determines whether to add vary results to the IterateToLimitWindow Cover
+        final boolean addToAllPositive = allPositiveIsSelected();  // Add code with all-positive iteration patterns
+        final boolean addToPlusMinus = plusMinusIsSelected();  // Add code with plus/minus patterns
+
+        if ((addToAllPositive || addToPlusMinus) && viewer.iterateToLimitWindow == null) viewer.iterateToLimitWindow = new IterateToLimitWindow(viewer.pool);
+
+        // Update screen when change detected
+        partials.addListener((ListChangeListener.Change<? extends Storage> c) -> {
+            if(overallProgress.isCancelled()) return; // Don't update after cancel received. This prevents codes being printed after the ending line
+            while (c.next()) {
+                if(!c.wasAdded()) continue;
+                // Draw all new additions
+                c.getAddedSubList().forEach(storage -> {
+                    if(!viewer.onScreenSequences.containsKey(storage)) {
+                        final Color color;
+                        if(colorOpt.isPresent()) {
+                            color = colorOpt.get();
+                        } else {
+                            final int index = viewer.cycle.get();
+                            color = viewer.comboBoxColors.get(index);
+                        }
+                        viewer.addToOnScreenSequences(storage, color);
+                        viewer.renderRegion(storage, (WritableImage) viewer.regionsImageView.getImage(), color);
+
+                        if (mode == 0 || autoCover) {
+                            // print the code
+                            final String msg;
+                            final CodeType type = storage.codeType();
+
+                            String codeStr = "" + type;
+                            // String codeStr = "xxx " + type; //george july 26 2017 -
+                            // type whatever you want between the quotes in the line above
+                            // make sure to add a space after the xxx
+                            if (type.equals(CodeType.CS)) {
+                                codeStr += "  ";
+                            } else if (!type.equals(OSNO)) {
+                                codeStr += " ";
+                            }
+                            msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+
+                            if (mode == 0) System.out.println(msg);
+                            if(autoCover) viewer.coverWindow.appendStablesInfo(msg);
+                        }
+
+                        // Zhao Yu Li, Jun 25, 2025.
+                        // Add the code sequence - iteration pattern pair to the IterateToLimitWindow Cover
+                        Viewer.addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, viewer.iterateToLimitWindow);
+                    }
+                });
+            }
+        });
+
+        task.setOnSucceeded(e -> {
+
+            final ObservableList<Storage> storages;
+            try {
+                storages = task.get();
+            } catch (InterruptedException | ExecutionException exception) {
+                throw new RuntimeException(exception);
+            }
+
+            // This takes care of the very last codes completed, in case the listChangeListener doesn't catch them in time
+            storages.forEach(storage -> {
+                if(!viewer.onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = viewer.cycle.get();
+                    color = viewer.comboBoxColors.get(index);
+                    viewer.addToOnScreenSequences(storage, color);
+
+                    if (mode == 0 || autoCover) {
+                        // print the code
+                        final String msg;
+                        final CodeType type = storage.codeType();
+
+                        String codeStr = "" + type;
+                        // String codeStr = "xxx " + type; //george july 26 2017 -
+                        // type whatever you want between the quotes in the line above
+                        // make sure to add a space after the xxx
+                        if (type.equals(CodeType.CS)) {
+                            codeStr += "  ";
+                        } else if (!type.equals(OSNO)) {
+                            codeStr += " ";
+                        }
+                        msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+
+                        if (mode == 0) System.out.println(msg);
+                        if(autoCover) viewer.coverWindow.appendStablesInfo(msg);
+                    }
+
+                    // Zhao Yu Li, Jun 25, 2025.
+                    // Add the code sequence - iteration pattern pair to the IterateToLimitWindow Cover
+                    Viewer.addToIterToLimitCover(storage.toString(), addToAllPositive, addToPlusMinus, viewer.iterateToLimitWindow);
+                }
+            });
+            overallProgress.increment(Math.abs(stepIdx));
+            // Run at the next hole
+            if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
+                viewer.renderRegions(viewer.onScreenSequences, viewer.guideLinesImageView, viewer.regionsImageView, drawExecutor);
+                Utils.safeShutdownExecutor(storageExecutor);
+                Utils.safeShutdownExecutor(shotExecutor);
+                if(overrideSS) {
+                    System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                }
+                System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+                overallProgress.close();
+                if(autoCover) viewer.coverWindow.show();
+                // Propagate cancellation for Super
+                step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
+            } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
+                drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
+            } else {
+                viewer.renderRegions(viewer.onScreenSequences, viewer.guideLinesImageView, viewer.regionsImageView, drawExecutor);
+                Utils.safeShutdownExecutor(storageExecutor);
+                Utils.safeShutdownExecutor(shotExecutor);
+
+                if(overrideSS) {
+                    System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                }
+
+                if(autoCover) {
+                    viewer.coverWindow.show();
+                    System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                } else {
+                    System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+                }
+
+                overallProgress.close();
+
+                // Zhao Yu Li, Jul 08, 2025.
+                // Scale only if the user selected to scale
+                boolean magnificationIsSelected = getMagnificationIsSelected();
+
+                if (magnificationIsSelected) {
+                    // Zhao Yu Li, Jul 08, 2025.
+                    // Try to get the user enter scale factor
+                    double scaleFactor = getMagnification();
+
+                    // Zhao Yu Li, Jul 7, 2025.
+                    // Scale after every rep
+                    Interval oldXInterval = viewer.map.getViewRectangle().intervalX;
+                    Interval oldYInterval = viewer.map.getViewRectangle().intervalY;
+                    double oldCenterX = (oldXInterval.min + oldXInterval.max) / 2;
+                    double oldCenterY = (oldYInterval.min + oldYInterval.max) / 2;
+
+                    viewer.map.scaleBy(scaleFactor);
+
+                    Interval newXInterval = viewer.map.getViewRectangle().intervalX;
+                    Interval newYInterval = viewer.map.getViewRectangle().intervalY;
+                    double newCenterX = (newXInterval.min + newXInterval.max) / 2;
+                    double newCenterY = (newYInterval.min + newYInterval.max) / 2;
+
+                    viewer.map.translateXBy(oldCenterX - newCenterX);
+                    viewer.map.translateYBy(oldCenterY - newCenterY);
+
+                    viewer.viewRectangleBF.add(viewer.map.getViewRectangle());
+                }
+
+                // Increment for superPoly
+                step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
+            }
+        });
+
+        task.setOnCancelled(e -> {
+            partials.forEach(storage -> {
+                if(!viewer.onScreenSequences.containsKey(storage)) {
+                    final Color color;
+                    final int index = viewer.cycle.get();
+                    color = viewer.comboBoxColors.get(index);
+                    viewer.addToOnScreenSequences(storage, color);
+
+                    // print the code
+                    final String msg;
+                    final CodeType type = storage.codeType();
+
+                    String codeStr = "" + type;
+                    // String codeStr = "xxx " + type; //george july 26 2017 -
+                    // type whatever you want between the quotes in the line above
+                    // make sure to add a space after the xxx
+                    if (type.equals(CodeType.CS)) {
+                        codeStr += "  ";
+                    } else if (!type.equals(OSNO)) {
+                        codeStr += " ";
+                    }
+                    msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
+                    System.out.println(msg);
+                    if(autoCover) viewer.coverWindow.appendStablesInfo(msg);
+                }
+            });
+            viewer.renderRegions(viewer.onScreenSequences, viewer.guideLinesImageView, viewer.regionsImageView, drawExecutor);
+            Utils.safeShutdownExecutor(storageExecutor);
+            Utils.safeShutdownExecutor(shotExecutor);
+            if(overrideSS) {
+                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+            }
+            System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+            overallProgress.close();
+            if(autoCover) viewer.coverWindow.show();
+            // Propagate cancellation for Super
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
+        });
+
+        task.setOnFailed(e -> {
+            //progress.close();
+            Utils.safeShutdownExecutor(storageExecutor);
+            Utils.safeShutdownExecutor(shotExecutor);
+            overallProgress.close();
+            // Propagate cancellation for Super
+            step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
+            throw new RuntimeException(task.getException());
+        });
+        drawExecutor.execute(task);
     }
 }
