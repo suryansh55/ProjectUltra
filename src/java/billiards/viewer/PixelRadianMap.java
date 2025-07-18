@@ -45,6 +45,10 @@ public final class PixelRadianMap {
         return (radianY - this.translateY) * this.side * this.scale / Math.PI;
     }
 
+    public double getScale() {
+        return scale;
+    }
+
     public void setScale(final double newScale) {
         this.scale = newScale;
     }

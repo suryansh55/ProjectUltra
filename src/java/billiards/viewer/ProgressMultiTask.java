@@ -91,6 +91,11 @@ public final class ProgressMultiTask {
         syncProgress();
     }
 
+    public void resetProgress() {
+        completed = 0;
+        syncProgress();
+    }
+
     public void close() {
         stage.close();
     }

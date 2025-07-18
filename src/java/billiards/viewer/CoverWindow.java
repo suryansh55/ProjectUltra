@@ -36,11 +36,11 @@ public final class CoverWindow {
 
     // ------------------------------------------------------------
     private static String polygonString = Utils.readFromFile(Viewer.tmpDir + "/cover_polygon.txt");
-    private static String stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
-    private static String triplesString = Utils.readFromFile(Viewer.tmpDir + "/cover_triples.txt");
-    private static String digitsString = Utils.readFromFile(Viewer.tmpDir + "/cover_digits.txt");
+    static String stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
+    static String triplesString = Utils.readFromFile(Viewer.tmpDir + "/cover_triples.txt");
+    static String digitsString = Utils.readFromFile(Viewer.tmpDir + "/cover_digits.txt");
     private static String emptyString = Utils.readFromFile(Viewer.tmpDir + "/cover_empty.txt");
-    private static String magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
+    static String magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
     //private static String halfTripleString = Utils.readFromFile(Viewer.tmpDir + "/cover_half_triples.txt");
  
     // WARNING: Global mutable state
@@ -52,9 +52,9 @@ public final class CoverWindow {
     private final HBox inputHBox = new HBox();
     private final Button calcBtn = new Button();
     private final Button autoVaryBtn = new Button();
-    private final TextField digitsTextField = new TextField();
+    final TextField digitsTextField = new TextField();
     private final TextField emptyTextField = new TextField();
-    private final TextField magnificationsTextField = new TextField();
+    final TextField magnificationsTextField = new TextField();
     private final TextField labelTextField = new TextField();
     private final RadioButton allRdoBtn = new RadioButton();
     private final RadioButton mrrRdoBtn = new RadioButton();
@@ -292,7 +292,7 @@ public final class CoverWindow {
         bottomText.setText(stable + "\n" + currentText);
     }
     
-    private void saveToFile() {
+    public void saveToFile() {
 
         polygonString = topText.getText().trim();
         stablesString = bottomText.getText().trim();
@@ -314,7 +314,7 @@ public final class CoverWindow {
 
     }
 
-    private static Tuple2<String, String> cleanTriples(final String string, final ConnectionPool pool) {
+    static Tuple2<String, String> cleanTriples(final String string, final ConnectionPool pool) {
 
         final Iterable<String> lines = Splitter.onPattern("\\R")
                                            .trimResults()
@@ -589,7 +589,7 @@ public final class CoverWindow {
         return Tuple.of(triples.toString().trim(), stables.toString().trim());
     }
 
-    private static String cleanStables(final String string, final ConnectionPool pool) {
+    static String cleanStables(final String string, final ConnectionPool pool) {
 
         final Iterable<String> lines = Splitter.onPattern("\\R")
                                            .trimResults()

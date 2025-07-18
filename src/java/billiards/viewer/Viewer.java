@@ -5637,7 +5637,7 @@ public final class Viewer {
         }
     }
 
-    private void addToOnScreenSequences(final Storage storage, final Color color) {
+    void addToOnScreenSequences(final Storage storage, final Color color) {
         // removes the storage if it is present
         onScreenSequences.remove(storage);
         // This makes sure it is at the end
@@ -5645,9 +5645,9 @@ public final class Viewer {
     }
 
 
-    private void renderRegions(final LinkedHashMap<Storage, Color> regions,
-                               final ImageView guideLinesImageView, final ImageView regionsImageView,
-                               final ExecutorService executor) {
+    void renderRegions(final LinkedHashMap<Storage, Color> regions,
+                       final ImageView guideLinesImageView, final ImageView regionsImageView,
+                       final ExecutorService executor) {
         // Image 1: Guidelines
         final WritableImage guideLinesImage = renderGuideLines();
 
@@ -6474,7 +6474,7 @@ public final class Viewer {
         }
     }
 
-    private void renderRegion(final Storage region, final WritableImage image, final Color color) {
+    void renderRegion(final Storage region, final WritableImage image, final Color color) {
         final PixelReader pixelReader = image.getPixelReader();
         final PixelWriter pixelWriter = image.getPixelWriter();
 
@@ -6846,9 +6846,9 @@ public final class Viewer {
         step.setValue(0);
     }
 
-    private void autoPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
-                                      final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-                                      final boolean overrideSS, final boolean autoCover, final ExecutorService executor
+    public void autoPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
+                                     final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                                     final boolean overrideSS, final boolean autoCover, final ExecutorService executor
     ) {
 
         // Zhao Yu Li, Jun 27, 2025.
@@ -7322,7 +7322,7 @@ public final class Viewer {
 
 
     // Calculate 4^max vary locations which are distributed across the entire query area
-    private void autoRecurse(final double xMin, final double xMax, final double yMin, final double yMax,
+    public void autoRecurse(final double xMin, final double xMax, final double yMin, final double yMax,
                              final int depth, final int max, final ConvexPolygon area, final MutableList<Double> points) {
 
         if (depth > max) {
@@ -7350,8 +7350,6 @@ public final class Viewer {
         autoRecurse(rx, xMax, yMin, ry, depth + 1, max, area, points);
         autoRecurse(xMin, rx, ry, yMax, depth + 1, max, area, points);
         autoRecurse(rx, xMax, ry, yMax, depth + 1, max, area, points);
-
-        return;
     }
 
     private String drawRegion(ArrayList<Optional<Storage>> storages,
