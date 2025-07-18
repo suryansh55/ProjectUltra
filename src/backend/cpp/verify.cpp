@@ -499,6 +499,46 @@ uint64_t get_or(const std::map<K, uint64_t>& m, const K& k, const uint64_t v) {
     }
 }
 
+const char* getEmpties(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
+    const uint32_t digits, const uint32_t max_depth, const size_t empty,
+    const bool mrr, sqlite::ConnectionPool& pool) {
+
+    const cover::Cover& old_cover = cover::Empty{};
+    const ClosedRectangleQ square{{0, 1}, {0, 1}};
+    sqlite::PooledConnection conn{pool};
+    const auto polygon = parse_polygon(polygon_str); // polygon to check
+    const auto singles = parse_singles(singles_str); // singles to check holes with
+    const auto triples = parse_triples(triples_str); // triples to check holes with
+
+    const auto single_infos = get_single_infos(singles, mrr, conn.db);
+    const auto triple_infos = get_triple_infos(triples, mrr, conn.db);
+
+    const auto prec = digits_to_bits(digits);
+
+    if (!geometry::subset(polygon, square)) {
+        throw std::runtime_error("polygon is not a subset of the square");
+    }
+
+    // With the above check, the square will only be a subset of the polygon if the polygon
+    // is equal to the square (so pretty well never), so we can say it's false
+    HalfTripleInfos temp{};
+    const UpdateCover updater{square, polygon, single_infos, triple_infos, prec, max_depth};
+    const auto cover = boost::apply_visitor(updater, old_cover);
+
+    const auto cover_info = cover_to_info(polygon, square, cover);
+
+    const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empty);
+    static std::string new_coordinates;
+    if (num_to_print != 0) {
+        const size_t inc = cover_info.not_filled.size() / num_to_print;
+        for (size_t i = 0; i < num_to_print * inc; i += inc) {
+            new_coordinates.append(center_degrees(cover_info.not_filled.at(i))).append("\n");
+        }
+    }
+
+    return new_coordinates.c_str();
+}
+
 static bool cover_polygon(const cover::Cover& old_cover,
                           const ClosedRectangleQ& square, const ClosedConvexPolygonQ& polygon,
                           const StableInfos& single_infos, const TripleInfos& triple_infos,

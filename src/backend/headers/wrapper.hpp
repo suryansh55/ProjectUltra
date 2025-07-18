@@ -56,29 +56,29 @@ sqlite::ConnectionPool* create_connection_pool(const char* const db_path, const 
 void destroy_connection_pool(const sqlite::ConnectionPool* const pool);
 
 int32_t cover_wrapper(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool);
-                      
-                      int32_t cover_wrapper_duplicate_stables(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool, const bool show);
+const char* const codes_str, const char* const unstables_str,
+const int32_t digits, const int32_t subdivide, const int32_t empty,
+const int32_t mrr, sqlite::ConnectionPool* const pool);
+
+int32_t cover_wrapper_duplicate_stables(const char* const poly_str,
+const char* const codes_str, const char* const unstables_str,
+const int32_t digits, const int32_t subdivide, const int32_t empty,
+const int32_t mrr, sqlite::ConnectionPool* const pool, const bool show);
 
 int32_t cover_wrapper_half_duplicate_stables(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool);
+const char* const codes_str, const char* const unstables_str,
+const int32_t digits, const int32_t subdivide, const int32_t empty,
+const int32_t mrr, sqlite::ConnectionPool* const pool);
 
 int32_t cover_wrapper_all(const char* const mrr_str, sqlite::ConnectionPool* const pool, const int32_t extra_depth);
 
 int32_t save_to_database(const int32_t* const code_numbers_ptr,
-                         const int32_t code_numbers_len,
-                         sqlite::ConnectionPool* const pool);
+   const int32_t code_numbers_len,
+   sqlite::ConnectionPool* const pool);
 
 int32_t delete_from_database(const int32_t* const code_numbers_ptr,
-                         const int32_t code_numbers_len,
-                         sqlite::ConnectionPool* const pool);
+   const int32_t code_numbers_len,
+   sqlite::ConnectionPool* const pool);
 int32_t load_info_all(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool);
 
 int32_t load_picture(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
@@ -87,10 +87,10 @@ int32_t load_picture(const int32_t* const code_numbers_ptr, const int32_t code_n
 void cleanup_cpicture(const CPicture* const cpicture);
 
 int32_t load_picture_lr(const int32_t* const base_code_numbers_ptr, const int32_t base_code_numbers_len,
-                        const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
-                        CPicture* const cpicture, sqlite::ConnectionPool* const pool);
+  const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
+  CPicture* const cpicture, sqlite::ConnectionPool* const pool);
 int32_t load_picture_lr_expando(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
-                        CPicture* const cpicture, sqlite::ConnectionPool* const pool, const char* const lr);
+  CPicture* const cpicture, sqlite::ConnectionPool* const pool, const char* const lr);
 
 
 int32_t load_info(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
@@ -117,6 +117,10 @@ float64_t calculate_gradient(const char* const equation_cstr, float64_t x_value,
 
 void cleanup_string(const CString* const cstring);
 
+const char* getNotFilledCoordinates(const char* poly_str,
+    const char* codes_str, const char* unstables_str,
+    int32_t digits, int32_t subdivide, int32_t empty,
+    int32_t mrr, sqlite::ConnectionPool* pool);
 }
 
 
