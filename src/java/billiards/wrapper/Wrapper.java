@@ -85,6 +85,10 @@ public final class Wrapper {
             throw new RuntimeException("unknown return value " + rval);
         }
     }
+
+    public static native String getNotFilledCoordinates(String polygon, String codes, String unstables,
+                                                        int digits, int subdivide, int empty,
+                                                        boolean mrr, Pointer pool);
     
     public static int coverWrapperDuplicateStables(final String polygon, final String codes, final String unstables,
                                        final int digits, final int subdivide, final int empty,
