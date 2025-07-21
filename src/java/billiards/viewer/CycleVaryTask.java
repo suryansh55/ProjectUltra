@@ -176,7 +176,7 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
                 ArrayList<ClassifiedCodeSequence> printedCodes = PrintMid.printFirstMidLast(localCodes, numGroupToPrint, true);
                 loadPrintedCodesStorage(usedCodes, futures, progress, todo, printedCodes);
             } else {
-                throw new NotImplementedException("Invalid mode value for PolyVaryTask");
+                throw new NotImplementedException("Invalid mode value for CycleTask");
             }
         }
 

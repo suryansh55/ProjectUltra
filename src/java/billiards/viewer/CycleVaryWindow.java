@@ -858,6 +858,7 @@ public class CycleVaryWindow {
 
             autoCycleVaryFunction(curVals, Optional.of(step), curCol, true, true, executor);
         });
+        cyclesProgress.show();
         repsProgress.show();
         step.setValue(0);
     }
@@ -885,20 +886,20 @@ public class CycleVaryWindow {
         subdivisionsTextfield.setText((subdivisions + subdivisionsStep) + "");
         final int shots = Integer.parseInt(shotsText.getText());
         System.out.printf(
-                "+---------- AutoPolyVary running on %d hole(s): %d shots, and %d subdivisions----------+%n",
+                "+---------- CycleVary running on %d hole(s): %d shots, and %d subdivisions----------+%n",
                 (int) Math.ceil((double) (endIdx - startIdx + 1) / stepIdx),
                 shots,
                 subdivisions
         );
         if(overrideSS) {
-            System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
+            System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
         }
         final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         progress.show();
         final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
         final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
 
-        if(autoCover) viewer.coverWindow.appendStablesInfo("// Start AutoPolyVary");
+        if(autoCover) viewer.coverWindow.appendStablesInfo("// Start CycleVary");
 
         drawCycleVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
     }
@@ -1050,9 +1051,9 @@ public class CycleVaryWindow {
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
                 if(overrideSS) {
-                    System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                    System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
-                System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+                System.out.println("+------------------------------ CycleVary Cancelled ------------------------------+");
                 overallProgress.close();
                 if(autoCover) viewer.coverWindow.show();
                 // Propagate cancellation for Super
@@ -1065,14 +1066,14 @@ public class CycleVaryWindow {
                 Utils.safeShutdownExecutor(shotExecutor);
 
                 if(overrideSS) {
-                    System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                    System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
 
                 if(autoCover) {
                     viewer.coverWindow.show();
-                    System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                    System.out.println("+-------------- CycleVary finished successfully, CODES ARE IN COVER --------------+");
                 } else {
-                    System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+                    System.out.println("+------------------------ CycleVary finished successfully ------------------------+");
                 }
 
                 overallProgress.close();
@@ -1141,9 +1142,9 @@ public class CycleVaryWindow {
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
             if(overrideSS) {
-                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
-            System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+            System.out.println("+------------------------------ CycleVary Cancelled ------------------------------+");
             overallProgress.close();
             if(autoCover) viewer.coverWindow.show();
             // Propagate cancellation for Super
