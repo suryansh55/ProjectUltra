@@ -23,6 +23,7 @@ dependencies {
     implementation 'io.javaslang:javaslang:2.0.5'
     implementation 'org.xerial:sqlite-jdbc:3.41.2.2'
     implementation 'net.java.dev.jna:jna:4.5.1'
+    implementation 'org.fxmisc.richtext:richtextfx:0.10.4'
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.2.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.2.0'
 }
