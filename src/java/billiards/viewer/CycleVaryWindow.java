@@ -119,8 +119,11 @@ public class CycleVaryWindow {
 
     private final Viewer viewer;
 
+    private final String coordsFileName;
+
     public CycleVaryWindow(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName, final String stepFileName, final String coordsFileName, final Viewer viewer) {
         this.viewer = viewer;
+        this.coordsFileName = coordsFileName;
         polygonString = Utils.readFromFile(fileName);
         String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
         String[] stepTokens = Utils.readFromFile(stepFileName).trim().split(" ");
@@ -368,7 +371,6 @@ public class CycleVaryWindow {
             final ConvexPolygon poly = createConvexPolygon(lines);
             //Utils.writeToFile(fileName, polygonString);
             Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, BoundCSstep, BoundOSOstep, BoundOSNOstep));
-            Utils.writeToFile(coordsFileName, coordinateCodeArea.getText());
 
             CycleVaryFunction(poly);
 
@@ -803,6 +805,7 @@ public class CycleVaryWindow {
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
             if (newVal >= Reps * cycles || newVal == -1) {
+                Utils.writeToFile(coordsFileName, coordinateCodeArea.getText());
                 cyclesProgress.close();
                 repsProgress.close();
                 return;
