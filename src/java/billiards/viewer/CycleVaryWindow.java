@@ -730,7 +730,7 @@ public class CycleVaryWindow {
                 showInvalidNumberError(lineStepText);
                 return Tuple.of(null, null, null);
             }
-            if (!(1 <= startIdxUser && startIdxUser <= endIdxUser && endIdxUser <= defaultEnd)) {
+            if (!(1 <= startIdxUser && startIdxUser <= endIdxUser)) {
                 showInvalidLineRangeError(defaultEnd);
                 return Tuple.of(null, null, null);
             }
@@ -740,7 +740,7 @@ public class CycleVaryWindow {
             }
         }
 
-        return Tuple.of(startIdxUser, stepIdxUser, endIdxUser);
+        return Tuple.of(startIdxUser, stepIdxUser, Math.min(endIdxUser, defaultEnd));
     }
 
     private static void showEnterLineNumberErrorAutoVary() {
@@ -805,6 +805,7 @@ public class CycleVaryWindow {
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
             if (newVal >= Reps * cycles || newVal == -1) {
+                executor.shutdown();
                 Utils.writeToFile(coordsFileName, coordinateCodeArea.getText());
                 cyclesProgress.close();
                 repsProgress.close();
@@ -843,7 +844,7 @@ public class CycleVaryWindow {
                 String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer);
 
                 coordinateCodeArea.replaceText(newCoordinates);
-                viewer.coverWindow.emptyTextField.setText(empties + deltaEmpties + "");
+                emptySquaresTextfield.setText(empties + deltaEmpties + "");
                 viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
 
                 viewer.coverWindow.saveToFile();

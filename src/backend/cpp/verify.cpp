@@ -529,6 +529,7 @@ const char* getEmpties(const std::string& polygon_str, const std::string& single
 
     const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empty);
     static std::string new_coordinates;
+    new_coordinates.clear();
     if (num_to_print != 0) {
         const size_t inc = cover_info.not_filled.size() / num_to_print;
         for (size_t i = 0; i < num_to_print * inc; i += inc) {
