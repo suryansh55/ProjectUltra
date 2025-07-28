@@ -52,8 +52,8 @@ public final class CoverWindow {
     private final HBox inputHBox = new HBox();
     private final Button calcBtn = new Button();
     private final Button autoVaryBtn = new Button();
-    final TextField digitsTextField = new TextField();
-    private final TextField emptyTextField = new TextField();
+    private final TextField digitsTextField = new TextField();
+    final TextField emptyTextField = new TextField();
     final TextField magnificationsTextField = new TextField();
     private final TextField labelTextField = new TextField();
     private final RadioButton allRdoBtn = new RadioButton();

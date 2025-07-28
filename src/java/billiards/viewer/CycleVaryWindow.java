@@ -114,7 +114,7 @@ public class CycleVaryWindow {
     private final TextField subdivisionsStepTextfield = new TextField();
     private final TextField shotsText = new TextField();
 
-    private final TextField changeDigitsText = new TextField();
+    private final TextField changeEmptySquaresText = new TextField();
     private final TextField changeMagnificationText = new TextField();
 
     private final Viewer viewer;
@@ -318,15 +318,15 @@ public class CycleVaryWindow {
         cyclesTextfield.setPrefWidth(40);
         cyclesTextfield.setText("1");
 
-        Label emptySquaresLabel = new Label("Empty Squares Per Cycle:");
+        Label emptySquaresLabel = new Label("Empty Squares Per Cycle");
         emptySquaresTextfield.setPrefWidth(40);
-        emptySquaresTextfield.setText("10");
+        emptySquaresTextfield.setText("100");
 
-        Label changeDigitsLabel = new Label("Change Digits By:");
-        changeDigitsText.setPrefWidth(40);
-        changeDigitsText.setText("-1");
+        Label changeDigitsLabel = new Label("Change Empty Squares By");
+        changeEmptySquaresText.setPrefWidth(40);
+        changeEmptySquaresText.setText("-10");
 
-        Label changeMagnificationLabel = new Label("Change Magnification By:");
+        Label changeMagnificationLabel = new Label("Change Magnification By");
         changeMagnificationText.setPrefWidth(40);
         changeMagnificationText.setText("2");
 
@@ -336,7 +336,7 @@ public class CycleVaryWindow {
         HBox codeTypeHBox = new HBox(10, CSCb, OSNOCb, OSOCb, shotsText, new Label("Shots"));
         codeTypeHBox.setAlignment(Pos.CENTER_LEFT);
 
-        HBox cyclesHBox = new HBox(10, cyclesLabel, cyclesTextfield, emptySquaresLabel, emptySquaresTextfield, changeDigitsLabel, changeDigitsText, changeMagnificationLabel, changeMagnificationText, loadButton);
+        HBox cyclesHBox = new HBox(10, cyclesLabel, cyclesTextfield, emptySquaresLabel, emptySquaresTextfield, changeDigitsLabel, changeEmptySquaresText, changeMagnificationLabel, changeMagnificationText, loadButton);
         cyclesHBox.setAlignment(Pos.CENTER_LEFT);
 
         root.getChildren().addAll(instructHBox, polygonText, coordinatesHBox, vsPane, getLineNavigateHBox(), maxVBox, getModesHBox(), controlHBox, codeTypeHBox, cyclesHBox);
@@ -819,7 +819,7 @@ public class CycleVaryWindow {
                 viewer.map.setScale(originalScale);
                 subdivisionsTextfield.setText(originalSubdivision + "");
                 final int empties = extractNumberFromTextField(emptySquaresTextfield);
-                final int deltaDigits = extractNumberFromTextField(changeDigitsText);
+                final int deltaEmpties = extractNumberFromTextField(changeEmptySquaresText);
                 final int deltaMagnification = extractNumberFromTextField(changeMagnificationText);
 
                 viewer.coverWindow.saveToFile();
@@ -843,7 +843,7 @@ public class CycleVaryWindow {
                 String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer);
 
                 coordinateCodeArea.replaceText(newCoordinates);
-                viewer.coverWindow.digitsTextField.setText(digits + deltaDigits + "");
+                viewer.coverWindow.emptyTextField.setText(empties + deltaEmpties + "");
                 viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
 
                 viewer.coverWindow.saveToFile();
