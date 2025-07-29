@@ -67,6 +67,9 @@ public final class CoverWindow {
     private final TextArea triplesText = new TextArea();
     //private final TextArea halfTriplesText = new TextArea();
 
+    // Zhao Yu Li, Jul 29, 2025.
+    // Added an option to render squares or not.
+    private final CheckBox squaresCheckBox = new CheckBox("Squares");
 
     private final Stage stage = new Stage();
     private final Scene scene = new Scene(base);
@@ -104,6 +107,9 @@ public final class CoverWindow {
 
         labelTextField.setPromptText("label");
         labelTextField.textProperty().bindBidirectional(mainLabel.textProperty());
+        labelTextField.setPrefColumnCount(3);
+
+        squaresCheckBox.setSelected(true);
 
         mrrRdoBtn.setSelected(true);
         mrrRdoBtn.setToggleGroup(calcGroup);
@@ -223,7 +229,7 @@ public final class CoverWindow {
                                        calcBtn, emptyTextField, labelTextField, diagonalCheckBox);
 */
         inputHBox.getChildren().addAll(mrrRdoBtn, allRdoBtn, digitsTextField, magnificationsTextField,
-                calcBtn, emptyTextField, labelTextField);
+                calcBtn, emptyTextField, labelTextField, squaresCheckBox);
         inputHBox.setSpacing(10);
         inputHBox.setAlignment(Pos.CENTER);
 
@@ -726,4 +732,7 @@ public final class CoverWindow {
         this.stage.toFront();
     }
 
+    public boolean getRenderSquares() {
+        return squaresCheckBox.isSelected();
+    }
 }
