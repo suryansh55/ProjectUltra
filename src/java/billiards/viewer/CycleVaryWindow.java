@@ -804,21 +804,14 @@ public class CycleVaryWindow {
 
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
-            if (newVal >= Reps * cycles || newVal == -1) {
-                executor.shutdown();
-                Utils.writeToFile(coordsFileName, coordinateCodeArea.getText());
-                cyclesProgress.close();
-                repsProgress.close();
+            if (newVal == -1) {
+                shutdown(cyclesProgress, repsProgress, executor);
                 return;
             }
 
             final int rep = newVal % Reps;
 
             if (newVal != 0 && rep == 0) {
-                cyclesProgress.increment(1);
-                repsProgress.resetProgress();
-                viewer.map.setScale(originalScale);
-                subdivisionsTextfield.setText(originalSubdivision + "");
                 final int empties = extractNumberFromTextField(emptySquaresTextfield);
                 final int deltaEmpties = extractNumberFromTextField(changeEmptySquaresText);
                 final int deltaMagnification = extractNumberFromTextField(changeMagnificationText);
@@ -844,6 +837,24 @@ public class CycleVaryWindow {
                 String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer);
 
                 coordinateCodeArea.replaceText(newCoordinates);
+
+                // Zhao Yu Li, Jul 29, 2025.
+                // Prints out "Covered" if all squares have been filled.
+                // Move exit check after updating the code area so we can see the coordinates of the newly found empty
+                // squares after the end of the last cycle. (Whereas before we would see the coordinates from the second
+                // last cycle.)
+                if (newVal >= Reps * cycles || newCoordinates.isEmpty()) {
+                    if (newCoordinates.isEmpty()) System.out.println("Covered");
+                    shutdown(cyclesProgress, repsProgress, executor);
+                    return;
+                } else {
+                    System.out.println("Not covered");
+                }
+
+                cyclesProgress.increment(1);
+                repsProgress.resetProgress();
+                viewer.map.setScale(originalScale);
+                subdivisionsTextfield.setText(originalSubdivision + "");
                 emptySquaresTextfield.setText(empties + deltaEmpties + "");
                 viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
 
@@ -865,6 +876,13 @@ public class CycleVaryWindow {
         cyclesProgress.show();
         repsProgress.show();
         step.setValue(0);
+    }
+
+    public void shutdown(final ProgressMultiTask cyclesProgress, final ProgressMultiTask repsProgress, final ExecutorService executor) {
+        executor.shutdown();
+        Utils.writeToFile(coordsFileName, coordinateCodeArea.getText());
+        cyclesProgress.close();
+        repsProgress.close();
     }
 
     public void autoCycleVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
