@@ -5644,35 +5644,32 @@ public final class Viewer {
         onScreenSequences.put(storage, color);
     }
 
-
     void renderRegions(final LinkedHashMap<Storage, Color> regions,
                        final ImageView guideLinesImageView, final ImageView regionsImageView,
                        final ExecutorService executor) {
+        renderRegions(regions, guideLinesImageView, regionsImageView, executor, false);
+    }
+
+    void renderRegions(final LinkedHashMap<Storage, Color> regions,
+                       final ImageView guideLinesImageView, final ImageView regionsImageView,
+                       final ExecutorService executor, final boolean renderSquares) {
         // Image 1: Guidelines
         final WritableImage guideLinesImage = renderGuideLines();
 
         // Image 2: Regions
         final WritableImage regionImage = redoFromScratch(regions, executor);
-        ArrayList<Rectangle> rectangles = new ArrayList<Rectangle>();
-        rectangles.addAll(coverRects.tripleEntrySet());
-        rectangles.addAll(coverRects.HalfTripleEntrySet());
-        rectangles.addAll(coverRects.stableEntrySet());
-        Collections.sort(rectangles, new Comparator<Rectangle>() {
-            @Override
-            public int compare(Rectangle o1, Rectangle o2) {
-                if ((o1.intervalX.max - o1.intervalX.min) > (o2.intervalX.max - o2.intervalX.min)) {
-                    return +1;
-                }
-                else if ((o1.intervalX.max - o1.intervalX.min) < (o2.intervalX.max - o2.intervalX.min)) {
-                    return -1;
-                }
-                else {
-                    return 0;
-                }
+
+        // Zhao Yu Li, Jul 29, 2025.
+        // Squares are optionally rendered (whereas they were unconditionally rendered before).
+        if (renderSquares) {
+            ArrayList<Rectangle> rectangles = new ArrayList<Rectangle>();
+            rectangles.addAll(coverRects.tripleEntrySet());
+            rectangles.addAll(coverRects.HalfTripleEntrySet());
+            rectangles.addAll(coverRects.stableEntrySet());
+            rectangles.sort((o1, o2) -> Double.compare(o1.intervalX.max - o1.intervalX.min, o2.intervalX.max - o2.intervalX.min));
+            for (Rectangle rect : rectangles) {
+                renderRectLoad(rect, regionImage, coverRects.getColor(rect), Color.FIREBRICK);
             }
-        });
-        for (Rectangle rect : rectangles) {
-            renderRectLoad(rect, regionImage, coverRects.getColor(rect), Color.FIREBRICK);
         }
 
         // Image 3: Bounds
@@ -7763,7 +7760,7 @@ public final class Viewer {
         coverRects.addStables(cover._1, Color.BLACK);
         coverRects.addTriples(cover._2, Color.BLACK);
         coverArea = Optional.of(polygon);
-        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor, coverWindow.getRenderSquares());
     }
 
     public void loadCoverWithoutTrim(final String dir, final ExecutorService executor) {
