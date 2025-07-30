@@ -120,7 +120,7 @@ void cleanup_string(const CString* const cstring);
 const char* getNotFilledCoordinates(const char* poly_str,
     const char* codes_str, const char* unstables_str,
     int32_t digits, int32_t subdivide, int32_t empty,
-    int32_t mrr, sqlite::ConnectionPool* pool);
+    int32_t mrr, sqlite::ConnectionPool* pool, bool is_last_cycle);
 }
 
 
