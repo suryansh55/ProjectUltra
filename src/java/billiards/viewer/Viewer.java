@@ -5644,6 +5644,10 @@ public final class Viewer {
         onScreenSequences.put(storage, color);
     }
 
+    void callRenderRegions() {
+        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executorService);
+    }
+
     void renderRegions(final LinkedHashMap<Storage, Color> regions,
                        final ImageView guideLinesImageView, final ImageView regionsImageView,
                        final ExecutorService executor) {
@@ -5658,7 +5662,7 @@ public final class Viewer {
         // Updated Jul 30, 205.
         // It is okay to unconditionally render the squares as it does not significantly impact the execution time
         // if (renderSquares) {
-        ArrayList<Rectangle> rectangles = new ArrayList<Rectangle>();
+        ArrayList<Rectangle> rectangles = new ArrayList<>();
         rectangles.addAll(coverRects.tripleEntrySet());
         rectangles.addAll(coverRects.HalfTripleEntrySet());
         rectangles.addAll(coverRects.stableEntrySet());

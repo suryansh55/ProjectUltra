@@ -501,7 +501,7 @@ uint64_t get_or(const std::map<K, uint64_t>& m, const K& k, const uint64_t v) {
 
 const char* getEmpties(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
     const uint32_t digits, const uint32_t max_depth, const size_t empty,
-    const bool mrr, sqlite::ConnectionPool& pool) {
+    const bool mrr, sqlite::ConnectionPool& pool, const bool is_last_cycle) {
 
     const cover::Cover& old_cover = cover::Empty{};
     const ClosedRectangleQ square{{0, 1}, {0, 1}};
@@ -535,6 +535,21 @@ const char* getEmpties(const std::string& polygon_str, const std::string& single
         for (size_t i = 0; i < num_to_print * inc; i += inc) {
             new_coordinates.append(center_degrees(cover_info.not_filled.at(i))).append("\n");
         }
+    }
+
+    if (is_last_cycle || cover_info.not_filled.empty()) {
+        const auto single_index_info = get_index_info(cover_info.single_square_count);
+        const auto triple_index_info = get_index_info(cover_info.triple_square_count);
+
+        const std::string dir{"cover"};
+
+        cover::save_polygon(dir, polygon);
+        cover::save_square(dir, square);
+        cover::save_singles(dir, single_index_info);
+        cover::save_triples(dir, triple_index_info);
+
+        cover::save_cover(dir, cover, single_index_info, triple_index_info);
+        cover::save_digits(dir, digits);
     }
 
     return new_coordinates.c_str();

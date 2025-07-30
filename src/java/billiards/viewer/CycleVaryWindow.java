@@ -834,7 +834,7 @@ public class CycleVaryWindow {
                 final String cleanedTriples = cleanedTriplesPre._1;
                 final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 
-                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer);
+                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * cycles);
 
                 coordinateCodeArea.replaceText(newCoordinates);
 
@@ -845,6 +845,8 @@ public class CycleVaryWindow {
                 // last cycle.)
                 if (newVal >= Reps * cycles || newCoordinates.isEmpty()) {
                     if (newCoordinates.isEmpty()) System.out.println("Covered");
+
+                    viewer.loadCover("cover", executor);
                     shutdown(cyclesProgress, repsProgress, executor);
                     return;
                 } else {
@@ -1069,7 +1071,7 @@ public class CycleVaryWindow {
             overallProgress.increment(Math.abs(stepIdx));
             // Run at the next hole
             if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
-                viewer.renderRegions(viewer.onScreenSequences, viewer.guideLinesImageView, viewer.regionsImageView, drawExecutor);
+                viewer.callRenderRegions();
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
                 if(overrideSS) {
@@ -1083,7 +1085,7 @@ public class CycleVaryWindow {
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
                 drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
             } else {
-                viewer.renderRegions(viewer.onScreenSequences, viewer.guideLinesImageView, viewer.regionsImageView, drawExecutor);
+                viewer.callRenderRegions();
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
 
@@ -1160,7 +1162,7 @@ public class CycleVaryWindow {
                     if(autoCover) viewer.coverWindow.appendStablesInfo(msg);
                 }
             });
-            viewer.renderRegions(viewer.onScreenSequences, viewer.guideLinesImageView, viewer.regionsImageView, drawExecutor);
+            viewer.callRenderRegions();
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
             if(overrideSS) {
