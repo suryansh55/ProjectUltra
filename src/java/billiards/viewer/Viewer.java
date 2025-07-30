@@ -5647,12 +5647,6 @@ public final class Viewer {
     void renderRegions(final LinkedHashMap<Storage, Color> regions,
                        final ImageView guideLinesImageView, final ImageView regionsImageView,
                        final ExecutorService executor) {
-        renderRegions(regions, guideLinesImageView, regionsImageView, executor, false);
-    }
-
-    void renderRegions(final LinkedHashMap<Storage, Color> regions,
-                       final ImageView guideLinesImageView, final ImageView regionsImageView,
-                       final ExecutorService executor, final boolean renderSquares) {
         // Image 1: Guidelines
         final WritableImage guideLinesImage = renderGuideLines();
 
@@ -5661,16 +5655,18 @@ public final class Viewer {
 
         // Zhao Yu Li, Jul 29, 2025.
         // Squares are optionally rendered (whereas they were unconditionally rendered before).
-        if (renderSquares) {
-            ArrayList<Rectangle> rectangles = new ArrayList<Rectangle>();
-            rectangles.addAll(coverRects.tripleEntrySet());
-            rectangles.addAll(coverRects.HalfTripleEntrySet());
-            rectangles.addAll(coverRects.stableEntrySet());
-            rectangles.sort((o1, o2) -> Double.compare(o1.intervalX.max - o1.intervalX.min, o2.intervalX.max - o2.intervalX.min));
-            for (Rectangle rect : rectangles) {
-                renderRectLoad(rect, regionImage, coverRects.getColor(rect), Color.FIREBRICK);
-            }
+        // Updated Jul 30, 205.
+        // It is okay to unconditionally render the squares as it does not significantly impact the execution time
+        // if (renderSquares) {
+        ArrayList<Rectangle> rectangles = new ArrayList<Rectangle>();
+        rectangles.addAll(coverRects.tripleEntrySet());
+        rectangles.addAll(coverRects.HalfTripleEntrySet());
+        rectangles.addAll(coverRects.stableEntrySet());
+        rectangles.sort(Comparator.comparingDouble(o -> o.intervalX.max - o.intervalX.min));
+        for (Rectangle rect : rectangles) {
+            renderRectLoad(rect, regionImage, coverRects.getColor(rect), Color.FIREBRICK);
         }
+        // }
 
         // Image 3: Bounds
         final WritableImage boundsImage = new WritableImage(SIDE, SIDE);
@@ -5680,12 +5676,8 @@ public final class Viewer {
         for (final ConvexPolygon poly : outerPolyBounds) {
             renderPolygon(poly, boundsImage, polyBoundColor);
         }
-        if (coverArea.isPresent()) {
-            renderPolygon(coverArea.get(), boundsImage, coverAreaColor);
-        }
-        if (autoVaryArea.isPresent()) {
-            renderPolygon(autoVaryArea.get(), boundsImage, coverAreaColor);
-        }
+        coverArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
+        autoVaryArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
         for (final Entry<ConvexPolygon, Color> poly : mrrBounds.entrySet()) {
             final Color color;
             if (poly.getValue().equals(Color.BLACK) || poly.getValue().equals(Color.TRANSPARENT)) {
@@ -7760,7 +7752,7 @@ public final class Viewer {
         coverRects.addStables(cover._1, Color.BLACK);
         coverRects.addTriples(cover._2, Color.BLACK);
         coverArea = Optional.of(polygon);
-        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor, coverWindow.getRenderSquares());
+        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
     }
 
     public void loadCoverWithoutTrim(final String dir, final ExecutorService executor) {
