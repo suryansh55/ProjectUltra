@@ -159,10 +159,13 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
 
                 addToIterToLimitCover(classCodeSeq.toString());
 
-                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
-                    this.updateProgress(progress.incrementAndGet(), todo);
-                    continue;
-                }
+                // Zhao Yu Li, Jul 31, 2025
+                // We need to always load the storages because we will check if the next coordinate is inside of any
+                // of the polygons formed by these storages.
+//                if(usedCodes.contains(classCodeSeq) || !this.draw) { // Update in the case of not drawing this code
+//                    this.updateProgress(progress.incrementAndGet(), todo);
+//                    continue;
+//                }
 
                 // Zhao Yu Li, Jun 24, 2025.
                 // Replaced code block with function call
@@ -529,10 +532,13 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
         );
 
         for (ClassifiedCodeSequence codePrinted : codesPrinted) {
-            if(usedCodes.contains(codePrinted) || !this.draw) { // Update in the case of not drawing this code
-                this.updateProgress(progress.incrementAndGet(), todo);
-                continue;
-            }
+            // Zhao Yu Li, Jul 31, 2025
+            // We need to always load the storages because we will check if the next coordinate is inside of any
+            // of the polygons formed by these storages.
+//            if(usedCodes.contains(codePrinted) || !this.draw) { // Update in the case of not drawing this code
+//                this.updateProgress(progress.incrementAndGet(), todo);
+//                continue;
+//            }
 
             loadStorage(usedCodes, todo, futures, progress, codePrinted);
         }
