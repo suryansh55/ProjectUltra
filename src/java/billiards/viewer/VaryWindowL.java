@@ -469,4 +469,8 @@ public final class VaryWindowL {
     private int getCoordinatesListLength() {
         return text.getText().trim().split("\n").length;
     }
+
+    public boolean getDraw() {
+        return drawCB.isSelected();
+    }
 }
