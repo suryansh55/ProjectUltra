@@ -1910,7 +1910,7 @@ public final class Viewer {
 
                     // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
                     final int[] maximums = {point._2, point._3, point._4, point._5, point._6, point._7};
-                    final boolean draw = VaryWindowL.Draw;
+                    final boolean draw = varyWindow.getDraw();
                     final boolean overrideSS = VaryWindowL.Override;
                     final boolean autoCover = VaryWindowL.AutoCover;
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
@@ -1981,7 +1981,7 @@ public final class Viewer {
 
                     // CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
                     final int[] maximums = {point._2, point._3, point._4, point._5, point._6, point._7};
-                    final boolean draw = VaryWindowL.Draw;
+                    final boolean draw = middleVaryWindow.getDraw();
                     final boolean overrideSS = VaryWindowL.Override;
                     final boolean autoCover = VaryWindowL.AutoCover;
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
@@ -4282,7 +4282,8 @@ public final class Viewer {
                                   final ExecutorService executor, final ExecutorService storageExecutor,
                                   final ExecutorService shotExecutor, final boolean printMid, final boolean firstLast,
                                   final boolean addToAllPositive, final boolean addToPlusMinus, final int idx,
-                                  final int step, final int end, final int codesFound, final ProgressMultiTask overallProgress) {
+                                  final int step, final int end, final int codesFound, final ProgressMultiTask overallProgress,
+                                  final ArrayList<Storage> previousCodes) {
 
         // Zhao Yu Li, Jun 27, 2025.
         // Move the screen to the point we are working on
@@ -4293,6 +4294,57 @@ public final class Viewer {
         // Set the line number of (Middle)VaryWindowL
         if (printMid) middleVaryWindow.setLineNumber(idx + 1);
         else varyWindow.setLineNumber(idx + 1);
+
+        // Zhao Yu Li, Jul 31, 2025.
+        // To save time, we check if the current coordinate is inside any of the polygons formed the codes found from
+        // the previous coordinate. If yes, then we don't need to run Vary for this coordinate because a code from the
+        // last coordinate fills the square.
+        for (Storage storage : previousCodes) {
+            if (storage.classCodeSeq.stable) {
+                final Storage.Stable stable = (Storage.Stable) storage;
+                double rx = Math.toRadians(point.x);
+                double ry = Math.toRadians(point.y);
+                final Location location = stable.polygon.location(rx, ry);
+
+                if (location == Location.INSIDE) {
+                    System.out.println("\n//------------- working on point " + (idx + 1) + "-------------\nThis coordinate was filled by a code from the previous coordinate.");
+                    System.out.println(Utils.standard(storage.classCodeSeq, 1));
+
+                    overallProgress.increment(Math.abs(step));
+
+                    if (overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
+                        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+                        Utils.safeShutdownExecutor(storageExecutor);
+                        Utils.safeShutdownExecutor(shotExecutor);
+                        overallProgress.close();
+                        if(autoCover) coverWindow.show();
+                    } else if (idx + step < end) {
+                        recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
+                                shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, idx + step, step, end,
+                                codesFound, overallProgress, previousCodes);
+                    } else {
+                        overallProgress.close();
+
+                        Utils.safeShutdownExecutor(storageExecutor);
+                        Utils.safeShutdownExecutor(shotExecutor);
+
+                        // only render the screen after everything has been loaded
+                        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+
+                        if(autoCover) {
+                            coverWindow.show();
+                            System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN COVER ----+");
+                            System.out.println();
+                        } else {
+                            System.out.println("+-------------- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed --------------+");
+                            System.out.println();
+                        }
+                    }
+
+                    return;
+                }
+            }
+        }
 
         // Create the task
         final VaryLTask task = new VaryLTask(
@@ -4323,11 +4375,13 @@ public final class Viewer {
                 if(!c.wasAdded()) continue;
                 // Draw all new additions
                 c.getAddedSubList().forEach(storage -> {
-                    final Color color;
-                    final int index = cycle.get();
-                    color = comboBoxColors.get(index);
-                    addToOnScreenSequences(storage, color);
-                    renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+                    if (draw) {
+                        final Color color;
+                        final int index = cycle.get();
+                        color = comboBoxColors.get(index);
+                        addToOnScreenSequences(storage, color);
+                        renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
+                    }
 
                     // prepare the code
                     String codeStr = "" + storage.codeType();
@@ -4356,10 +4410,12 @@ public final class Viewer {
 
             storages.forEach(storage -> {
                 if(!onScreenSequences.containsKey(storage)) {
-                    final Color color;
-                    final int index = cycle.get();
-                    color = comboBoxColors.get(index);
-                    addToOnScreenSequences(storage, color);
+                    if (draw) {
+                        final Color color;
+                        final int index = cycle.get();
+                        color = comboBoxColors.get(index);
+                        addToOnScreenSequences(storage, color);
+                    }
 
                     if (autoCover && storage.classCodeSeq.stable) coverWindow.appendStablesInfo(getCoverCodeString(storage));
                 }
@@ -4376,7 +4432,7 @@ public final class Viewer {
             } else if (idx + step < end) {
                 recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
                         shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, idx + step, step, end,
-                        storages.size() + codesFound, overallProgress);
+                        storages.size() + codesFound, overallProgress, new ArrayList<>(storages));
             } else {
                 overallProgress.close();
 
@@ -4476,7 +4532,7 @@ public final class Viewer {
         // Changed from a single call to a recursive call. This is to facilitate moving the screen from one point to the
         // next.
         recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
-                shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, start-1, step, end, 0, progress);
+                shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, start-1, step, end, 0, progress, new ArrayList<>());
     }
 
     private void LoadFileAction(
