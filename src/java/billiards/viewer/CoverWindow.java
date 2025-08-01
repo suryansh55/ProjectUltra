@@ -73,12 +73,13 @@ public final class CoverWindow {
     // Removed this check box because the execution time of calculating the cover is not significantly impacted by the
     // rendering of the squares
     // private final CheckBox squaresCheckBox = new CheckBox("Squares");
+    private final CheckBox addToSmallCoverCB = new CheckBox("Add to Small Cover");
 
     private final Stage stage = new Stage();
     private final Scene scene = new Scene(base);
 
     public CoverWindow(final String windowTitle, final ConnectionPool pool,
-    				   final TextField mainLabel, final Runnable loadCover) {
+    				   final TextField mainLabel, final Runnable loadCover, final Viewer viewer) {
         stage.setScene(scene);
         stage.setTitle(windowTitle);
 
@@ -113,6 +114,7 @@ public final class CoverWindow {
         labelTextField.setPrefColumnCount(3);
 
         // squaresCheckBox.setSelected(true);
+        addToSmallCoverCB.setSelected(true);
 
         mrrRdoBtn.setSelected(true);
         mrrRdoBtn.setToggleGroup(calcGroup);
@@ -195,7 +197,8 @@ public final class CoverWindow {
                 final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 //                System.out.println(cleanedStables);
 
-                Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, mrr, pool);
+                String res = Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, mrr, pool);
+                if (viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected()) viewer.smallCoverWindow.addPolygons(res);
                 //}
             } else {
 
@@ -232,7 +235,7 @@ public final class CoverWindow {
                                        calcBtn, emptyTextField, labelTextField, diagonalCheckBox);
 */
         inputHBox.getChildren().addAll(mrrRdoBtn, allRdoBtn, digitsTextField, magnificationsTextField,
-                calcBtn, emptyTextField, labelTextField);
+                calcBtn, emptyTextField, labelTextField, addToSmallCoverCB);
         inputHBox.setSpacing(10);
         inputHBox.setAlignment(Pos.CENTER);
 

@@ -577,10 +577,10 @@ public final class Viewer {
 
         coverWindow = new CoverWindow(
                 String.format("Cover %s", version), pool,
-                labelMainWindow, () -> loadCover("cover", executor));
+                labelMainWindow, () -> loadCover("cover", executor), this);
 
         smallCoverWindow = new SmallCoverWindow(
-                String.format("Cover %s", version), pool,
+                String.format("Small Cover %s", version), pool,
                 () -> loadCover("small_cover", executor), coverWindow);
 
         final StablesWindow stablesWindow = new StablesWindow(coverWindow);
