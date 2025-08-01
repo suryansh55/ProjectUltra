@@ -25,8 +25,6 @@ import org.eclipse.collections.api.list.primitive.IntList;
 import java.io.File;
 import java.util.Optional;
 
-import static billiards.utils.Polygon.cleanPolygon;
-
 public final class SmallCoverWindow {
 
     // ------------------------------------------------------------
@@ -63,11 +61,8 @@ public final class SmallCoverWindow {
     // private final CheckBox squaresCheckBox = new CheckBox("Squares");
 
     private final Stage stage = new Stage();
-    private final CoverWindow coverWindow;
 
     public SmallCoverWindow(final String windowTitle, final ConnectionPool pool, final Runnable loadCover, final CoverWindow coverWindow) {
-        this.coverWindow = coverWindow;
-
         VBox base = new VBox();
         Scene scene = new Scene(base);
         stage.setScene(scene);
@@ -155,44 +150,31 @@ public final class SmallCoverWindow {
             cover.mkdir();
 
             if (mrr) {
+                coverWindow.appendStablesInfo("// Small Cover");
+                coverWindow.appendTriplesInfo("// Small Cover");
+                String[] squares = polygonString.split("\n");
 
-                final String cleanedPolygon = cleanPolygon(polygonString);
-                final String cleanedStablesPre = cleanStables(stablesString, pool);
-                final Tuple2<String, String> cleanedTriplesPre = cleanTriples(triplesString, pool);
-                //final Tuple2<String , String> cleanedHalfTriplePre = cleanHalfTriples(halfTripleString, pool);
-                //ArrayLit<Tuple2<tring,String>> temp = cleanedHalfTriplePre._1.split("\n");
-                /*if (!halfTripleString.isEmpty()) {
-                    final String cleanedHalfTriples = cleanedHalfTriplePre._1;
-                    final String cleanedStables = (cleanedStablesPre + '\n' + cleanedHalfTriplePre._2).trim();
-                    //final String cleanedStables = cleanedStablesPre.trim();
-                    // Stables in the half triple
-                    //final String cleanedStableshalf = (cleanedHalfTriplePre._2).trim();
-                    // Stables
-                    //final String cleanedStables = (cleanedStablesPre).trim();
-                    //final String[] cleanedStables_str = cleanedStables.split("\n");
-                    //final String[] cleanedStablesHalf_str = cleanedStableshalf.split("\n");
-                    //final String[] cleanedHalftriples_str = cleanedHalfTriples.split("\n");
+                for (String square : squares) {
+                    String[] coordinates = square.split(" ");
 
-                    if (diagonalCheckBox.isSelected()) {
-                        Wrapper.coverWrapperDiagonal(cleanedPolygon, cleanedStables, cleanedHalfTriples, digits, magnifications, empty, mrr, pool);
+                    if (coordinates.length != 4) continue;
+
+                    final String cleanedPolygon = coordinates[0] + " " + coordinates[1] + " " + coordinates[2] + " " + coordinates[3];
+                    final String cleanedStablesPre = cleanStables(stablesString, pool);
+                    final Tuple2<String, String> cleanedTriplesPre = cleanTriples(triplesString, pool);
+                    final String cleanedTriples = cleanedTriplesPre._1;
+                    final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
+
+                    String result = Wrapper.smallCoverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, true, pool);
+
+                    if (!result.isEmpty()) {
+                        String[] newCodes = result.split("-----");
+                        if (newCodes.length > 0 && !newCodes[0].trim().isEmpty()) coverWindow.appendStablesInfo(newCodes[0].trim());
+                        if (newCodes.length > 1 && !newCodes[1].trim().isEmpty()) coverWindow.appendTriplesInfo(newCodes[1].trim());
+
+                        loadCover.run();
                     }
-                    else {
-                        Wrapper.coverWrapperHalf(cleanedPolygon, cleanedStables, cleanedHalfTriples, digits, magnifications, empty, mrr, pool);
-                    }
-                }*/
-                //else {
-                final String cleanedTriples = cleanedTriplesPre._1;
-                final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
-//                System.out.println(cleanedStables);
-
-                String result = Wrapper.smallCoverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, true, pool);
-
-                if (!result.isEmpty()) {
-                    String[] newCodes = result.split("-----");
-                    if (newCodes.length > 0 && !newCodes[0].isEmpty()) coverWindow.appendStablesInfo(newCodes[0].trim() + "\n// Small Cover");
-                    if (newCodes.length > 1 && !newCodes[1].isEmpty()) coverWindow.appendTriplesInfo(newCodes[1].trim() + "\n// Small Cover");
                 }
-                //}
             } else {
 
                 final DirectoryChooser chooser = new DirectoryChooser();
@@ -207,8 +189,6 @@ public final class SmallCoverWindow {
 
                 Wrapper.coverWrapperAll(dir.getPath(), pool, magnifications);
             }
-
-            loadCover.run();
 
             System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
 
@@ -412,5 +392,9 @@ public final class SmallCoverWindow {
     void show() {
         this.stage.show();
         this.stage.toFront();
+    }
+
+    void addPolygons(String newPolygons) {
+        this.topText.setText(newPolygons.trim() + "\n" + topText.getText());
     }
 }
