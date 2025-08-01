@@ -496,9 +496,9 @@ public final class Viewer {
     final CheckBox autoFillerCheckBox = new CheckBox();
     final TextField labelMainWindow = new TextField();
     final Button coverBtn = new Button();
-    final Button halfTripleBtn = new Button();
-    final Button unstableBtn = new Button();
-    final Button cornerBtn = new Button();
+//    final Button halfTripleBtn = new Button();
+//    final Button unstableBtn = new Button();
+//    final Button cornerBtn = new Button();
     final Button covRectsColorBox = new Button();
     Color coverColor = Color.BLACK;
 
@@ -542,6 +542,8 @@ public final class Viewer {
 
     final BoyanMenu boyanMenu = new BoyanMenu(cycleVaryButton, middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
 
+    final Button smallCoverButton = new Button("SmallCover");
+    final SmallCoverWindow smallCoverWindow;
     final CoverWindow coverWindow;
 
     VaryWindowL varyWindow =  null;
@@ -577,17 +579,21 @@ public final class Viewer {
                 String.format("Cover %s", version), pool,
                 labelMainWindow, () -> loadCover("cover", executor));
 
+        smallCoverWindow = new SmallCoverWindow(
+                String.format("Cover %s", version), pool,
+                () -> loadCover("small_cover", executor), coverWindow);
+
         final StablesWindow stablesWindow = new StablesWindow(coverWindow);
 
-        final CoverWindow2 coverWindow2 = new CoverWindow2(
-                String.format("Cover %s", version), pool,
-                labelMainWindow, () -> loadCover("cover2", executor));
-        final CoverWindow3 coverWindow3 = new CoverWindow3(
-                String.format("Cover %s", version), pool,
-                labelMainWindow, () -> loadCover("cover2", executor));
-        final CoverWindow4 coverWindow4 = new CoverWindow4(
-                String.format("Cover %s", version), pool,
-                labelMainWindow, () -> loadCover("cover2", executor));
+//        final CoverWindow2 coverWindow2 = new CoverWindow2(
+//                String.format("Cover %s", version), pool,
+//                labelMainWindow, () -> loadCover("cover2", executor));
+//        final CoverWindow3 coverWindow3 = new CoverWindow3(
+//                String.format("Cover %s", version), pool,
+//                labelMainWindow, () -> loadCover("cover2", executor));
+//        final CoverWindow4 coverWindow4 = new CoverWindow4(
+//                String.format("Cover %s", version), pool,
+//                labelMainWindow, () -> loadCover("cover2", executor));
 
         executorService = executor;
 
@@ -1751,9 +1757,14 @@ public final class Viewer {
         lineNumberTxt.setPrefWidth(45);
         lineNumberTxt.setPrefColumnCount(8);
 
+        // Zhao Yu Li, Aug 1, 2025.
+        // Small Cover
+        Utils.colorButton(smallCoverButton, Color.PALEVIOLETRED, clickColor);
+        smallCoverButton.setOnAction(event -> smallCoverWindow.show());
+
         // Zhao Yu Li, Jul 7, 2025.
         // Pattern Calculator
-        patternCalculatorBtn.setText("Pattern Calculator");
+        patternCalculatorBtn.setText("Pattern Calc.");
         patternCalculatorBtn.setTooltip(Utils.toolTip("Opens the Pattern Calculator"));
         Utils.colorButton(patternCalculatorBtn, Color.SKYBLUE, clickColor);
         patternCalculatorBtn.setOnAction(event -> new PatternCalculator());
@@ -2479,32 +2490,32 @@ public final class Viewer {
         Utils.colorButton(coverBtn, Color.LIGHTPINK, clickColor);
         coverBtn.setOnAction(e -> coverWindow.show());
 
-        halfTripleBtn.setText("Half Triple");
-        halfTripleBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
-                + " sequences cover a specified polygon. See instructions for details"));
-        Utils.colorButton(halfTripleBtn, Color.LIGHTPINK, clickColor);
-        halfTripleBtn.setOnAction(e -> {
-            coverWindow2.show();
-            //trim = true;
-        });
+//        halfTripleBtn.setText("Half Triple");
+//        halfTripleBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
+//                + " sequences cover a specified polygon. See instructions for details"));
+//        Utils.colorButton(halfTripleBtn, Color.LIGHTPINK, clickColor);
+//        halfTripleBtn.setOnAction(e -> {
+//            coverWindow2.show();
+//            //trim = true;
+//        });
 
-        unstableBtn.setText("Unstable");
-        unstableBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
-                + " sequences cover a specified polygon. See instructions for details"));
-        Utils.colorButton(unstableBtn, Color.LIGHTPINK, clickColor);
-        unstableBtn.setOnAction(e -> {
-            coverWindow3.show();
-            //trim = true;
-        });
+//        unstableBtn.setText("Unstable");
+//        unstableBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
+//                + " sequences cover a specified polygon. See instructions for details"));
+//        Utils.colorButton(unstableBtn, Color.LIGHTPINK, clickColor);
+//        unstableBtn.setOnAction(e -> {
+//            coverWindow3.show();
+//            //trim = true;
+//        });
 
-        cornerBtn.setText("Corner");
-        cornerBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
-                + " sequences cover a specified polygon. See instructions for details"));
-        Utils.colorButton(cornerBtn, Color.LIGHTPINK, clickColor);
-        cornerBtn.setOnAction(e -> {
-            coverWindow4.show();
-            //trim = true;
-        });
+//        cornerBtn.setText("Corner");
+//        cornerBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
+//                + " sequences cover a specified polygon. See instructions for details"));
+//        Utils.colorButton(cornerBtn, Color.LIGHTPINK, clickColor);
+//        cornerBtn.setOnAction(e -> {
+//            coverWindow4.show();
+//            //trim = true;
+//        });
 
         txtCodeSequence.setPromptText("Code Sequence");
         txtCodeSequence.setTooltip(Utils.toolTip("here you put in a code sequence that you want to"
@@ -3751,7 +3762,7 @@ public final class Viewer {
         zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
         backForthHBox.getChildren().addAll(
                 zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
-        oboHBox.getChildren().addAll(patternCalculatorBtn, btnLoadOBOFile, lineNumberTxt, btnGo);
+        oboHBox.getChildren().addAll(smallCoverButton, patternCalculatorBtn, btnLoadOBOFile, lineNumberTxt, btnGo);
         //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, cboxRegionColor2, clearBtn, resetBtn);//george may 2,2019
         colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
 
