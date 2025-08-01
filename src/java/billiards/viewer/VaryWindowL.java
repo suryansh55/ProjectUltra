@@ -86,6 +86,8 @@ public final class VaryWindowL {
     private final String windowTitle;
     private Integer lineNumber = null;
 
+    private final CheckBox autoSmallCoverBox = new CheckBox();
+
     private Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> result;
 
     public VaryWindowL(final String windowTitle, final String buttonText, final String fileName,
@@ -167,6 +169,11 @@ public final class VaryWindowL {
         autoCoverBox.setSelected(AutoCover);
         autoCoverBox.setText("Add codes to cover");
 
+        autoSmallCoverBox.setIndeterminate(false);
+        autoSmallCoverBox.setAllowIndeterminate(false);
+        autoSmallCoverBox.setSelected(AutoCover);
+        autoSmallCoverBox.setText("Add codes to small cover");
+
         firstLastBox.setIndeterminate(false);
         firstLastBox.setAllowIndeterminate(false);
         firstLastBox.setSelected(false);
@@ -207,9 +214,9 @@ public final class VaryWindowL {
         addToPlusMinusCB.setSelected(false);
         addToPlusMinusCB.setText("Add to plus-minus");
 
-        controlHBox = new HBox(10, autoCoverBox, addToAllPositiveCB, addToPlusMinusCB);
+        controlHBox = new HBox(10, autoCoverBox, autoSmallCoverBox, addToAllPositiveCB, addToPlusMinusCB);
 
-        if (middle) controlHBox.getChildren().add(1, firstLastBox);
+        if (middle) controlHBox.getChildren().add(2, firstLastBox);
 
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
@@ -472,5 +479,9 @@ public final class VaryWindowL {
 
     public boolean getDraw() {
         return drawCB.isSelected();
+    }
+
+    public boolean getAddToSmallCover() {
+        return autoSmallCoverBox.isSelected();
     }
 }

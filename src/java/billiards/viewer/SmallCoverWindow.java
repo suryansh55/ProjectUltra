@@ -256,6 +256,11 @@ public final class SmallCoverWindow {
 
     }
 
+    public void appendStablesInfo(String stable) {
+        String currentText = bottomText.getText();
+        bottomText.setText(stable + "\n" + currentText);
+    }
+
     static Tuple2<String, String> cleanTriples(final String string, final ConnectionPool pool) {
 
         final Iterable<String> lines = Splitter.onPattern("\\R")

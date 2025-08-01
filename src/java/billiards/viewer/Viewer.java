@@ -1924,6 +1924,7 @@ public final class Viewer {
                     final boolean draw = varyWindow.getDraw();
                     final boolean overrideSS = VaryWindowL.Override;
                     final boolean autoCover = VaryWindowL.AutoCover;
+                    final boolean autoSmallCover = varyWindow.getAddToSmallCover();
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
 
                     System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
@@ -1933,7 +1934,7 @@ public final class Viewer {
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
-                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, false, false);
+                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor, shotExecutor, false, false);
                 }
             }
         });
@@ -1995,6 +1996,7 @@ public final class Viewer {
                     final boolean draw = middleVaryWindow.getDraw();
                     final boolean overrideSS = VaryWindowL.Override;
                     final boolean autoCover = VaryWindowL.AutoCover;
+                    final boolean autoSmallCover = middleVaryWindow.getAddToSmallCover();
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
 
                     System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
@@ -2005,7 +2007,7 @@ public final class Viewer {
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
                     final boolean firstLastSelected = middleVaryWindow.getFirstLastSelected();
-                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor, shotExecutor, true, firstLastSelected);
+                    drawVaryL(pointList, maximums, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor, shotExecutor, true, firstLastSelected);
                 }
             }
         });
@@ -4289,7 +4291,7 @@ public final class Viewer {
     // starting the Vary task. It May cause a slight performance overhead because we are drawing more often (after
     // finishing the vary task of the current point and before starting the next one).
     private void recurseDrawVaryL(final MutableList<Vector2> points, final int[] max, List<String> codeList,
-                                  final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
+                                  final boolean draw, final boolean overrideSS, final boolean autoCover, final boolean autoSmallCover, final int maxPrint,
                                   final ExecutorService executor, final ExecutorService storageExecutor,
                                   final ExecutorService shotExecutor, final boolean printMid, final boolean firstLast,
                                   final boolean addToAllPositive, final boolean addToPlusMinus, final int idx,
@@ -4330,7 +4332,7 @@ public final class Viewer {
                         overallProgress.close();
                         if(autoCover) coverWindow.show();
                     } else if (idx + step < end) {
-                        recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
+                        recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor,
                                 shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, idx + step, step, end,
                                 codesFound, overallProgress, previousCodes);
                     } else {
@@ -4378,7 +4380,8 @@ public final class Viewer {
         //final ObservableList<Storage> partials = task.getPartialProperty().get();
         //final MutableSortedSet<String> codeStrings = new TreeSortedSet<>();
         // Count the number of holes we start with
-        if(autoCover) coverWindow.appendStablesInfo("// Start " + (printMid ? "MiddleVaryL" : "VaryL"));
+        if (autoCover) coverWindow.appendStablesInfo("// Start " + (printMid ? "MiddleVaryL" : "VaryL"));
+        if (autoSmallCover) smallCoverWindow.appendStablesInfo("// Start " + (printMid ? "MiddleVaryL" : "VaryL"));
 
         // Update screen when change detected
         task.getPartialProperty().get().addListener((ListChangeListener.Change<? extends Storage> c) -> {
@@ -4393,20 +4396,6 @@ public final class Viewer {
                         addToOnScreenSequences(storage, color);
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
                     }
-
-                    // prepare the code
-                    String codeStr = "" + storage.codeType();
-                    // String codeStr = "xxx " + type; //george july 26 2017 -
-                    // type whatever you want between the quotes in the line above
-                    // make sure to add a space after the xxx
-                    if (codeStr.equals("CS")) {
-                        codeStr += "  ";
-                    } else if (!codeStr.equals("OSNO")) {
-                        codeStr += " ";
-                    }
-                    final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage;
-                    //codeStrings.add(msg);
-                    if(autoCover) coverWindow.appendStablesInfo(msg);
                 });
             }
         });
@@ -4427,9 +4416,10 @@ public final class Viewer {
                         color = comboBoxColors.get(index);
                         addToOnScreenSequences(storage, color);
                     }
-
-                    if (autoCover && storage.classCodeSeq.stable) coverWindow.appendStablesInfo(getCoverCodeString(storage));
                 }
+
+                if (autoCover && storage.classCodeSeq.stable) coverWindow.appendStablesInfo(getCoverCodeString(storage));
+                if (autoSmallCover && storage.classCodeSeq.stable) smallCoverWindow.appendStablesInfo(getCoverCodeString(storage));
             });
 
             overallProgress.increment(Math.abs(step));
@@ -4439,9 +4429,10 @@ public final class Viewer {
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
                 overallProgress.close();
-                if(autoCover) coverWindow.show();
+                if (autoCover) coverWindow.show();
+                if (autoSmallCover) smallCoverWindow.show();
             } else if (idx + step < end) {
-                recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
+                recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor,
                         shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, idx + step, step, end,
                         storages.size() + codesFound, overallProgress, new ArrayList<>(storages));
             } else {
@@ -4460,7 +4451,13 @@ public final class Viewer {
                 }
                  */
 
-                if(autoCover) {
+                if (autoSmallCover) {
+                    smallCoverWindow.show();
+                    System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN SMALL COVER ----+");
+                    System.out.println();
+                }
+
+                if (autoCover) {
                     coverWindow.show();
                     System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN COVER ----+");
                     System.out.println();
@@ -4497,7 +4494,12 @@ public final class Viewer {
             }
              */
 
-            if(autoCover) {
+            if (autoSmallCover) {
+                smallCoverWindow.show();
+                System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled, CODES ARE IN SMALL COVER ----+");
+            }
+
+            if (autoCover) {
                 coverWindow.show();
                 System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Cancelled, CODES ARE IN COVER ----+");
             } else {
@@ -4514,8 +4516,8 @@ public final class Viewer {
         executor.execute(task);
     }
 
-    private void drawVaryL(final MutableList<Vector2> points, final int[] max,
-                           final boolean draw, final boolean overrideSS, final boolean autoCover, final int maxPrint,
+    private void drawVaryL(final MutableList<Vector2> points, final int[] max, final boolean draw,
+                           final boolean overrideSS, final boolean autoCover, final boolean autoSmallCover, final int maxPrint,
                            final ExecutorService executor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
                            final boolean printMid, final boolean firstLast) {
         // Zhao Yu Li, Jun 27, 2025.
@@ -4542,7 +4544,7 @@ public final class Viewer {
         // Zhao Yu Li, Jun 27, 2025.
         // Changed from a single call to a recursive call. This is to facilitate moving the screen from one point to the
         // next.
-        recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, maxPrint, executor, storageExecutor,
+        recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor,
                 shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, start-1, step, end, 0, progress, new ArrayList<>());
     }
 
