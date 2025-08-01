@@ -55,7 +55,7 @@ void database_clear(const char* const db_path);
 sqlite::ConnectionPool* create_connection_pool(const char* const db_path, const int32_t pool_size);
 void destroy_connection_pool(const sqlite::ConnectionPool* const pool);
 
-int32_t cover_wrapper(const char* const poly_str,
+const char* cover_wrapper(const char* const poly_str,
 const char* const codes_str, const char* const unstables_str,
 const int32_t digits, const int32_t subdivide, const int32_t empty,
 const int32_t mrr, sqlite::ConnectionPool* const pool);
@@ -127,6 +127,7 @@ const char* small_cover_wrapper(const char* poly_str,
     int32_t digits, int32_t subdivide, int32_t empty,
     int32_t mrr, sqlite::ConnectionPool* pool);
 }
+
 
 
 
