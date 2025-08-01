@@ -555,7 +555,7 @@ const char* getEmpties(const std::string& polygon_str, const std::string& single
     return new_coordinates.c_str();
 }
 
-static bool cover_polygon(const cover::Cover& old_cover,
+const char* cover_polygon(const cover::Cover& old_cover,
                           const ClosedRectangleQ& square, const ClosedConvexPolygonQ& polygon,
                           const StableInfos& single_infos, const TripleInfos& triple_infos,
                           const uint32_t digits, const uint32_t max_mag, const size_t empties, const bool mrr) {
@@ -662,12 +662,20 @@ static bool cover_polygon(const cover::Cover& old_cover,
     std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
     file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
 
+    static std::string res;
     const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empties);
     if (num_to_print != 0) {
         const size_t inc = cover_info.not_filled.size() / num_to_print;
         for (size_t i = 0; i < num_to_print * inc; i += inc) {
-            std::cout << center_degrees(cover_info.not_filled.at(i)) << "; " << cover_info.not_filled.at(i).interval_x() << ", " << cover_info.not_filled.at(i).interval_y() << std::endl;
-            file << "// " << center_degrees(cover_info.not_filled.at(i)) << "; " << cover_info.not_filled.at(i).interval_x() << ", " << cover_info.not_filled.at(i).interval_y() << '\n';
+            std::cout << center_degrees(cover_info.not_filled.at(i)) << std::endl;
+            file << "// " << center_degrees(cover_info.not_filled.at(i)) << '\n';
+
+            const auto rect = cover_info.not_filled.at(i);
+            const auto& interval_x = rect.interval_x();
+            const auto& interval_y = rect.interval_y();
+            std::string interval_x_str = boost::str(boost::format("%1% %2%") % interval_x.lower() % interval_x.upper());
+            std::string interval_y_str = boost::str(boost::format("%1% %2%") % interval_y.lower() % interval_y.upper());
+            res.append(interval_x_str).append(" ").append(interval_y_str).append("\n");
         }
     }
 
@@ -749,12 +757,12 @@ static bool cover_polygon(const cover::Cover& old_cover,
     std::cout << "Time elapsed: " << oss.str() << std::endl;
     file << "// Time elapsed: " << oss.str() << '\n';
 
-    return covered;
+    return res.c_str();
 }
 
 // Static variables need to be reset between each invocation. They are saved, surprisingly
 
-bool check_cover(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
+const char* check_cover(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
                  const uint32_t digits, const uint32_t max_depth, const size_t empty,
                  const bool mrr, sqlite::ConnectionPool& pool) {
 
@@ -1066,12 +1074,10 @@ const char* check_small_cover(const std::string& polygon_str, const std::string&
     // Just use the default values for now
     const auto cover = cover::Empty{};
 
-    const auto intervals = split(polygon_str, "\n");
-    const auto x_interval = split(intervals[0], " ");
-    const auto y_interval = split(intervals[1], " ");
+    const auto coordinates = split(polygon_str, " ");
     const ClosedRectangleQ square{
-        {parse_fraction_to_double(x_interval[0]), parse_fraction_to_double(x_interval[1])},
-        {parse_fraction_to_double(y_interval[0]), parse_fraction_to_double(y_interval[1])}
+        {parse_fraction_to_double(coordinates[0]), parse_fraction_to_double(coordinates[1])},
+        {parse_fraction_to_double(coordinates[2]), parse_fraction_to_double(coordinates[3])}
     };
 
     // Right now we just check using the new singles and triples. It would be nice to merge them
