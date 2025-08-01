@@ -663,6 +663,7 @@ const char* cover_polygon(const cover::Cover& old_cover,
     file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
 
     static std::string res;
+    res.clear();
     const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empties);
     if (num_to_print != 0) {
         const size_t inc = cover_info.not_filled.size() / num_to_print;
