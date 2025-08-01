@@ -55,7 +55,7 @@ public final class Wrapper {
         destroy_connection_pool(dbPtr);
     }
 
-    private static native int cover_wrapper(String polygon, String codes, String unstables,
+    private static native String cover_wrapper(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
                                             boolean mrr, Pointer pool);
 
@@ -73,21 +73,11 @@ public final class Wrapper {
 
     private static native int cover_wrapper_all(String mrr_dir, Pointer pool, int depth);
 
-    public static boolean coverWrapper(final String polygon, final String codes, final String unstables,
+    public static String coverWrapper(final String polygon, final String codes, final String unstables,
                                        final int digits, final int subdivide, final int empty,
                                        final boolean mrr, final ConnectionPool pool) {
 
-        final int rval = cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer);
-
-        if (rval == 0) {
-            return false;
-        } else if (rval == 1) {
-            return true;
-        } else if (rval == -1) {
-            throw new RuntimeException("calculation of cover failed");
-        } else {
-            throw new RuntimeException("unknown return value " + rval);
-        }
+        return cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer);
     }
 
     public static String smallCoverWrapper(final String polygon, final String codes, final String unstables,

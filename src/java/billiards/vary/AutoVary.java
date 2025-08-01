@@ -48,7 +48,7 @@ public class AutoVary {
                 codes.addAll(BoyanMenu.findCodes3(cnt[0], cnt[1], movesMin, movesMax, i, types, executor));
             }
 
-            covered = Wrapper.coverWrapper(square.toString(), codes.toString(), "", 0, 1, 0, true, pool);
+            covered = Wrapper.coverWrapper(square.toString(), codes.toString(), "", 0, 1, 0, true, pool).isEmpty();
         }
 
         if (!covered) {
