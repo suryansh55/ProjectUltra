@@ -9,8 +9,12 @@ const char* getEmpties(const std::string& polygon_str, const std::string& single
     uint32_t digits, uint32_t max_depth, size_t empty, bool mrr, sqlite::ConnectionPool& pool, bool is_last_cycle);
 
 bool check_cover(const std::string& polygon_str, const std::string& stables_str, const std::string& triples_str,
-                 const uint32_t digits, const uint32_t subdivide, const size_t empty,
-                 const bool mrr, sqlite::ConnectionPool& pool);
+                 uint32_t digits, uint32_t subdivide, size_t empty,
+                 bool mrr, sqlite::ConnectionPool& pool);
+
+const char* check_small_cover(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
+                 uint32_t digits, uint32_t max_depth, size_t empty,
+                 bool mrr, sqlite::ConnectionPool& pool);
                 
 int32_t check_cover_duplicate_stables(const std::string& polygon_str, const std::string& stables_str, const std::string& triples_str,
                  const bool mrr, sqlite::ConnectionPool& pool, const bool show);

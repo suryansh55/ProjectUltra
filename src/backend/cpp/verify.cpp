@@ -666,8 +666,8 @@ static bool cover_polygon(const cover::Cover& old_cover,
     if (num_to_print != 0) {
         const size_t inc = cover_info.not_filled.size() / num_to_print;
         for (size_t i = 0; i < num_to_print * inc; i += inc) {
-            std::cout << center_degrees(cover_info.not_filled.at(i)) << std::endl;
-            file << "// " << center_degrees(cover_info.not_filled.at(i)) << '\n';
+            std::cout << center_degrees(cover_info.not_filled.at(i)) << "; " << cover_info.not_filled.at(i).interval_x() << ", " << cover_info.not_filled.at(i).interval_y() << std::endl;
+            file << "// " << center_degrees(cover_info.not_filled.at(i)) << "; " << cover_info.not_filled.at(i).interval_x() << ", " << cover_info.not_filled.at(i).interval_y() << '\n';
         }
     }
 
@@ -752,7 +752,7 @@ static bool cover_polygon(const cover::Cover& old_cover,
     return covered;
 }
 
-// static variables need to be reset between each invocation. They are saved, suprisingly
+// Static variables need to be reset between each invocation. They are saved, surprisingly
 
 bool check_cover(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
                  const uint32_t digits, const uint32_t max_depth, const size_t empty,
@@ -793,6 +793,300 @@ bool check_cover(const std::string& polygon_str, const std::string& singles_str,
     const auto triple_infos = get_triple_infos(triples, mrr, conn.db);
 
     return cover_polygon(cover, square, polygon, single_infos, triple_infos, digits, max_depth, empty, mrr);
+}
+
+const char* cover_small_polygon(const cover::Cover& old_cover,
+                          const ClosedRectangleQ& square, const ClosedConvexPolygonQ& polygon,
+                          const StableInfos& single_infos, const TripleInfos& triple_infos,
+                          const uint32_t digits, const uint32_t max_mag, const size_t empties, const bool mrr) {
+
+    const std::string dir{"small_cover"};
+
+    auto file = open_file_write(dir + "/info.txt");
+
+    for (const auto& vertex : polygon) {
+        std::cout << rationalToDegrees(vertex.x) << ' ' << rationalToDegrees(vertex.y) << std::endl;//George aug19th 2021 customize the precision for the decimal in the info.txt
+        file << "// " << rationalToDegrees(vertex.x)<< ' ' << rationalToDegrees(vertex.y) << '\n';
+        //std::cout << rationalToDegrees(vertex.x).str(20) << ' ' << rationalToDegrees(vertex.y).str(20) << std::endl;//George aug19th 2021 customize the precision for the decimal in the info.txt
+        //file << "// " << rationalToDegrees(vertex.x).str(20) << ' ' << rationalToDegrees(vertex.y).str(20) << '\n';
+    }
+
+    const auto prec = digits_to_bits(digits);
+
+    const auto begin = std::chrono::steady_clock::now();
+
+    if (!geometry::subset(polygon, square)) {
+        throw std::runtime_error("polygon is not a subset of the square");
+    }
+
+    // With the above check, the square will only be a subset of the polygon if the polygon
+    // is equal to the square (so pretty well never), so we can say it's false
+    HalfTripleInfos temp{};
+    const UpdateCover updater{square, polygon, single_infos, triple_infos, prec, max_mag};
+    const auto cover = boost::apply_visitor(updater, old_cover);
+
+    const auto end = std::chrono::steady_clock::now();
+
+    const auto cover_info = cover_to_info(polygon, square, cover);
+
+    const auto covered = cover_info.not_filled.empty();
+
+    auto file_unused = open_file_write(dir + "/unused.txt");
+    file_unused << "// Unused singles\n";
+    for (const auto& p : single_infos) {
+        const auto count = get_or(cover_info.single_square_count, p.first, 0);
+        if (count == 0) {
+
+            const auto& stable = p.first.stable.get().sequence;
+            const auto cost = get_cost(p.second);
+
+            const auto code_type = stable.type();
+            const auto code_length = stable.length();
+            const auto code_sum = stable.sum();
+
+            // These colored in no squares, so they are left out, hence 0 for the square count
+
+            const auto s = str(boost::format("%1% (%2%, %3%) (%4%, 0) - %5%") % code_type % code_length % code_sum % cost % stable);
+            file_unused << s << '\n';
+        }
+    }
+
+    file_unused << "// Unused triples\n";
+    for (const auto& p : triple_infos) {
+        const auto count = get_or(cover_info.triple_square_count, p.first, 0);
+        if (count == 0) {
+            const Triple triple{p.first.stable_neg.get().sequence,
+                                p.first.unstable.get().sequence,
+                                p.first.stable_pos.get().sequence};
+            file_unused << triple << '\n';
+        }
+    }
+
+    Integer total_single_cost = 0;
+
+    static std::string res;
+    res.clear();
+
+    std::cout << "The following stables colored squares:" << std::endl;
+    file << "// The following stables colored squares:" << '\n';
+    // We need to do this to have them sorted by cost when printing
+    for (const auto& p : single_infos) {
+        const auto count = get_or(cover_info.single_square_count, p.first, 0);
+        if (count != 0) {
+            const auto& stable = p.first.stable.get().sequence;
+            const auto cost = get_cost(p.second);
+
+            total_single_cost += count * cost;
+
+            const auto code_type = stable.type();
+            const auto code_length = stable.length();
+            const auto code_sum = stable.sum();
+
+            const auto s = str(boost::format("%1% (%2%, %3%) (%4%, %5%) - %6%") % code_type % code_length % code_sum % cost % count % stable);
+
+            std::cout << s << std::endl;
+            file << s << '\n';
+            res.append(s).append("\n");
+        }
+    }
+
+    res.append("-----\n");
+
+    std::cout << "The following triples colored squares:" << std::endl;
+    file << "// The following triples colored squares:" << '\n';
+    for (const auto& p : triple_infos) {
+        const auto count = get_or(cover_info.triple_square_count, p.first, 0);
+        if (count != 0) {
+            const Triple triple{p.first.stable_neg.get().sequence,
+                                p.first.unstable.get().sequence,
+                                p.first.stable_pos.get().sequence};
+            std::cout << triple << std::endl;
+            file << triple << '\n';
+
+            const auto stable_neg = boost::str(boost::format("%1%") % p.first.stable_neg.get().sequence);
+            const auto unstable = boost::str(boost::format("%1%") % p.first.unstable.get().sequence);
+            const auto stable_pos = boost::str(boost::format("%1%") % p.first.stable_pos.get().sequence);
+
+            res.append(stable_neg).append(", ").append(unstable).append(", ").append(stable_pos).append("\n");
+        }
+    }
+
+    std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
+    file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
+
+    const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empties);
+    if (num_to_print != 0) {
+        const size_t inc = cover_info.not_filled.size() / num_to_print;
+        for (size_t i = 0; i < num_to_print * inc; i += inc) {
+            std::cout << center_degrees(cover_info.not_filled.at(i)) << std::endl;
+            file << "// " << center_degrees(cover_info.not_filled.at(i)) << '\n';
+        }
+    }
+
+    uint64_t single_squares = 0;
+    for (const auto& p : cover_info.single_square_count) {
+        single_squares += p.second;
+    }
+
+    uint64_t triple_squares = 0;
+    for (const auto& p : cover_info.triple_square_count) {
+        triple_squares += p.second;
+    }
+
+    std::cout << single_squares << " stable squares used in the cover" << std::endl;
+    file << "// " << single_squares << " stable squares used in the cover" << '\n';
+
+    std::cout << triple_squares << " triple squares used in the cover" << std::endl;
+    file << "// " << triple_squares << " triple squares used in the cover" << '\n';
+
+    std::cout << cover_info.single_square_count.size() << " stables used in the cover" << std::endl;
+    file << "// " << cover_info.single_square_count.size() << " stables used in the cover" << '\n';
+
+    std::cout << cover_info.triple_square_count.size() << " triples used in the cover" << std::endl;
+    file << "// " << cover_info.triple_square_count.size() << " triples used in the cover" << '\n';
+
+    if (mrr) {
+        std::cout << "MRR ";
+        file << "// MRR ";
+    } else {
+        std::cout << "ALL ";
+        file << "// ALL ";
+    }
+
+    std::cout << boost::format("at %1% decimals, deepest magnification %2%") % digits % cover_info.deepest << std::endl;
+    file << boost::format("at %1% decimals, deepest magnification %2%") % digits % cover_info.deepest << '\n';
+
+    std::cout << "Total stable cost: " << total_single_cost << std::endl;
+    file << "// Total stable cost: " << total_single_cost << '\n';
+
+    //added these two lines George Oct4,2017
+    std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
+    file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
+
+    if (covered) {
+        std::cout << "Covered" << std::endl;
+        file << "// Covered" << '\n';
+    } else {
+        std::cout << "Not Covered" << std::endl;
+        file << "// Not Covered" << '\n';
+    }
+
+    const auto single_index_info = get_index_info(cover_info.single_square_count);
+    const auto triple_index_info = get_index_info(cover_info.triple_square_count);
+
+    cover::save_polygon(dir, polygon);
+    cover::save_square(dir, square);
+    cover::save_singles(dir, single_index_info);
+    cover::save_triples(dir, triple_index_info);
+
+    cover::save_cover(dir, cover, single_index_info, triple_index_info);
+    cover::save_digits(dir, digits);
+
+    const auto hours = std::chrono::duration_cast<std::chrono::hours>(end - begin).count();
+    const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(end - begin).count() % 60;
+    const auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end - begin).count() % 60;
+    const auto micros = std::chrono::duration_cast<std::chrono::microseconds>(end - begin).count() % 1000;
+
+    std::ostringstream oss{};
+    if (hours != 0) {
+        oss << hours << "h ";
+    }
+
+    if (minutes != 0) {
+        oss << minutes << "m ";
+    }
+
+    oss << seconds << '.' << micros << 's';
+
+    std::cout << "Time elapsed: " << oss.str() << std::endl;
+    file << "// Time elapsed: " << oss.str() << '\n';
+
+    return res.c_str();
+}
+
+// Zhao Yu Li, Aug 1, 2025.
+// From Google Gemini
+// Prompt: c++ parse fraction to double
+double parse_fraction_to_double(const std::string& fractionString) {
+    size_t slashPos = fractionString.find('/');
+    if (slashPos == std::string::npos) {
+        // Handle cases where no '/' is found (e.g., "5")
+        try {
+            return std::stod(fractionString);
+        } catch (const std::invalid_argument& e) {
+            throw std::invalid_argument("Invalid number format: " + fractionString);
+        } catch (const std::out_of_range& e) {
+            throw std::out_of_range("Number out of range for double: " + fractionString);
+        }
+    }
+
+    std::string numeratorStr = fractionString.substr(0, slashPos);
+    std::string denominatorStr = fractionString.substr(slashPos + 1);
+
+    try {
+        int numerator = std::stoi(numeratorStr);
+        int denominator = std::stoi(denominatorStr);
+
+        if (denominator == 0) {
+            throw std::runtime_error("Division by zero in fraction: " + fractionString);
+        }
+
+        return static_cast<double>(numerator) / denominator;
+    } catch (const std::invalid_argument& e) {
+        throw std::invalid_argument("Invalid number in fraction: " + fractionString);
+    } catch (const std::out_of_range& e) {
+        throw std::out_of_range("Number out of range in fraction: " + fractionString);
+    }
+}
+
+const char* check_small_cover(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
+                 const uint32_t digits, const uint32_t max_depth, const size_t empty,
+                 const bool mrr, sqlite::ConnectionPool& pool) {
+
+    // TODO it would be really nice to fix the number of digits in the precision.
+    // That way we don't have to worry about it changing on us in between runs.
+    // TODO should we also hardcode the square?
+
+    // TODO we are also doing a lot of extra work. Once an equation is positive, you do not need to check
+    // those again on later subdivisions, even if other equations fail.
+
+    sqlite::PooledConnection conn{pool};
+
+#if 0
+    const std::string dir{"cover"};
+
+    // Right now, the new polygon will always overwrite the old one
+    const auto square = cover::load_square(dir);
+    const auto cover_singles = cover::load_singles(dir);
+    const auto cover_triples = cover::load_triples(dir);
+    const auto cover = cover::load_cover(dir, cover_singles, cover_triples);
+    const auto cover_digits = cover::load_digits(dir);
+#endif
+
+    // Just use the default values for now
+    const auto cover = cover::Empty{};
+
+    const auto intervals = split(polygon_str, "\n");
+    const auto x_interval = split(intervals[0], " ");
+    const auto y_interval = split(intervals[1], " ");
+    const ClosedRectangleQ square{
+        {parse_fraction_to_double(x_interval[0]), parse_fraction_to_double(x_interval[1])},
+        {parse_fraction_to_double(y_interval[0]), parse_fraction_to_double(y_interval[1])}
+    };
+
+    // Right now we just check using the new singles and triples. It would be nice to merge them
+    // (especially if the max_depth is increased), but George only adds, not subtracts, so we'll
+    // leave it
+    const ClosedConvexPolygonQ polygon{
+        {square.lower_left(), square.upper_left(), square.upper_right(), square.lower_right()},
+    }; // polygon to check
+    const auto singles = parse_singles(singles_str); // singles to check holes with
+    const auto triples = parse_triples(triples_str); // triples to check holes with
+
+    const auto single_infos = get_single_infos(singles, mrr, conn.db);
+    const auto triple_infos = get_triple_infos(triples, mrr, conn.db);
+
+    return cover_small_polygon(cover, square, polygon, single_infos, triple_infos, digits, max_depth, empty, mrr);
 }
 
 int32_t check_cover_duplicate_stables(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,

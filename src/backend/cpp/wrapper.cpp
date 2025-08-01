@@ -127,6 +127,30 @@ int32_t cover_wrapper(const char* const poly_str,
     }
 }
 
+// -1 failure
+// 0 on not a cover
+// 1 means a cover
+const char* small_cover_wrapper(const char* const poly_str,
+                      const char* const codes_str, const char* const unstables_str,
+                      const int32_t digits, const int32_t subdivide, const int32_t empty,
+                      const int32_t mrr, sqlite::ConnectionPool* const pool) {
+
+    try {
+
+        const std::string poly{poly_str};
+        const std::string codes{codes_str};
+        const std::string unstables{unstables_str};
+
+        const auto covered = check_small_cover(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, *pool);
+
+        return covered;
+    } catch (const std::runtime_error& except) {
+        std::cerr << "calculation of cover failed with error:\n"
+                  << except.what() << std::endl;
+        return "";
+    }
+}
+
 const char* getNotFilledCoordinates(const char* const poly_str,
     const char* const codes_str, const char* const unstables_str,
     const int32_t digits, const int32_t subdivide, const int32_t empty,
