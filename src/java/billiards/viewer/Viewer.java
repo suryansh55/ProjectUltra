@@ -542,7 +542,7 @@ public final class Viewer {
 
     final BoyanMenu boyanMenu = new BoyanMenu(cycleVaryButton, middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
 
-    final Button smallCoverButton = new Button("SmallCover");
+    final Button smallCoverButton = new Button("LiCover");
     final SmallCoverWindow smallCoverWindow;
     final CoverWindow coverWindow;
 
@@ -1641,7 +1641,7 @@ public final class Viewer {
 
         // Zhao Yu Li, Jun 09, 2025.
         // Iterate-to-Limit feature.
-        iterateToLimitBtn.setText("Iter To Limit");
+        iterateToLimitBtn.setText("LiPattern");
         Utils.colorButton(iterateToLimitBtn, Color.SKYBLUE, clickColor);
         iterateToLimitBtn.setOnAction(event -> {
             // Lazy initialization
@@ -1764,7 +1764,7 @@ public final class Viewer {
 
         // Zhao Yu Li, Jul 7, 2025.
         // Pattern Calculator
-        patternCalculatorBtn.setText("Pattern Calc.");
+        patternCalculatorBtn.setText("LiPattern Calc.");
         patternCalculatorBtn.setTooltip(Utils.toolTip("Opens the Pattern Calculator"));
         Utils.colorButton(patternCalculatorBtn, Color.SKYBLUE, clickColor);
         patternCalculatorBtn.setOnAction(event -> new PatternCalculator());
@@ -1940,7 +1940,7 @@ public final class Viewer {
         });
 
         // Zhao Yu Li, Jul 17, 2025.
-        cycleVaryButton.setText("CycleVary");
+        cycleVaryButton.setText("LiCycle");
         Utils.colorButton(cycleVaryButton, Color.PALEVIOLETRED, Color.GOLD);
         cycleVaryButton.setOnAction(event -> {
             if (cycleVaryWindow == null) cycleVaryWindow = new CycleVaryWindow("CycleVary", "CycleVary", tmpDir + "cover_polygon.txt", tmpDir + "CycleVaryBounds.txt", tmpDir + "CycleVaryStep.txt", tmpDir + "CycleVaryCoords.txt", this);
@@ -1949,7 +1949,7 @@ public final class Viewer {
             else cycleVaryWindow.show();
         });
 
-        middleVaryLBtn.setText("MVL");
+        middleVaryLBtn.setText("LiMVL");
         middleVaryLBtn.setTooltip(Utils.toolTip("Search for codes at a list of points, but only prints the middle one " +
                 "of each (code length, code type, odd-even pattern) group."));
         Utils.colorButton(middleVaryLBtn, Color.LIGHTPINK, Color.GOLD);
@@ -2020,7 +2020,7 @@ public final class Viewer {
         lineEndField.setPrefWidth(60);
 
         //autoPolyVaryBtn.setText("AutoPolyVary");
-        autoPolyVaryBtn.setText("AustinMaxVary");
+        autoPolyVaryBtn.setText("LiLuMaxVary");
         autoPolyVaryBtn.setTooltip(Utils.toolTip("Automatically Call PolyVary on existing holes."));
         Utils.colorButton(autoPolyVaryBtn, Color.GREEN, Color.GOLD);
         autoPolyVaryBtn.setOnAction(event -> {
@@ -2089,10 +2089,10 @@ public final class Viewer {
             //renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
 
-        superAutoCb.setText("Use AustinMaxVary");
+        superAutoCb.setText("Use LiLuMaxVary");
         superAutoCb.setSelected(false);
 
-        superPolyVaryBtn.setText("SuperAustinVary");
+        superPolyVaryBtn.setText("SuperLiLuVary");
         superPolyVaryBtn.setTooltip(Utils.toolTip("Repeat PolyVary or AutoPolyVary a set number of times"));
         Utils.colorButton(superPolyVaryBtn, Color.GREEN, Color.GOLD);
         superPolyVaryBtn.setOnAction(event -> {
@@ -2523,7 +2523,7 @@ public final class Viewer {
         txtCodeSequence.setTooltip(Utils.toolTip("here you put in a code sequence that you want to"
                 + " calculate"));
         txtCodeSequence.setStyle(textBoxColor);
-        txtCodeSequence.setPrefColumnCount(6);
+        txtCodeSequence.setPrefColumnCount(10);
         txtCodeSequence.textProperty().bindBidirectional(
                 new SimpleObjectProperty<MutableIntList[]>(currentCodeNumbers),
                 new StringConverter<MutableIntList[]>() {

@@ -243,7 +243,7 @@ public class BoyanMenu {
         // Zhao Yu Li, May 05, 2025.
         // A new button that performs the same computations as Vary, but only prints the middle code of each
         // (code type, code length) group.
-        middleVaryButton.setText("MV");
+        middleVaryButton.setText("LiMV");
         middleVaryButton.setTooltip(Utils.toolTip("Middle Vary. Search for codes at points specified above. But for codes of " +
                 "the same type (i.e. CS, OSO, OSNO, etc.) and the same code length, only print the middle one."));
         Utils.colorButton(middleVaryButton, Color.SKYBLUE, Color.GOLD);
