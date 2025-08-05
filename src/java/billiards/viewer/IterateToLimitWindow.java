@@ -107,7 +107,7 @@ public class IterateToLimitWindow {
 
         stage.setScene(scene);
         stage.setTitle("Iterate To Limit Window");
-        stage.setHeight(600);
+        stage.setHeight(800);
         stage.setOnCloseRequest(event -> {
             this.results = null;
             this.finish.set(true);
@@ -244,10 +244,10 @@ public class IterateToLimitWindow {
         VBox vbox = new VBox(10,
                 polygonHBox, polygonTextArea,
                 stablesHBox, stablesTextArea,
+                triplesHBox, triplesTextArea,
                 pmStablesHBox, pmStablesTextArea,
                 unstablesHBox, unstablesTextArea,
-                pmUnstablesHBox, pmUnstablesTextArea,
-                triplesHBox, triplesTextArea
+                pmUnstablesHBox, pmUnstablesTextArea
         );
 
         ScrollPane scrollPane = new ScrollPane(vbox);
