@@ -112,6 +112,10 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         int empty = 0; // Number of empty pixels
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
+        // Zhao Yu Li, Aug 6, 2025.
+        // To save time, we check if the current coordinate is inside any of the polygons formed the codes found from
+        // the previous coordinate. If yes, then we don't need to run Vary for this coordinate because a code from the
+        // last coordinate fills the square.
         for(Vector2 coord: this.coordList) {
             boolean skip = false;
 

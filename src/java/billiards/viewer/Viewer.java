@@ -7103,6 +7103,9 @@ public final class Viewer {
             if (overrideSS) {
                 System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
+
+            // Zhao Yu Li, Aug 6, 2025.
+            // Also add to the small cover
             if (autoCover || autoSmallCover) {
                 if (autoCover) {
                     coverWindow.show();
@@ -7153,6 +7156,8 @@ public final class Viewer {
                 System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
 
+            // Zhao Yu Li, Aug 6, 2025.
+            // Also add to the small cover
             if (autoCover || autoSmallCover) {
                 if (autoCover) {
                     coverWindow.show();
@@ -7211,6 +7216,10 @@ public final class Viewer {
         final double rx = Math.toRadians(Double.parseDouble(coords[0]));
         final double ry = Math.toRadians(Double.parseDouble(coords[1]));
 
+        // Zhao Yu Li, Aug 6, 2025.
+        // To save time, we check if the current coordinate is inside any of the polygons formed the codes found from
+        // the previous coordinate. If yes, then we don't need to run Vary for this coordinate because a code from the
+        // last coordinate fills the square.
         for (Storage storage : previousCodes) {
             if (storage.classCodeSeq.stable) {
                 final Storage.Stable stable = (Storage.Stable) storage;
@@ -7243,6 +7252,9 @@ public final class Viewer {
                         if (overrideSS) {
                             System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                         }
+
+                        // Zhao Yu Li, Aug 6, 2025.
+                        // Also add to the small cover
                         if (autoCover || autoSmallCover) {
                             if (autoCover) {
                                 coverWindow.show();
@@ -7421,6 +7433,9 @@ public final class Viewer {
                 if (overrideSS) {
                     System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
+
+                // Zhao Yu Li, Aug 6, 2025.
+                // Also add to the small cover
                 if (autoCover || autoSmallCover) {
                     if (autoCover) {
                         coverWindow.show();
