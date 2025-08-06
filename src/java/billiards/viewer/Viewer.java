@@ -2083,7 +2083,7 @@ public final class Viewer {
             }
             final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 
-            autoPolyVaryFunction(polyVals, Optional.empty(), Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, executor);
+            autoPolyVaryFunction(polyVals, Optional.empty(), Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, autoPolyVaryWindow.getAutoSmallCover(), executor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
             //renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
@@ -6905,9 +6905,9 @@ public final class Viewer {
                 curCol = Optional.empty();
             }
             if(superAutoCb.isSelected()) {
-                autoPolyVaryFunction(curVals, Optional.of(step), curCol, true, SuperPolyVaryLoad.AutoCover, executor);
+                autoPolyVaryFunction(curVals, Optional.of(step), curCol, true, SuperPolyVaryLoad.AutoCover, superPolyVaryWindow.getAutoSmallCover(), executor);
             } else {
-                polyVaryFunction(curVals, Optional.of(step), curCol, true, SuperPolyVaryLoad.AutoCover, executor);
+                polyVaryFunction(curVals, Optional.of(step), curCol, true, SuperPolyVaryLoad.AutoCover, superPolyVaryWindow.getAutoSmallCover(), executor);
             }
         });
         overallProgress.show();
@@ -6916,7 +6916,8 @@ public final class Viewer {
 
     public void autoPolyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
                                      final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-                                     final boolean overrideSS, final boolean autoCover, final ExecutorService executor
+                                     final boolean overrideSS, final boolean autoCover, final boolean autoSmallCover,
+                                     final ExecutorService executor
     ) {
 
         // Zhao Yu Li, Jun 27, 2025.
@@ -6955,16 +6956,22 @@ public final class Viewer {
 
         if(autoCover) coverWindow.appendStablesInfo("// Start AutoPolyVary");
         if(!AutoPolyVaryLoad.Reverse) {
-            drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+            drawAutoPolyVary(maxList, subdivisions, autoCover, autoSmallCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
         } else {
-            drawAutoPolyVary(maxList, subdivisions, autoCover, overrideSS, endIdx, startIdx, -1 * stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+            drawAutoPolyVary(maxList, subdivisions, autoCover, autoSmallCover, overrideSS, endIdx, startIdx, -1 * stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
         }
+    }
+
+    private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
+                                  final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, final boolean overrideSS,
+                                  final boolean autoCover, final ExecutorService executor) {
+        polyVaryFunction(polyVals, step, colorOpt, overrideSS, autoCover, false, executor);
     }
 
     // Preforms the necessary preprocessing steps to run drawPolyVary 
     private void polyVaryFunction(final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals,
                                   final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt, final boolean overrideSS,
-                                  final boolean autoCover, final ExecutorService executor) {
+                                  final boolean autoCover, final boolean autoSmallCover, final ExecutorService executor) {
         // Order is CSmax, OSOmax, OSNOmax, CSmaxSS, OSOmaxSS, OSNOmaxSS
         final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         final ConvexPolygon area = polyVals._1;
@@ -7011,13 +7018,13 @@ public final class Viewer {
         // Now that points have been found, pass to drawPolyVary for calculations 
         final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
         final ExecutorService shotExecutor = new PriorityExecutor(Utils.numThreads);
-        drawPolyVary(pointsFiltered, maxList, area, step, colorOpt, overrideSS, autoCover, executor, storageExecutor, shotExecutor);
+        drawPolyVary(pointsFiltered, maxList, area, step, colorOpt, overrideSS, autoCover, autoSmallCover, executor, storageExecutor, shotExecutor);
     }
 
     // Calculates and draws codes at each of the list of points 
     private void drawPolyVary(final MutableList<Double> points, final int[] max, final ConvexPolygon area,
                               final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-                              final boolean overrideSS, final boolean autoCover, final ExecutorService executor,
+                              final boolean overrideSS, final boolean autoCover, final boolean autoSmallCover, final ExecutorService executor,
                               final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
@@ -7059,7 +7066,8 @@ public final class Viewer {
                         }
                         final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
                         System.out.println(msg);
-                        if(autoCover) coverWindow.appendStablesInfo(msg);
+                        if (autoCover) coverWindow.appendStablesInfo(msg);
+                        if (autoSmallCover) smallCoverWindow.appendStablesInfo(msg);
                     }
                 });
             }
@@ -7092,14 +7100,24 @@ public final class Viewer {
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
-            if(overrideSS) {
+            if (overrideSS) {
                 System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
-            if(autoCover) {
-                coverWindow.show();
-                System.out.printf(
-                        "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
-                        startHoles, startHoles - endHoles, endHoles);
+            if (autoCover || autoSmallCover) {
+                if (autoCover) {
+                    coverWindow.show();
+                    System.out.printf(
+                            "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
+                            startHoles, startHoles - endHoles, endHoles);
+                }
+
+                if (autoSmallCover) {
+                    smallCoverWindow.show();
+                    System.out.printf(
+                            "+---- Completed, CODES ARE IN SMALL COVER; started with %d holes, filled %d, %d remain ----+%n",
+                            startHoles, startHoles - endHoles, endHoles);
+                }
+
                 System.out.println();
             } else {
                 System.out.printf(
@@ -7131,14 +7149,24 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
 
-            if(overrideSS) {
+            if (overrideSS) {
                 System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
-            if(autoCover) {
-                coverWindow.show();
-                System.out.printf(
-                        "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
-                        startHoles, startHoles - endHoles, endHoles);
+
+            if (autoCover || autoSmallCover) {
+                if (autoCover) {
+                    coverWindow.show();
+                    System.out.printf(
+                            "+---- Cancelled, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
+                            startHoles, startHoles - endHoles, endHoles);
+                }
+
+                if (autoSmallCover) {
+                    smallCoverWindow.show();
+                    System.out.printf(
+                            "+---- Cancelled, CODES ARE IN SMALL COVER; started with %d holes, filled %d, %d remain ----+%n",
+                            startHoles, startHoles - endHoles, endHoles);
+                }
             } else {
                 System.out.printf(
                         "+-------------- Cancelled; started with %d holes, filled %d, %d remain --------------+%n",
@@ -7160,17 +7188,17 @@ public final class Viewer {
         progress.show();
     }
 
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean autoSmallCover, final boolean overrideSS,
                                  final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                  final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
                                  final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor
                                  ) {
-        return drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx, endIdx, stepIdx, area, overallProgress,
+        return drawAutoPolyVary(max, maxSubdivisions, autoCover, autoSmallCover, overrideSS, currIdx, endIdx, stepIdx, area, overallProgress,
                 step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>());
     }
 
     // Recursively iterate through the list of holes, running polyVary at each hole.
-    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean autoSmallCover, final boolean overrideSS,
                                  final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                  final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
                                  final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
@@ -7207,17 +7235,24 @@ public final class Viewer {
                         // Propagate cancellation for Super
                         step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
                     } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                        drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, previousCodes);
+                        drawAutoPolyVary(max, maxSubdivisions, autoCover, autoSmallCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, previousCodes);
                     } else {
                         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                         Utils.safeShutdownExecutor(storageExecutor);
                         Utils.safeShutdownExecutor(shotExecutor);
-                        if(overrideSS) {
+                        if (overrideSS) {
                             System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                         }
-                        if(autoCover) {
-                            coverWindow.show();
-                            System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                        if (autoCover || autoSmallCover) {
+                            if (autoCover) {
+                                coverWindow.show();
+                                System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                            }
+
+                            if (autoSmallCover) {
+                                smallCoverWindow.show();
+                                System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN SMALL COVER --------------+");
+                            }
                         } else {
                             System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
 
@@ -7309,6 +7344,7 @@ public final class Viewer {
 
                             if (mode == 0) System.out.println(msg);
                             if(autoCover) coverWindow.appendStablesInfo(msg);
+                            if(autoSmallCover) smallCoverWindow.appendStablesInfo(msg);
                         }
 
                         // Zhao Yu Li, Jun 25, 2025.
@@ -7354,6 +7390,7 @@ public final class Viewer {
 
                         if (mode == 0) System.out.println(msg);
                         if(autoCover) coverWindow.appendStablesInfo(msg);
+                        if(autoSmallCover) smallCoverWindow.appendStablesInfo(msg);
                     }
 
                     // Zhao Yu Li, Jun 25, 2025.
@@ -7376,17 +7413,24 @@ public final class Viewer {
                 // Propagate cancellation for Super
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>(storages));
+                drawAutoPolyVary(max, maxSubdivisions, autoCover, autoSmallCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>(storages));
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
-                if(overrideSS) {
+                if (overrideSS) {
                     System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
-                if(autoCover) {
-                    coverWindow.show();
-                    System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                if (autoCover || autoSmallCover) {
+                    if (autoCover) {
+                        coverWindow.show();
+                        System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                    }
+
+                    if (autoSmallCover) {
+                        smallCoverWindow.show();
+                        System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN SMALL COVER --------------+");
+                    }
                 } else {
                     System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
 

@@ -73,6 +73,7 @@ public class SuperPolyVaryLoad {
     private final TextField OSNOstepbox = new TextField();
     private final CheckBox colorCycleBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
+	private final CheckBox autoSmallCoverBox = new CheckBox("Add codes to small cover");
     private final Label repl = new Label();
     private final TextField repBox = new TextField();
     private final Button loadButton = new Button();
@@ -204,6 +205,10 @@ public class SuperPolyVaryLoad {
         autoCoverBox.setSelected(AutoCover);
         autoCoverBox.setText("Add codes to cover");
 
+		autoSmallCoverBox.setIndeterminate(false);
+		autoSmallCoverBox.setAllowIndeterminate(false);
+		autoSmallCoverBox.setSelected(true);
+
     	instructHBox.getChildren().add(instruct);
 
     	maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
@@ -234,7 +239,7 @@ public class SuperPolyVaryLoad {
 		magnifyHBox.setAlignment(Pos.CENTER_LEFT);
 
         //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
-        controlVBox.getChildren().addAll(loadHBox, autoCoverBox, colorCycleBox);
+        controlVBox.getChildren().addAll(loadHBox, autoCoverBox, autoSmallCoverBox, colorCycleBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -309,5 +314,9 @@ public class SuperPolyVaryLoad {
 		}
 
 		return magnification;
+	}
+
+	public boolean getAutoSmallCover() {
+		return autoSmallCoverBox.isSelected();
 	}
 }

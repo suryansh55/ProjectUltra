@@ -55,6 +55,7 @@ public class AutoPolyVaryLoad {
     private final TextField OSNOsbox = new TextField();
     private final CheckBox overrideBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
+	private final CheckBox autoSmallCoverBox = new CheckBox();
     private final Button loadButton = new Button();
     private final VBox root = new VBox();
     private final VBox maxVBox = new VBox(10);
@@ -162,6 +163,11 @@ public class AutoPolyVaryLoad {
         autoCoverBox.setSelected(AutoCover);
         autoCoverBox.setText("Add codes to cover");
 
+		autoSmallCoverBox.setIndeterminate(false);
+		autoSmallCoverBox.setAllowIndeterminate(false);
+		autoSmallCoverBox.setSelected(true);
+		autoSmallCoverBox.setText("Add codes to small cover");
+
 		addToAllPositiveCheckbox.setIndeterminate(false);
 		addToAllPositiveCheckbox.setAllowIndeterminate(false);
 		addToAllPositiveCheckbox.setSelected(false);
@@ -188,7 +194,7 @@ public class AutoPolyVaryLoad {
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
-		final HBox controlHBox = new HBox(10, autoCoverBox, addToAllPositiveCheckbox, addToPlusMinusCheckbox);
+		final HBox controlHBox = new HBox(10, autoCoverBox, autoSmallCoverBox, addToAllPositiveCheckbox, addToPlusMinusCheckbox);
 
         bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
@@ -301,5 +307,9 @@ public class AutoPolyVaryLoad {
 		}
 
 		return numGroupToPrint;
+	}
+
+	public boolean getAutoSmallCover() {
+		return autoSmallCoverBox.isSelected();
 	}
 }
