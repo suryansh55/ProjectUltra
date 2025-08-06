@@ -4,6 +4,7 @@ import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeType;
 import billiards.codeseq.Storage;
 import billiards.database.Database;
+import billiards.geometry.Location;
 import billiards.geometry.Vector2;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
@@ -101,6 +102,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
         final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<ClassifiedCodeSequence>();
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
+        ArrayList<Storage> storages = new ArrayList<>();
 
         AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
         final int todo = this.coordList.size();
@@ -111,6 +113,27 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
         for(Vector2 coord: this.coordList) {
+            boolean skip = false;
+
+            for (Storage storage : storages) {
+                Storage.Stable stable = (Storage.Stable) storage;
+                final Location location = stable.polygon.location(coord.x, coord.y);
+
+                if (location == Location.INSIDE) {
+//                    System.out.println("Skipped because a code sequence from previous coordinate covers this coordinate.");
+//                    System.out.println(Utils.standard(storage.classCodeSeq, 1));
+
+                    skip = true;
+                    break;
+                }
+            }
+
+            if (skip) {
+                continue;
+            }
+
+            storages.clear();
+
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
             // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
@@ -175,50 +198,48 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             } else {
                 throw new NotImplementedException("Invalid mode value for PolyVaryTask");
             }
-        }
 
+            for (final Future<Either<String, Storage>> future : futures) {
+                Either<String, Storage> either = checkStatus(future);
 
-        Optional<ExecutionException> except = Optional.empty();
+                if (either != null) {
+                    if (either.isLeft()) { // Print things like empty sets
+                        if (!either.left().get().isEmpty()) System.out.println(either.left().get());
+                    } else {
+                        storages.add(either.right().get());
+                    }
+                }
+            }
 
-        // If one of the futures throws an exception (like a failed to
-        // calculate exception), we need to save it, cancel the rest of
-        // the futures, and then throw that exception to bubble up the stack
-        for (final Future<Either<String, Storage>> future : futures) {
-            except = checkStatus(future);
-        }
-
-        if (except.isPresent()) {
-            throw new RuntimeException(except.get());
+            futures.clear();
         }
 
         return this.partialResults.get();
     }
 
     // Cancel or detect execution errors; This is where we do checking to see if we were cancelled
-    private Optional<ExecutionException> checkStatus(final Future<Either<String, Storage>> future) {
-        Optional<ExecutionException> except = Optional.empty();
-        if (this.isCancelled() || except.isPresent()) {
+    private Either<String, Storage> checkStatus(final Future<Either<String, Storage>> future) {
+        if (this.isCancelled()) {
             // If the task was cancelled, or one of the futures threw an
             // exception, we need to cancel the rest of the futures
             //System.out.println("//Cancelling submitted future");
             future.cancel(true);
+            return null;
         } else {
             try {
-                final Either<String, Storage> either = future.get();
-                if (either.isLeft()) { // Print things like empty sets 
-                    if(!either.left().get().equals("")) System.out.println(either.left().get());
-                }
+                return future.get();
             } catch (final ExecutionException e) {
                 // One of the futures threw an exception during its calculation,
                 // so we need to cancel the rest of the futures
-                except = Optional.of(e);
+                throw new RuntimeException(e);
             } catch (final InterruptedException e) {
                 if (!this.isCancelled()) {
                     throw new RuntimeException(e);
                 }
             }
         }
-        return except;
+
+        return null;
     }
 
     // Calculates codeSequence set at a specific coordinate 
