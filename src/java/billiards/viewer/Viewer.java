@@ -4344,6 +4344,12 @@ public final class Viewer {
                         // only render the screen after everything has been loaded
                         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
+                        if (autoSmallCover) {
+                            smallCoverWindow.show();
+                            System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN SMALL COVER ----+");
+                            System.out.println();
+                        }
+
                         if(autoCover) {
                             coverWindow.show();
                             System.out.println("+---- " + (printMid ? "MiddleVaryL" : "VaryL") + " Completed, CODES ARE IN COVER ----+");
@@ -7154,14 +7160,75 @@ public final class Viewer {
         progress.show();
     }
 
+    private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
+                                 final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
+                                 final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
+                                 final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor
+                                 ) {
+        return drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx, endIdx, stepIdx, area, overallProgress,
+                step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>());
+    }
+
     // Recursively iterate through the list of holes, running polyVary at each hole.
     private int drawAutoPolyVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
                                  final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                  final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-                                 final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+                                 final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
+                                 final ArrayList<Storage> previousCodes) {
         // Move the screen
         lineNumberTxt.setText(Integer.toString(currIdx + 1));
         setOBO(currIdx, pool, drawExecutor);
+
+        final String[] coords = fileCodeSequences.get(currIdx).split(" ");
+        final double rx = Math.toRadians(Double.parseDouble(coords[0]));
+        final double ry = Math.toRadians(Double.parseDouble(coords[1]));
+
+        for (Storage storage : previousCodes) {
+            if (storage.classCodeSeq.stable) {
+                final Storage.Stable stable = (Storage.Stable) storage;
+                final Location location = stable.polygon.location(rx, ry);
+
+                if (location == Location.INSIDE) {
+                    System.out.println("\n//------------- working on point " + (currIdx + 1) + "-------------\nThis coordinate was filled by a code from the previous coordinate.");
+                    System.out.println(Utils.standard(storage.classCodeSeq, 1));
+
+                    overallProgress.increment(Math.abs(stepIdx));
+                    // Run at the next hole
+                    if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
+                        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
+                        Utils.safeShutdownExecutor(storageExecutor);
+                        Utils.safeShutdownExecutor(shotExecutor);
+                        if(overrideSS) {
+                            System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                        }
+                        System.out.println("+------------------------------ AutoPolyVary Cancelled ------------------------------+");
+                        overallProgress.close();
+                        if(autoCover) coverWindow.show();
+                        // Propagate cancellation for Super
+                        step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
+                    } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
+                        drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, previousCodes);
+                    } else {
+                        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
+                        Utils.safeShutdownExecutor(storageExecutor);
+                        Utils.safeShutdownExecutor(shotExecutor);
+                        if(overrideSS) {
+                            System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                        }
+                        if(autoCover) {
+                            coverWindow.show();
+                            System.out.println("+-------------- AutoPolyVary finished successfully, CODES ARE IN COVER --------------+");
+                        } else {
+                            System.out.println("+------------------------ AutoPolyVary finished successfully ------------------------+");
+
+                        }
+                        overallProgress.close();
+                        // Increment for superPoly
+                        step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
+                    }
+                }
+            }
+        }
 
         final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
         final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
@@ -7309,7 +7376,7 @@ public final class Viewer {
                 // Propagate cancellation for Super
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
+                drawAutoPolyVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>(storages));
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
