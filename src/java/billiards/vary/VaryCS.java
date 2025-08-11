@@ -14,6 +14,7 @@ import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.geometry.TriangleBilliard;
 import billiards.viewer.SideSum;
 import billiards.viewer.Utils;
+import billiards.wrapper.Wrapper;
 
 public final class VaryCS {
     private static final double OFFSET = 0.0005;
@@ -166,6 +167,25 @@ public final class VaryCS {
 		iterateFireAway(movesMin/2, movesMax/2, billiard.vertexB.x, sideSum, billiard, foundCode, codes);
 
 		return codes;
+    }
+
+            /* jul,31,2025 Marco Mai
+     * move varyCS to backend, rest of the code here being disable
+     */
+    public static MutableList<ClassifiedCodeSequence> fireAway(final int movesMin, final int movesMax,
+            final double xAngle, final double yAngle,final String reqTypes) {
+		
+		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.varyCSCpp( movesMin, movesMax,xAngle,yAngle,reqTypes);
+		if(!values.isPresent()){
+			final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
+			return codes;
+		} else {
+			MutableList<ClassifiedCodeSequence> codes = values.get();
+			return codes;
+		}
+		
+
+
     }
 	
 }

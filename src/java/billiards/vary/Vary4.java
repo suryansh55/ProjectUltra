@@ -23,6 +23,7 @@ import billiards.viewer.Utils;
 import javaslang.Tuple;
 import javaslang.Tuple3;
 import javaslang.collection.Array;
+import billiards.wrapper.Wrapper;
 
 public class Vary4 {
 private static final double OFFSET = 0.05;
@@ -292,5 +293,33 @@ private static final double OFFSET = 0.05;
 		if (!leftArray.isEmpty()) leftArray.removeAtIndex(leftArray.size() - 1);
 		if (!rightArray.isEmpty()) rightArray.removeAtIndex(rightArray.size() - 1);
 		if (!billiards.isEmpty()) billiards.remove(billiards.size() - 1);
+	}
+
+		/* jul,31,2025 Marco Mai
+     * move vary3 to backend, rest of the code here being disable
+	 * passing codetype to the backend
+     */
+
+	public static MutableList<ClassifiedCodeSequence> fireAway(final int movesMin, final int movesMax,
+            final double xAngle, final double yAngle,final String reqTypes) {
+		
+		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.vary4Cpp( movesMin, movesMax, xAngle,yAngle,reqTypes);
+		if(!values.isPresent()){
+			final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
+			return codes;
+		} else {
+			MutableList<ClassifiedCodeSequence> codes = values.get();
+			return codes;
+		}
+
+
+        // final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
+        // final TriangleBilliard billiard = TriangleBilliard.create(xAngle, yAngle, pos);
+        // final SideSum sideSum = SideSum.create(xAngle, yAngle);
+        // final MutableIntList foundCode = new IntArrayList();
+		// System.out.println("vray3");
+        // recurseFireAway(movesMin, movesMax, 0, Math.PI, pos, 0, sideSum, billiard, foundCode, codes);
+		// //fireAwayIterative(movesMin, movesMax, 0, Math.PI, pos, sideSum, billiard, codes);
+		// return codes;
 	}
 }

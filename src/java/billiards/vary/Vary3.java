@@ -14,6 +14,7 @@ import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.geometry.TriangleBilliard;
 import billiards.viewer.SideSum;
+import billiards.wrapper.Wrapper;
 
 import static billiards.vary.VaryCS.doneIteration;
 
@@ -134,6 +135,24 @@ public final class Vary3 {
 
         iterateFireAway(movesMin, movesMax, pos, sideSum, billiard, foundCode, codes);
 		return codes;
+	}
+
+		    /* jul,31,2025 Marco Mai
+     * move vary3 to backend, rest of the code here being disable
+	 * passing codetype to the backend
+     */
+	public static MutableList<ClassifiedCodeSequence> fireAway(final int movesMin, final int movesMax,
+            final double xAngle, final double yAngle, final double pos,final String reqTypes) {
+		
+		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.vary3Cpp( movesMin, movesMax,pos, xAngle,yAngle,reqTypes);
+		if(!values.isPresent()){
+			final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
+			return codes;
+		} else {
+			MutableList<ClassifiedCodeSequence> codes = values.get();
+			return codes;
+		}
+
 	}
 
 }

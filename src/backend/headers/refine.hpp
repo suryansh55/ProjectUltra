@@ -6,6 +6,11 @@
 #include "intersection.hpp"
 #include "linear_derivative.hpp"
 
+#include <thread>
+
+#include <tbb/parallel_for.h>
+#include <tbb/concurrent_vector.h>
+
 struct EquationPrinter final : public boost::static_visitor<std::string> {
     template <typename Symbols, typename S>
     std::string operator()(const EquationGradient<Symbols, S>& eq_grad) const {

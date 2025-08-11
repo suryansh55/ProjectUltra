@@ -3,6 +3,11 @@
 #include "code_sequence.hpp"
 #include "general.hpp"
 
+#include <boost/thread.hpp>
+#include <boost/optional.hpp>
+#include <mutex>
+#include <thread>
+
 class RationalLineSegment final {
 
   public:

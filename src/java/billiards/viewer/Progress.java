@@ -9,7 +9,10 @@ import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 
+
 import java.util.concurrent.atomic.AtomicInteger;
+
+import billiards.wrapper.Wrapper;
 
 public final class Progress {
     private final HBox root = new HBox();
@@ -37,6 +40,7 @@ public final class Progress {
 
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
+            Wrapper.backend_cancel();
             task.cancel();
             stage.close();
         });

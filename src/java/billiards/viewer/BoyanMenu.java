@@ -828,8 +828,13 @@ public class BoyanMenu {
         return codeSeqs;
     }
 
-
     // boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
+    // boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
+    /* Jul,31 Marco Mai
+     * 1. the excuator will run each loop one by one
+     * 2. code type will transfer to the backend will computing, only transfer match one back to java here reduce memory usage
+     * 3. parallel computing most of the for loop
+     */
     public static MutableSet<ClassifiedCodeSequence> findCodes3(
         final double xCoord, final double yCoord, final int min, final int max, final double shots,
         final boolean[] types, final ExecutorService executor) {
@@ -841,10 +846,21 @@ public class BoyanMenu {
 
         final MutableSet<ClassifiedCodeSequence> codeSeqs = new UnifiedSet<>();
 
-        final MutableList<Future<MutableList<ClassifiedCodeSequence>>> futures = new FastList<>();
+        final MutableList<ClassifiedCodeSequence> futures = new FastList<>();
+        final MutableList<Future<MutableList<ClassifiedCodeSequence>>> futures2 = new FastList<>();
 
         final double increment = base / (shots + 1);
 
+        StringBuilder selectedTypes = new StringBuilder();
+
+        //transfer this to backend checking if right type
+        if (types[0] ) selectedTypes.append("OSO ");
+        if (types[1] ) selectedTypes.append("CS ");
+        if (types[2] ) selectedTypes.append("CNS ");
+        if (types[3] ) selectedTypes.append("ONS ");
+        if (types[4] ) selectedTypes.append("OSNO ");
+
+        String reqTypes = selectedTypes.toString().trim();
         //run the CS-specific code
         if (types[1]) {
         	double xAngle = Double.valueOf(xRad);
@@ -855,10 +871,18 @@ public class BoyanMenu {
         		final Double finX = xAngle;
         		final Double finY = yAngle;
 
-	            final Future<MutableList<ClassifiedCodeSequence>> future =
-	                executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
+                final Future<MutableList<ClassifiedCodeSequence>> future =
+	                executor.submit(() -> VaryCS.fireAway(min, max, finX, finY,reqTypes));
+	            // final Future<MutableList<ClassifiedCodeSequence>> future =
+	            //     executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
 
-	            futures.add(future);
+
+                try {
+                    MutableList<ClassifiedCodeSequence> result = future.get();
+                    futures.addAll(result);
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);  // or handle it however you need
+                }
 
 	            double zAngle = Double.valueOf(Math.PI - xAngle - yAngle);
 	            xAngle = Double.valueOf(yAngle);
@@ -867,38 +891,28 @@ public class BoyanMenu {
         }
         //run the non-CS-specific code
         if(types[0] || types[2] || types[3] || types[4]) {
+
 	        for (int count = 1; count <= shots; ++count) {
 
 	            final double pos = count * increment;
 
 	            final Future<MutableList<ClassifiedCodeSequence>> future =
-	            		executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
+	            		executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos,reqTypes));
+                        //executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
 
-	            futures.add(future);
+                futures2.add(future);
 	        }
-        }
-
-        for (final Future<MutableList<ClassifiedCodeSequence>> future : futures) {
-        	try {
-                for (final ClassifiedCodeSequence codeSeq : future.get()) {
-                    final CodeType type = codeSeq.codeType;
-
-                    if ((types[0] && type.equals(CodeType.OSO)) ||
-                        (types[1] && type.equals(CodeType.CS)) ||
-                        (types[2] && type.equals(CodeType.CNS)) ||
-                        (types[3] && type.equals(CodeType.ONS)) ||
-                        (types[4] && type.equals(CodeType.OSNO))) {
-
-                    	if (codeSeq.codeSum >= min) {
-                    		codeSeqs.add(codeSeq);
-                    	}
-                    }
+            for (Future<MutableList<ClassifiedCodeSequence>> future : futures2) {
+                try {
+                    MutableList<ClassifiedCodeSequence> partial = future.get(); // get the actual list
+                    futures.addAll(partial); // now addAll on MutableList, not Future
+                } catch (InterruptedException | ExecutionException e) {
+                    e.printStackTrace(); // handle exceptions as needed
                 }
-            } catch (InterruptedException | ExecutionException e) {
-                //System.out.println("Throw");
-                throw new RuntimeException(e);
             }
         }
+
+        codeSeqs.addAll(futures);
 
         return codeSeqs;
     }
@@ -912,12 +926,23 @@ public class BoyanMenu {
         final double yRad = FastMath.toRadians(yCoord);
 
         final MutableSet<ClassifiedCodeSequence> codeSeqs = new UnifiedSet<>();
+        
 
-        final MutableList<Future<MutableList<ClassifiedCodeSequence>>> futures = new FastList<>();
+        StringBuilder selectedTypes = new StringBuilder();
+
+        //transfer this to backend checking if right type
+        if (types[0] ) selectedTypes.append("OSO ");
+        if (types[1] ) selectedTypes.append("CS ");
+        if (types[2] ) selectedTypes.append("CNS ");
+        if (types[3] ) selectedTypes.append("ONS ");
+        if (types[4] ) selectedTypes.append("OSNO ");
+
+        String reqTypes = selectedTypes.toString().trim();
 
         final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
         if (types[1] && !types[0] && !types[2] && !types[0] && !types[4]) {
         	//run the CS-specific code
+
 
         	double xAngle = Double.valueOf(xRad);
         	double yAngle = Double.valueOf(yRad);
@@ -927,35 +952,36 @@ public class BoyanMenu {
         		final Double finX = xAngle;
         		final Double finY = yAngle;
 
-	            final Future<MutableList<ClassifiedCodeSequence>> future =
-	                executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
+                final Future<MutableList<ClassifiedCodeSequence>> future =
+	                executor.submit(() -> VaryCS.fireAway(min, max, finX, finY,reqTypes));
+	            // final Future<MutableList<ClassifiedCodeSequence>> future =
+	            //     executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
 
-	            futures.add(future);
+
+                try {
+                    MutableList<ClassifiedCodeSequence> result = future.get();
+                    codeSeqs.addAll(result);
+                } catch (InterruptedException | ExecutionException e) {
+                    throw new RuntimeException(e);  // or handle it however you need
+                }
 
 	            double zAngle = Double.valueOf(Math.PI - xAngle - yAngle);
 	            xAngle = Double.valueOf(yAngle);
 	        	yAngle = Double.valueOf(zAngle);
-	        }
+	        
+            }
+
         }
         else {
 
-            final MutableList<ClassifiedCodeSequence> future = Vary4.fireAway(min, max, xRad, yRad);
-
-            for (final ClassifiedCodeSequence codeSeq : future) {
-                final CodeType type = codeSeq.codeType;
-                if ((types[0] && type.equals(CodeType.OSO)) ||
-                    (types[1] && type.equals(CodeType.CS))  ||
-                    (types[2] && type.equals(CodeType.CNS)) ||
-                    (types[3] && type.equals(CodeType.ONS)) ||
-                    (types[4] && type.equals(CodeType.OSNO))) {
-                    codeSeqs.add(codeSeq);
-                }
-            }
+            final MutableList<ClassifiedCodeSequence> future = Vary4.fireAway(min, max, xRad, yRad,reqTypes);
+            codeSeqs.addAll(future);
         }
 
         executor.shutdown();
         return codeSeqs;
     }
+
 
     // Objects for comparison functionality
     static ArrayList<ArrayList<String>> cList = new ArrayList<>();

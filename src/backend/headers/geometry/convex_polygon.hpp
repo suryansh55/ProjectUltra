@@ -260,7 +260,7 @@ class ConvexPolygon final {
     // ------------------------------------------------------------------------
 
     friend bool operator==(const ConvexPolygon<N, Top>& lhs, const ConvexPolygon<N, Top>& rhs) {
-        return lhs.vertices_ == rhs.vertices_;
+        return lhs.vertices == rhs.vertices;
     }
 
     friend bool operator!=(const ConvexPolygon<N, Top>& lhs, const ConvexPolygon<N, Top>& rhs) {
@@ -268,7 +268,7 @@ class ConvexPolygon final {
     }
 
     friend bool operator<(const ConvexPolygon<N, Top>& lhs, const ConvexPolygon<N, Top>& rhs) {
-        return lhs.vertices_ < rhs.vertices_;
+        return lhs.vertices < rhs.vertices;
     }
 
     friend bool operator>(const ConvexPolygon<N, Top>& lhs, const ConvexPolygon<N, Top>& rhs) {

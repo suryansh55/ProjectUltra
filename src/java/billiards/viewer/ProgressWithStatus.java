@@ -14,6 +14,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import billiards.wrapper.Wrapper;
 
 public final class ProgressWithStatus {
     private final HBox root = new HBox();
@@ -64,6 +65,7 @@ public final class ProgressWithStatus {
         
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
+            Wrapper.backend_cancel();
             task.cancel();
             stage.close();
         });

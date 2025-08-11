@@ -66,8 +66,8 @@
 // which is what we want.
 
 static Vector2<Real> median(const Vector2<Interval>& point) {
-    const Real x0 = boost::multiprecision::median(point[0]);
-    const Real x1 = boost::multiprecision::median(point[1]);
+    Real x0 = boost::multiprecision::median(point[0]);
+    Real x1 = boost::multiprecision::median(point[1]);
 
     return {x0, x1};
 }
@@ -96,14 +96,14 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
         return boost::none;
     }
 
-    const auto& point0 = line_segment.point0;
-    const auto& point1 = line_segment.point1;
+    auto& point0 = line_segment.point0;
+    auto& point1 = line_segment.point1;
 
-    const auto sign0 = curve_sign_at_point(curve, point0);
-    const auto sign1 = curve_sign_at_point(curve, point1);
+    auto sign0 = curve_sign_at_point(curve, point0);
+    auto sign1 = curve_sign_at_point(curve, point1);
 
-    const auto& equation0 = line_segment.equation0;
-    const auto& equation1 = line_segment.equation1;
+    auto& equation0 = line_segment.equation0;
+    auto& equation1 = line_segment.equation1;
 
     //std::cout << curve << std::endl;
     //std::cout << point0 << std::endl;
@@ -127,7 +127,7 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
         return boost::none;
     } else if (sign0 == Sign::NEG && sign1 == Sign::ZERO) {
 
-        const auto moved1_sign = linear_derivative_sign(curve, constraint.equation, point1, point0);
+        auto moved1_sign = linear_derivative_sign(curve, constraint.equation, point1, point0);
 
         if (moved1_sign == Sign::NEG) {
             // neg-neg-zero
@@ -144,8 +144,8 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
 
             // We need to be careful though that the root we find is the one in the middle,
             // not the endpoint at point1
-            const EquationGradient<XY, T> curve_grad{curve};
-            const auto inter = intersection_zero(constraint, curve_grad, median(point1), median(point0));
+            EquationGradient<XY, T> curve_grad{curve};
+            auto inter = intersection_zero(constraint, curve_grad, median(point1), median(point0));
             //return IntervalLineSegment{inter, curve_grad, point1, equation1};
             return IntervalLineSegment{inter, curve_grad, point1, curve_grad};
         } else {
@@ -155,12 +155,12 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
         }
     } else if (sign0 == Sign::NEG && sign1 == Sign::POS) {
         // neg-pos
-        const EquationGradient<XY, T> curve_grad{curve};
-        const auto inter = intersection(constraint, curve_grad, median(point0), median(point1));
+        EquationGradient<XY, T> curve_grad{curve};
+        auto inter = intersection(constraint, curve_grad, median(point0), median(point1));
         return IntervalLineSegment{inter, curve_grad, point1, equation1};
     } else if (sign0 == Sign::ZERO && sign1 == Sign::NEG) {
 
-        const auto moved0_sign = linear_derivative_sign(curve, constraint.equation, point0, point1);
+        auto moved0_sign = linear_derivative_sign(curve, constraint.equation, point0, point1);
 
         if (moved0_sign == Sign::NEG) {
             // zero-neg-neg
@@ -175,8 +175,8 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
 
             // TODO we need to be careful though that the root we find is the one in the middle,
             // not the endpoint at point1
-            const EquationGradient<XY, T> curve_grad{curve};
-            const auto inter = intersection_zero(constraint, curve_grad, median(point0), median(point1));
+            EquationGradient<XY, T> curve_grad{curve};
+            auto inter = intersection_zero(constraint, curve_grad, median(point0), median(point1));
             //return IntervalLineSegment{point0, equation0, inter, curve_grad};
             return IntervalLineSegment{point0, curve_grad, inter, curve_grad};
         } else {
@@ -187,8 +187,8 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
 
     } else if (sign0 == Sign::ZERO && sign1 == Sign::ZERO) {
 
-        const auto moved0_sign = linear_derivative_sign(curve, constraint.equation, point0, point1);
-        const auto moved1_sign = linear_derivative_sign(curve, constraint.equation, point1, point0);
+        auto moved0_sign = linear_derivative_sign(curve, constraint.equation, point0, point1);
+        auto moved1_sign = linear_derivative_sign(curve, constraint.equation, point1, point0);
 
         if (moved0_sign == Sign::NEG && moved1_sign == Sign::NEG) {
             // We assume everything is negative acrerr the rest of the
@@ -260,15 +260,15 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
 
     } else if (sign0 == Sign::ZERO && sign1 == Sign::POS) {
 
-        const auto moved0_sign = linear_derivative_sign(curve, constraint.equation, point0, point1);
+        auto moved0_sign = linear_derivative_sign(curve, constraint.equation, point0, point1);
 
         if (moved0_sign == Sign::NEG) {
             // zero-neg-pos
 
             // TODO we need to be careful though that the root we find is the one in the middle,
             // not the endpoint at point1
-            const EquationGradient<XY, T> curve_grad{curve};
-            const auto inter = intersection_zero(constraint, curve_grad, median(point0), median(point1));
+            EquationGradient<XY, T> curve_grad{curve};
+            auto inter = intersection_zero(constraint, curve_grad, median(point0), median(point1));
             return IntervalLineSegment{inter, curve_grad, point1, equation1};
         } else if (moved0_sign == Sign::ZERO) {
             // zero-zero-pos
@@ -281,7 +281,7 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
         } else if (moved0_sign == Sign::POS) {
             // zero-pos-pos
             //return line_segment;
-            const EquationGradient<XY, T> curve_grad{curve};
+            EquationGradient<XY, T> curve_grad{curve};
             return IntervalLineSegment{point0, curve_grad, point1, equation1};
         } else {
             std::ostringstream err;
@@ -290,17 +290,17 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
         }
 
     } else if (sign0 == Sign::POS && sign1 == Sign::NEG) {
-        const EquationGradient<XY, T> curve_grad{curve};
-        const auto inter = intersection(constraint, curve_grad, median(point0), median(point1));
+        EquationGradient<XY, T> curve_grad{curve};
+        auto inter = intersection(constraint, curve_grad, median(point0), median(point1));
         return IntervalLineSegment{point0, equation0, inter, curve_grad};
     } else if (sign0 == Sign::POS && sign1 == Sign::ZERO) {
 
-        const auto moved1_sign = linear_derivative_sign(curve, constraint.equation, point1, point0);
+        auto moved1_sign = linear_derivative_sign(curve, constraint.equation, point1, point0);
 
         if (moved1_sign == Sign::NEG) {
             // pos-neg-zero
-            const EquationGradient<XY, T> curve_grad{curve};
-            const auto inter = intersection_zero(constraint, curve_grad, median(point1), median(point0));
+            EquationGradient<XY, T> curve_grad{curve};
+            auto inter = intersection_zero(constraint, curve_grad, median(point1), median(point0));
             return IntervalLineSegment{point0, equation0, inter, curve_grad};
         } else if (moved1_sign == Sign::ZERO) {
             // pos-zero-zero
@@ -310,7 +310,7 @@ boost::optional<IntervalLineSegment> refine_line_segment(const IntervalLineSegme
         } else if (moved1_sign == Sign::POS) {
             // pos-pos-zero
             //return line_segment;
-            const EquationGradient<XY, T> curve_grad{curve};
+            EquationGradient<XY, T> curve_grad{curve};
             return IntervalLineSegment{point0, equation0, point1, curve_grad};
         } else {
             std::ostringstream err;
@@ -396,7 +396,7 @@ struct Corner final {
 
     friend std::ostream& operator<<(std::ostream& os, const Corner& corner) {
         if (corner.zero_info) {
-            const auto& info = *corner.zero_info;
+            auto& info = *corner.zero_info;
             return os << '(' << info.prev_sign << ", " << corner.corner_sign << ", " << info.next_sign << ')';
         } else {
             return os << corner.corner_sign;
@@ -415,14 +415,14 @@ static void correct_zeros(std::vector<Corner>& corners) {
     // find the sign, so I will just assume that the sign matches the non-zero one,
     // which so far always seems to be correct.
 
-    const auto size = corners.size();
+    auto size = corners.size();
 
     for (size_t i = 0; i < size; i += 1) {
         // Yikes! Be careful with mutability
         auto& corner0 = corners.at(i);
         auto& corner1 = corners.at((i + 1) % size);
 
-        const std::pair<Sign, Sign> signs = {corner0.corner_sign, corner1.corner_sign};
+        std::pair<Sign, Sign> signs = {corner0.corner_sign, corner1.corner_sign};
 
         // We need to change the P/N, (Z, Z, _) and (_, Z, Z), P/N
 
@@ -453,12 +453,12 @@ static void correct_zeros(std::vector<Corner>& corners) {
 template <typename T>
 std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& curve) {
 
-    const auto size = polygon.size();
+    auto size = polygon.size();
 
     std::vector<Corner> corners;
     for (size_t i = 0; i < size; ++i) {
-        const auto& int_pair = polygon.at(i);
-        const auto curve_sign = curve_sign_at_point(curve, int_pair.point);
+        auto& int_pair = polygon.at(i);
+        auto curve_sign = curve_sign_at_point(curve, int_pair.point);
 
         //std::cout << curve << ", " << int_pair.point.coord0.str() << ", " << int_pair.point.coord1.str() << ", ";
 
@@ -466,7 +466,7 @@ std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& c
             corners.emplace_back(Sign::NEG);
         } else if (curve_sign == Sign::ZERO) {
             // (i - 1) % size won't work!
-            const auto& prev_int_pair = i == 0 ? polygon.at(size - 1) : polygon.at(i - 1);
+            auto& prev_int_pair = i == 0 ? polygon.at(size - 1) : polygon.at(i - 1);
 
             // The gradient of a function f(x, y) at any location (x, y) points in the direction
             // of greatest increase of the function (so it pulls you towards local maximums).
@@ -484,20 +484,20 @@ std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& c
             // to factor out that line to find the gradient information
             // TODO when this happens, should we remember the equation, and continue refining
             // with others hoping that the troublesome point gets cut out?
-            const auto prev_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, prev_int_pair.equation);
-            const auto next_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, int_pair.equation);
+            auto prev_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, prev_int_pair.equation);
+            auto next_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, int_pair.equation);
 
-            const Vector2<Interval> prev_dir{-prev_gradient[1], prev_gradient[0]}; // rotate 90 CCW
-            const Vector2<Interval> next_dir{next_gradient[1], -next_gradient[0]}; // rotate 90 CW
+            Vector2<Interval> prev_dir{-prev_gradient[1], prev_gradient[0]}; // rotate 90 CCW
+            Vector2<Interval> next_dir{next_gradient[1], -next_gradient[0]}; // rotate 90 CW
 
-            const EquationGradient<XY, T> eq_grad{curve};
-            const auto curve_gradient = gradient(eq_grad, int_pair.point);
+            EquationGradient<XY, T> eq_grad{curve};
+            auto curve_gradient = gradient(eq_grad, int_pair.point);
 
-            const auto prev_dot = prev_dir.dot(curve_gradient);
-            const auto next_dot = next_dir.dot(curve_gradient);
+            auto prev_dot = prev_dir.dot(curve_gradient);
+            auto next_dot = next_dir.dot(curve_gradient);
 
-            const auto prev_sign = sign(prev_dot);
-            const auto next_sign = sign(next_dot);
+            auto prev_sign = sign(prev_dot);
+            auto next_sign = sign(next_dot);
 
             corners.emplace_back(Sign::ZERO, ZeroInfo{prev_sign, next_sign});
 
@@ -525,27 +525,27 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
         return boost::none;
     }
 
-    const auto corners = calculate_corners(polygon, curve);
+    auto corners = calculate_corners(polygon, curve);
     //std::cout << corners << std::endl;
 
     IntervalPolygon new_polygon{};
 
-    const size_t size = polygon.size();
+    size_t size = polygon.size();
 
     for (size_t i = 0; i < size; i += 1) {
-        const auto& point0 = polygon.at(i).point;
-        const auto& point1 = polygon.at((i + 1) % size).point;
+        auto& point0 = polygon.at(i).point;
+        auto& point1 = polygon.at((i + 1) % size).point;
 
-        const auto& side_equation = polygon.at(i).equation;
+        auto& side_equation = polygon.at(i).equation;
 
-        const auto& corner0 = corners.at(i);
-        const auto& corner1 = corners.at((i + 1) % size);
+        auto& corner0 = corners.at(i);
+        auto& corner1 = corners.at((i + 1) % size);
 
         //std::cout << corner0 << ", " << corner1 << std::endl;
         //std::cout << point0 << ", " << point1 << std::endl;
         //std::cout << std::endl;
 
-        const std::pair<Sign, Sign> signs = {corner0.corner_sign, corner1.corner_sign};
+        std::pair<Sign, Sign> signs = {corner0.corner_sign, corner1.corner_sign};
 
         // The nice thing with this technique is that it doesn't matter if there are
         // spurious lines in the curve. It works anyway!
@@ -553,7 +553,7 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
             continue;
         } else if (signs == std::pair<Sign, Sign>{Sign::NEG, Sign::ZERO}) {
 
-            const auto& zero_info1 = *corner1.zero_info;
+            auto& zero_info1 = *corner1.zero_info;
 
             if (zero_info1 == ZeroInfo{Sign::NEG, Sign::NEG}) {
                 continue;
@@ -564,8 +564,8 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
                 continue;
             } else if (zero_info1 == ZeroInfo{Sign::POS, Sign::POS}) {
                 // 1 1 1 1 2 1 3 1 1 4
-                const EquationGradient<XY, T> curve_grad{curve};
-                const auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point1), median(point0)}, side_equation);
+                EquationGradient<XY, T> curve_grad{curve};
+                auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point1), median(point0)}, side_equation);
                 new_polygon.emplace_back(inter, side_equation);
             } else {
                 std::ostringstream err;
@@ -578,13 +578,13 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
             }
 
         } else if (signs == std::pair<Sign, Sign>{Sign::NEG, Sign::POS}) {
-            const EquationGradient<XY, T> curve_grad{curve};
-            const auto inter = boost::apply_visitor(IntersectionVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
+            EquationGradient<XY, T> curve_grad{curve};
+            auto inter = boost::apply_visitor(IntersectionVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
             new_polygon.emplace_back(inter, side_equation);
 
         } else if (signs == std::pair<Sign, Sign>{Sign::ZERO, Sign::NEG}) {
 
-            const auto& zero_info0 = *corner0.zero_info;
+            auto& zero_info0 = *corner0.zero_info;
 
             if (zero_info0 == ZeroInfo{Sign::NEG, Sign::NEG}) {
                 continue;
@@ -592,12 +592,12 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
                 // 1 1 1 1 2 1 4 1 2 1 1 1 1 4 1 1 1 1 2 1 4 1 2 1 1 1 1 4 1 1 2 1 1 4 1 1 2 1 1 4
                 continue;
             } else if (zero_info0 == ZeroInfo{Sign::POS, Sign::NEG}) {
-                const EquationGradient<XY, T> curve_grad{curve};
+                EquationGradient<XY, T> curve_grad{curve};
                 new_polygon.emplace_back(point0, curve_grad);
             } else if (zero_info0 == ZeroInfo{Sign::POS, Sign::POS}) {
                 // 1 1 2 1 1 5 1 1 8
-                const EquationGradient<XY, T> curve_grad{curve};
-                const auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
+                EquationGradient<XY, T> curve_grad{curve};
+                auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
                 new_polygon.emplace_back(point0, side_equation);
                 new_polygon.emplace_back(inter, curve_grad);
             } else {
@@ -608,9 +608,9 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
 
         } else if (signs == std::pair<Sign, Sign>{Sign::ZERO, Sign::ZERO}) {
 
-            const auto& zero_info0 = *corner0.zero_info;
-            const auto& zero_info1 = *corner1.zero_info;
-            const std::array<Sign, 4> zero_signs = {{zero_info0.prev_sign, zero_info0.next_sign,
+            auto& zero_info0 = *corner0.zero_info;
+            auto& zero_info1 = *corner1.zero_info;
+            std::array<Sign, 4> zero_signs = {{zero_info0.prev_sign, zero_info0.next_sign,
                                                      zero_info1.prev_sign, zero_info1.next_sign}};
 
             if (zero_signs == std::array<Sign, 4>{{Sign::NEG, Sign::NEG, Sign::NEG, Sign::NEG}}) {
@@ -632,14 +632,14 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
 
             } else if (zero_signs == std::array<Sign, 4>{{Sign::POS, Sign::NEG, Sign::NEG, Sign::NEG}}) {
                 // 1 1 1 1 2 1 1 2 1 1 2 1 2 2 2
-                const EquationGradient<XY, T> curve_grad{curve};
+                EquationGradient<XY, T> curve_grad{curve};
                 new_polygon.emplace_back(point0, curve_grad);
             } else if (zero_signs == std::array<Sign, 4>{{Sign::POS, Sign::NEG, Sign::NEG, Sign::POS}}) {
                 new_polygon.emplace_back(point0, EquationGradient<XY, T>{curve});
             } else if (zero_signs == std::array<Sign, 4>{{Sign::POS, Sign::ZERO, Sign::ZERO, Sign::POS}}) {
                 // TODO look at curve vs. side_equation
                 // 1 1 1
-                const EquationGradient<XY, T> curve_grad{curve};
+                EquationGradient<XY, T> curve_grad{curve};
                 new_polygon.emplace_back(point0, curve_grad);
             } else if (zero_signs == std::array<Sign, 4>{{Sign::POS, Sign::POS, Sign::POS, Sign::NEG}}) {
                 new_polygon.emplace_back(point0, side_equation);
@@ -659,12 +659,12 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
 
         } else if (signs == std::pair<Sign, Sign>{Sign::ZERO, Sign::POS}) {
 
-            const auto& zero_info0 = *corner0.zero_info;
+            auto& zero_info0 = *corner0.zero_info;
 
             if (zero_info0 == ZeroInfo{Sign::NEG, Sign::NEG}) {
                 // 1 1 3 1 2 1 6
-                const EquationGradient<XY, T> curve_grad{curve};
-                const auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
+                EquationGradient<XY, T> curve_grad{curve};
+                auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
                 new_polygon.emplace_back(inter, side_equation);
             } else if (zero_info0 == ZeroInfo{Sign::NEG, Sign::POS}) {
                 new_polygon.emplace_back(point0, side_equation);
@@ -673,8 +673,8 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
                 new_polygon.emplace_back(point0, side_equation);
             } else if (zero_info0 == ZeroInfo{Sign::POS, Sign::NEG}) {
                 // 1 1 2 1 1 5 1 1 8
-                const EquationGradient<XY, T> curve_grad{curve};
-                const auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
+                EquationGradient<XY, T> curve_grad{curve};
+                auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
                 new_polygon.emplace_back(point0, curve_grad);
                 new_polygon.emplace_back(inter, side_equation);
             } else if (zero_info0 == ZeroInfo{Sign::POS, Sign::POS}) {
@@ -691,24 +691,24 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
             }
 
         } else if (signs == std::pair<Sign, Sign>{Sign::POS, Sign::NEG}) {
-            const EquationGradient<XY, T> curve_grad{curve};
-            const auto inter = boost::apply_visitor(IntersectionVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
+            EquationGradient<XY, T> curve_grad{curve};
+            auto inter = boost::apply_visitor(IntersectionVariant<XY, T>{curve_grad, median(point0), median(point1)}, side_equation);
             new_polygon.emplace_back(point0, side_equation);
             new_polygon.emplace_back(inter, curve_grad);
         } else if (signs == std::pair<Sign, Sign>{Sign::POS, Sign::ZERO}) {
 
-            const auto& zero_info1 = *corner1.zero_info;
+            auto& zero_info1 = *corner1.zero_info;
 
             if (zero_info1 == ZeroInfo{Sign::NEG, Sign::NEG}) {
                 // 1 1 1 1 2 1 3 1 1 4 1 2 2 2 1 4 1 1 3 1 2 1 1 1 1 3 1 1 4 1 1 2 1 1 4 1 1 3
-                const EquationGradient<XY, T> curve_grad{curve};
-                const auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point1), median(point0)}, side_equation);
+                EquationGradient<XY, T> curve_grad{curve};
+                auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point1), median(point0)}, side_equation);
                 new_polygon.emplace_back(point0, side_equation);
                 new_polygon.emplace_back(inter, curve_grad);
             } else if (zero_info1 == ZeroInfo{Sign::NEG, Sign::POS}) {
                 // 1 1 1 1 2 1 3 1 1 4
-                const EquationGradient<XY, T> curve_grad{curve};
-                const auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point1), median(point0)}, side_equation);
+                EquationGradient<XY, T> curve_grad{curve};
+                auto inter = boost::apply_visitor(IntersectionZeroVariant<XY, T>{curve_grad, median(point1), median(point0)}, side_equation);
                 new_polygon.emplace_back(point0, side_equation);
                 new_polygon.emplace_back(inter, curve_grad);
             } else if (zero_info1 == ZeroInfo{Sign::POS, Sign::NEG}) {

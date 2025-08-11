@@ -2,6 +2,12 @@
 
 #include "general.hpp"
 
+#include <boost/asio/thread_pool.hpp>
+#include <boost/asio/post.hpp>
+#include <thread>
+#include <vector>
+#include <algorithm>
+
 struct Edge final {
     XYZ edge_type;
     LinComArrZ<XYPi> polar_angle;

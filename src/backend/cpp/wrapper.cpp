@@ -26,6 +26,9 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "trim.hpp"
 #include "verify.hpp"
 #include "wrapper.hpp"
+#include "vary_cs.hpp"
+#include "vary3.hpp"
+#include "vary4.hpp"
 #include <boost/optional/optional_io.hpp>
 
 // Java <-> C++
@@ -1219,3 +1222,90 @@ void cleanup_string(const CString* const cstring) {
     delete[] cstring->string;
 }
 
+/* jul 31 2025 Marco Mai
+ * backend connection to VaryCS
+*/
+int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t int_xAngle, const float64_t int_yAngle,CString* const result,const char* const reqTypes){
+    try {
+        std::string selectedTypes = std::string(reqTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAwayCS(int_movesMin,int_movesMax,int_xAngle,int_yAngle,selectedTypes);
+
+        std::string buffer;
+        size_t estimated_size = founded_codes.size() * 32; // adjust as needed
+        buffer.reserve(estimated_size);  // Reserve space to avoid reallocations
+
+        char temp[20];  // buffer for each int (enough for 64-bit integers)
+
+        for (const auto& row : founded_codes) {
+            for (int value : row) {
+                int len = std::snprintf(temp, sizeof(temp), "%d ", value);
+                buffer.append(temp, len);
+            }
+            buffer.push_back('\n');
+        }
+
+        result->string = to_cstr(std::move(buffer)); 
+        return 1;
+    } catch (const std::runtime_error& except) {
+        std::cerr << "vary cs failed : " << except.what() << std::endl;
+        return -1;
+    }
+}
+
+/* jul 31 2025 Marco Mai
+ * backend connection to Vary3
+*/
+int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax,const float64_t db_initPosition, const float64_t db_xAngle, const float64_t db_yAngle,CString* const result,const char* const reqTypes){
+    try {
+        std::string selectedTypes = std::string(reqTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAway3(int_movesMin,int_movesMax, db_xAngle,db_yAngle,db_initPosition,selectedTypes);
+        
+        // std::vector<std::vector<int>> to string
+        std::ostringstream oss;
+        for (const auto& row : founded_codes) {
+            for (int value : row) {
+                oss << value << ' ';
+            }
+            oss << '\n';
+        }
+            // return boost::none;
+        result->string = to_cstr(oss.str());
+        return 1;
+    } catch (const std::runtime_error& except) {
+        std::cerr << "vary 3 failed : " << except.what() << std::endl;
+        return -1;
+    }
+}
+
+
+/* Aug 05 2025 Marco Mai
+ * backend connection to Vary4
+*/
+int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle,CString* const result,const char* const reqTypes){
+    try {
+        std::string selectedTypes = std::string(reqTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAway4(int_movesMin,int_movesMax, db_xAngle,db_yAngle,selectedTypes);
+        
+        // std::vector<std::vector<int>> to string
+        std::ostringstream oss;
+        for (const auto& row : founded_codes) {
+            for (int value : row) {
+                oss << value << ' ';
+            }
+            oss << '\n';
+        }
+            // return boost::none;
+        result->string = to_cstr(oss.str());
+        return 1;
+    } catch (const std::runtime_error& except) {
+        std::cerr << "vary 3 failed : " << except.what() << std::endl;
+        return -1;
+    }
+
+
+}
+
+// cancel
+void backend_cancel()       { 
+    cancel_flag().store(true,  std::memory_order_relaxed);  
+}

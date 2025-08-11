@@ -1,5 +1,6 @@
 package billiards.viewer;
 
+import billiards.wrapper.Wrapper;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -68,6 +69,7 @@ public final class ProgressMultiTask {
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
             cancelled = true;
+            Wrapper.backend_cancel();
             if(boundTask) this.task.cancel();
             //stage.close();
         });

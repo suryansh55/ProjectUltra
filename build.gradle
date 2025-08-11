@@ -3,6 +3,13 @@ apply plugin: 'cpp'
 apply plugin: TestingModelBasePlugin
 //apply plugin: 'findbugs'
 
+// At top level of build.gradle
+def currentOs = org.gradle.internal.os.OperatingSystem.current()
+def currentArch = System.getProperty("os.arch")
+def isLinux = currentOs.isLinux()
+def isMac = currentOs.isMacOsX()
+def isWindows = currentOs.isWindows()
+
 mainClassName = 'billiards.viewer.Main'
 
 repositories {
@@ -84,8 +91,14 @@ model {
 
                 cppCompiler.define "NDEBUG"
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
-                linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb'
-
+                // Aug,8 2025 Marco,Mai
+                // for Aplle Arm platnorm there is an instruction to use java17 natively
+                if (currentOs.isMacOsX()){
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread-mt', '-lboost_system-mt'
+                } else {
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread', '-lboost_system'
+                }
+                
                 if (toolChain in Clang) {
                     cppCompiler.args '-Werror',
                                      '-Wno-padded', '-Wno-comma',
@@ -114,7 +127,13 @@ model {
 
                 cppCompiler.define "NDEBUG"
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
-                linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lboost_unit_test_framework'
+                // Aug,8 2025 Marco,Mai
+                // for Aplle Arm platnorm there is an instruction to use java17 natively
+                if (currentOs.isMacOsX()){
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread-mt','-lboost_system-mt'
+                } else {
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
+                }
 
                 if (toolChain in Clang) {
                     cppCompiler.args  '-Werror',

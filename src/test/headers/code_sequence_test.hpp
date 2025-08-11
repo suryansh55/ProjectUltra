@@ -1,9 +1,11 @@
 #pragma once
 
 #include <code_sequence.hpp>
+#include "invalid_code_sequence.hpp"
 
 BOOST_AUTO_TEST_CASE(test_empty_code_sequence) {
-    BOOST_CHECK_THROW(CodeSequence{{}}, std::runtime_error);
+    auto result = CodeSequence::create(std::vector<int>{});
+    BOOST_CHECK(boost::get<InvalidCodeSequence>(result) == InvalidCodeSequence::EMPTY);
 }
 
 BOOST_AUTO_TEST_CASE(test_negative_code_numbers) {
@@ -16,7 +18,11 @@ BOOST_AUTO_TEST_CASE(test_negative_code_numbers) {
     };
 
     for (const auto& code_numbers : invalid) {
-        BOOST_CHECK_THROW(CodeSequence{code_numbers}, std::runtime_error);
+        //BOOST_CHECK_THROW(CodeSequence{code_numbers},  InvalidCodeSequence::NEGATIVE_OR_ZERO_NUMBERS);
+    auto result = CodeSequence::create(code_numbers);
+
+    BOOST_CHECK(boost::get<InvalidCodeSequence>(&result));
+    BOOST_CHECK(boost::get<InvalidCodeSequence>(result) == InvalidCodeSequence::NEGATIVE_OR_ZERO_NUMBERS);
     }
 }
 
@@ -46,7 +52,10 @@ BOOST_AUTO_TEST_CASE(test_illegal_code_sequences) {
     };
 
     for (const auto& code_numbers : illegal) {
-        BOOST_CHECK_THROW(CodeSequence{code_numbers}, std::runtime_error);
+    auto result = CodeSequence::create(code_numbers);
+
+    BOOST_CHECK(boost::get<InvalidCodeSequence>(&result));
+    BOOST_CHECK(boost::get<InvalidCodeSequence>(result) == InvalidCodeSequence::ILLEGAL_PATTERN);
     }
 }
 

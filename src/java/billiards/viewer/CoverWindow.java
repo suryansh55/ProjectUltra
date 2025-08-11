@@ -1,6 +1,7 @@
 package billiards.viewer;
 
 import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeType;
 import billiards.codeseq.InvalidCodeSequence;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
@@ -17,7 +18,9 @@ import org.eclipse.collections.api.list.primitive.IntList;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.List; // added jul31,2025 marco
 import java.util.Optional;//added oct 15,2017 george
+import java.util.concurrent.ForkJoinPool;
 
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.geometry.Insets;
@@ -601,7 +604,10 @@ public final class CoverWindow {
         return Tuple.of(triples.toString().trim(), stables.toString().trim());
     }
 
-    static String cleanStables(final String string, final ConnectionPool pool) {
+  /* 2025,jul,31
+   * This function is updated to calcualte new code parallel at the same time
+   */
+   public static String cleanStables(final String string, final ConnectionPool pool) {
 
         final Iterable<String> lines = Splitter.onPattern("\\R")
                                            .trimResults()
@@ -609,24 +615,92 @@ public final class CoverWindow {
                                            .split(string);
 
         final StringBuilder stables = new StringBuilder();
+        // This list holds only the valid, classified code sequences (not just lines!)
+        final List<ClassifiedCodeSequence> validSequences_fast = new ArrayList<>();
+        final List<ClassifiedCodeSequence> validSequences_slow = new ArrayList<>();
+        
+        // reference data 
+        //OSNO (114, 1142) 1.7GB
+        //OSNO (194, 1894) 7GB
+        // OSNO (236, 2238) 19.3GB
+        //CS   (526, 4860) 1.8GB
+        //CS   (762, 7900) 5.7GB
 
+        // default limit(guessing a system has 8GB memory)
+        int threadholdOSNO = 3000;
+        int threadholdCS = 6000;
+        //detect system memory
+        try{
+            Runtime runtime = Runtime.getRuntime();
+            long maxMemory = runtime.maxMemory();       // Max memory JVM will attempt to use
+            // OperatingSystemMXBean osBean = (OperatingSystemMXBean)
+            // ManagementFactory.getOperatingSystemMXBean();
+            // long totalBytes3 = osBean.getTotalPhysicalMemorySize();
+            int totalGB = (int) (maxMemory /(1073741824.0)); // Convert to GB
+            // System.out.println("JVM System Memory: " + totalGB + " GB");
+            threadholdOSNO = 500+totalGB/4*50;
+            threadholdCS = 1500+totalGB/4*300;
+            // threadholdOSNO
+        } catch(Exception e1){
+            System.out.println("using default task limit");
+        }
+
+
+        // First loop: Filter, parse, and classify
+        // and determain which code are small and can be compute at same time
         for (final String line : lines) {
             if (line.split("#")[0].trim().isEmpty()) continue;
             if (line.split("//")[0].trim().isEmpty()) continue;
 
             final Optional<ImmutableIntList> optList = Utils.splitString(Utils.trimCodeLine(line));
             if (!optList.isPresent()) {
-            	throw new RuntimeException(line + " is an invalid line");
+                throw new RuntimeException(line + " is an invalid line");
             }
             final IntList list = optList.get();
-            final Either<InvalidCodeSequence, ClassifiedCodeSequence> either
-            								= ClassifiedCodeSequence.create(list);
+            final Either<InvalidCodeSequence, ClassifiedCodeSequence> either = ClassifiedCodeSequence.create(list);
             if (either.isLeft()) {
-            	throw new RuntimeException(line + " is an invalid code sequence");
+                throw new RuntimeException(line + " is an invalid code sequence");
             }
+
+            // determine which code are fast compuation
+            // threadhold decide by computer performence
             final ClassifiedCodeSequence codeSeq = either.get();
+            if ((codeSeq.codeType == CodeType.OSNO || codeSeq.codeType == CodeType.OSO)  &  codeSeq.codeSum <threadholdOSNO){
+                validSequences_fast.add(codeSeq);
+            }else if (codeSeq.codeType == CodeType.CS &codeSeq.codeSum < threadholdCS){
+                validSequences_fast.add(codeSeq);
+            } else {
+                validSequences_slow.add(codeSeq);
+            }                
+        }
+  
+        // Make sure Utils.numThreads is set to less than total of thread, 
+        // otherwise not all thread are able to connect the database 
+        ForkJoinPool customPool = new ForkJoinPool(Utils.numThreads);
+        try {
+            customPool.submit(() ->
+                validSequences_fast.parallelStream().forEach(codeSeq -> {
+                    if (!codeSeq.stable) {
+                        throw new RuntimeException("unstable code " + codeSeq + " put in stables");
+                    }
+                    if (!Wrapper.saveToDatabase(codeSeq, pool)) {
+                        throw new RuntimeException(codeSeq + " is empty");
+                    }
+                    synchronized (stables) {
+                        stables.append(codeSeq).append('\n');
+                    }
+                })
+            ).get();
+        } catch (Exception e) {
+            throw new RuntimeException("Parallel processing failed", e);
+        } finally {
+            customPool.shutdown();
+        }
+
+        // Second loop: Only handle large stable, valid code sequences
+        for (final ClassifiedCodeSequence codeSeq : validSequences_slow) {
             if (!codeSeq.stable) {
-                throw new RuntimeException("unstable code " + codeSeq + " from line " + line + " put in stables");
+                throw new RuntimeException("unstable code " + codeSeq + " put in stables");
             }
 
             if (!Wrapper.saveToDatabase(codeSeq, pool)) {
@@ -635,7 +709,6 @@ public final class CoverWindow {
 
             stables.append(codeSeq).append('\n');
         }
-
         return stables.toString().trim();
     }
 
