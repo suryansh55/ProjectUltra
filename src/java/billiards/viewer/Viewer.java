@@ -1867,12 +1867,12 @@ public final class Viewer {
             if (boyanMenu.CScb.isSelected() || boyanMenu.CNScb.isSelected() || boyanMenu.ONScb.isSelected()
                     || boyanMenu.OSNOcb.isSelected() || boyanMenu.OSOcb.isSelected()) {
                 final Rectangle screen = map.getViewRectangle();
-                final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt =
-                        new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", screen).getPolyVaryLoad();
+                final PolyVaryLoad polyVaryLoad = new PolyVaryLoad("Poly Vary", "Vary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", screen);
+                final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = polyVaryLoad.getPolyVaryLoad();
                 if (polyOpt.isPresent()) {
                     final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
                     autoVaryArea = Optional.of(polyVals._1);
-                    polyVaryFunction(polyVals, Optional.empty(), Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, executor);
+                    polyVaryFunction(polyVals, Optional.empty(), Optional.empty(), PolyVaryLoad.Override, PolyVaryLoad.AutoCover, polyVaryLoad.getAutoSmallCover(), executor);
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
                 }
             }

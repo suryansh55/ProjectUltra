@@ -203,7 +203,7 @@ public final class SmallCoverWindow {
         inputHBox.setSpacing(10);
         inputHBox.setAlignment(Pos.CENTER);
 
-        topText.setPromptText("polygon");
+        topText.setPromptText("Squares, represented as lower x bound, upper x bound, lower y bound, upper x bound. Each number should be a fractional value of Pi. \nFor example, 0 1 0 1 covers then entire viewer.");
         topText.setPrefColumnCount(60);
         topText.setPrefRowCount(10);
         topText.setWrapText(true);

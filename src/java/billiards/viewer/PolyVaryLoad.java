@@ -66,6 +66,7 @@ public final class PolyVaryLoad {
     private final TextField OSNOsbox = new TextField();
     private final CheckBox overrideBox = new CheckBox();
     private final CheckBox autoCoverBox = new CheckBox();
+    private final CheckBox autoSmallCoverBox = new CheckBox();
     private final VBox root = new VBox();
     private final VBox maxVBox = new VBox(10);
     private final VBox controlVBox = new VBox(20);
@@ -146,6 +147,10 @@ public final class PolyVaryLoad {
         autoCoverBox.setSelected(AutoCover);
         autoCoverBox.setText("Add codes to cover");
 
+        autoSmallCoverBox.setIndeterminate(false);
+        autoSmallCoverBox.setAllowIndeterminate(false);
+        autoSmallCoverBox.setSelected(true);
+        autoSmallCoverBox.setText("Add codes to small cover");
 
         instructHBox.getChildren().add(instruct);
 
@@ -165,7 +170,7 @@ public final class PolyVaryLoad {
 
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox);
         maxVBox.setAlignment(Pos.TOP_RIGHT);
-        controlVBox.getChildren().addAll(loadButton, overrideBox, autoCoverBox);
+        controlVBox.getChildren().addAll(loadButton, overrideBox, autoCoverBox, autoSmallCoverBox);
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
@@ -230,5 +235,9 @@ public final class PolyVaryLoad {
     public Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> getPolyVaryLoad() {
         stage.showAndWait();
         return this.result;
+    }
+
+    public boolean getAutoSmallCover() {
+        return autoSmallCoverBox.isSelected();
     }
 }
