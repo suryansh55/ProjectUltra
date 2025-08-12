@@ -807,14 +807,14 @@ const char* check_cover(const std::string& polygon_str, const std::string& singl
 const char* cover_small_polygon(const cover::Cover& old_cover,
                           const ClosedRectangleQ& square, const ClosedConvexPolygonQ& polygon,
                           const StableInfos& single_infos, const TripleInfos& triple_infos,
-                          const uint32_t digits, const uint32_t max_mag, const size_t empties, const bool mrr) {
+                          const uint32_t digits, const uint32_t max_mag, const size_t empties, const bool mrr, const bool printInfo) {
 
     const std::string dir{"small_cover"};
 
     auto file = open_file_write(dir + "/info.txt");
 
     for (const auto& vertex : polygon) {
-        std::cout << rationalToDegrees(vertex.x) << ' ' << rationalToDegrees(vertex.y) << std::endl;//George aug19th 2021 customize the precision for the decimal in the info.txt
+        if (printInfo) std::cout << rationalToDegrees(vertex.x) << ' ' << rationalToDegrees(vertex.y) << std::endl;//George aug19th 2021 customize the precision for the decimal in the info.txt
         file << "// " << rationalToDegrees(vertex.x)<< ' ' << rationalToDegrees(vertex.y) << '\n';
         //std::cout << rationalToDegrees(vertex.x).str(20) << ' ' << rationalToDegrees(vertex.y).str(20) << std::endl;//George aug19th 2021 customize the precision for the decimal in the info.txt
         //file << "// " << rationalToDegrees(vertex.x).str(20) << ' ' << rationalToDegrees(vertex.y).str(20) << '\n';
@@ -876,7 +876,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
     static std::string res;
     res.clear();
 
-    std::cout << "The following stables colored squares:" << std::endl;
+    if (printInfo) std::cout << "The following stables colored squares:" << std::endl;
     file << "// The following stables colored squares:" << '\n';
     // We need to do this to have them sorted by cost when printing
     for (const auto& p : single_infos) {
@@ -893,7 +893,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
 
             const auto s = str(boost::format("%1% (%2%, %3%) (%4%, %5%) - %6%") % code_type % code_length % code_sum % cost % count % stable);
 
-            std::cout << s << std::endl;
+            if (printInfo) std::cout << s << std::endl;
             file << s << '\n';
             res.append(s).append("\n");
         }
@@ -901,7 +901,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
 
     res.append("-----\n");
 
-    std::cout << "The following triples colored squares:" << std::endl;
+    if (printInfo) std::cout << "The following triples colored squares:" << std::endl;
     file << "// The following triples colored squares:" << '\n';
     for (const auto& p : triple_infos) {
         const auto count = get_or(cover_info.triple_square_count, p.first, 0);
@@ -909,7 +909,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
             const Triple triple{p.first.stable_neg.get().sequence,
                                 p.first.unstable.get().sequence,
                                 p.first.stable_pos.get().sequence};
-            std::cout << triple << std::endl;
+            if (printInfo) std::cout << triple << std::endl;
             file << triple << '\n';
 
             const auto stable_neg = boost::str(boost::format("%1%") % p.first.stable_neg.get().sequence);
@@ -920,14 +920,16 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
         }
     }
 
-    std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
+    if (printInfo) std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
     file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
 
+    res.append("-----\n");
     const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empties);
     if (num_to_print != 0) {
         const size_t inc = cover_info.not_filled.size() / num_to_print;
         for (size_t i = 0; i < num_to_print * inc; i += inc) {
-            std::cout << center_degrees(cover_info.not_filled.at(i)) << std::endl;
+            res.append(center_degrees(cover_info.not_filled.at(i))).append("\n");
+            if (printInfo) std::cout << center_degrees(cover_info.not_filled.at(i)) << std::endl;
             file << "// " << center_degrees(cover_info.not_filled.at(i)) << '\n';
         }
     }
@@ -942,41 +944,41 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
         triple_squares += p.second;
     }
 
-    std::cout << single_squares << " stable squares used in the cover" << std::endl;
+    if (printInfo) std::cout << single_squares << " stable squares used in the cover" << std::endl;
     file << "// " << single_squares << " stable squares used in the cover" << '\n';
 
-    std::cout << triple_squares << " triple squares used in the cover" << std::endl;
+    if (printInfo) std::cout << triple_squares << " triple squares used in the cover" << std::endl;
     file << "// " << triple_squares << " triple squares used in the cover" << '\n';
 
-    std::cout << cover_info.single_square_count.size() << " stables used in the cover" << std::endl;
+    if (printInfo) std::cout << cover_info.single_square_count.size() << " stables used in the cover" << std::endl;
     file << "// " << cover_info.single_square_count.size() << " stables used in the cover" << '\n';
 
-    std::cout << cover_info.triple_square_count.size() << " triples used in the cover" << std::endl;
+    if (printInfo) std::cout << cover_info.triple_square_count.size() << " triples used in the cover" << std::endl;
     file << "// " << cover_info.triple_square_count.size() << " triples used in the cover" << '\n';
 
     if (mrr) {
-        std::cout << "MRR ";
+        if (printInfo) std::cout << "MRR ";
         file << "// MRR ";
     } else {
-        std::cout << "ALL ";
+        if (printInfo) std::cout << "ALL ";
         file << "// ALL ";
     }
 
-    std::cout << boost::format("at %1% decimals, deepest magnification %2%") % digits % cover_info.deepest << std::endl;
+    if (printInfo) std::cout << boost::format("at %1% decimals, deepest magnification %2%") % digits % cover_info.deepest << std::endl;
     file << boost::format("at %1% decimals, deepest magnification %2%") % digits % cover_info.deepest << '\n';
 
-    std::cout << "Total stable cost: " << total_single_cost << std::endl;
+    if (printInfo) std::cout << "Total stable cost: " << total_single_cost << std::endl;
     file << "// Total stable cost: " << total_single_cost << '\n';
 
     //added these two lines George Oct4,2017
-    std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
+    if (printInfo) std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
     file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
 
     if (covered) {
-        std::cout << "Covered" << std::endl;
+        if (printInfo) std::cout << "Covered" << std::endl;
         file << "// Covered" << '\n';
     } else {
-        std::cout << "Not Covered" << std::endl;
+        if (printInfo) std::cout << "Not Covered" << std::endl;
         file << "// Not Covered" << '\n';
     }
 
@@ -1007,7 +1009,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
 
     oss << seconds << '.' << micros << 's';
 
-    std::cout << "Time elapsed: " << oss.str() << std::endl;
+    if (printInfo) std::cout << "Time elapsed: " << oss.str() << std::endl << "// ----------" << std::endl;
     file << "// Time elapsed: " << oss.str() << '\n';
 
     return res.c_str();
@@ -1050,7 +1052,7 @@ double parse_fraction_to_double(const std::string& fractionString) {
 
 const char* check_small_cover(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,
                  const uint32_t digits, const uint32_t max_depth, const size_t empty,
-                 const bool mrr, sqlite::ConnectionPool& pool) {
+                 const bool mrr, sqlite::ConnectionPool& pool, const bool printInfo) {
 
     // TODO it would be really nice to fix the number of digits in the precision.
     // That way we don't have to worry about it changing on us in between runs.
@@ -1093,7 +1095,7 @@ const char* check_small_cover(const std::string& polygon_str, const std::string&
     const auto single_infos = get_single_infos(singles, mrr, conn.db);
     const auto triple_infos = get_triple_infos(triples, mrr, conn.db);
 
-    return cover_small_polygon(cover, square, polygon, single_infos, triple_infos, digits, max_depth, empty, mrr);
+    return cover_small_polygon(cover, square, polygon, single_infos, triple_infos, digits, max_depth, empty, mrr, printInfo);
 }
 
 int32_t check_cover_duplicate_stables(const std::string& polygon_str, const std::string& singles_str, const std::string& triples_str,

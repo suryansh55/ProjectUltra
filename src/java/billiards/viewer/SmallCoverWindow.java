@@ -47,6 +47,7 @@ public final class SmallCoverWindow {
     final TextField magnificationsTextField = new TextField();
     private final RadioButton allRdoBtn = new RadioButton();
     private final RadioButton mrrRdoBtn = new RadioButton();
+    private final CheckBox printInfoCb = new CheckBox();
 
     private final TextArea topText = new TextArea();
     private final TextArea bottomText = new TextArea();
@@ -149,6 +150,8 @@ public final class SmallCoverWindow {
             final File cover = new File("small_cover");
             cover.mkdir();
 
+            final StringBuilder newEmpties = new StringBuilder();
+
             if (mrr) {
                 coverWindow.appendStablesInfo("// Small Cover");
                 coverWindow.appendTriplesInfo("// Small Cover");
@@ -165,12 +168,13 @@ public final class SmallCoverWindow {
                     final String cleanedTriples = cleanedTriplesPre._1;
                     final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 
-                    String result = Wrapper.smallCoverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, true, pool);
+                    String result = Wrapper.smallCoverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, true, pool, printInfoCb.isSelected());
 
                     if (!result.isEmpty()) {
                         String[] newCodes = result.split("-----");
                         if (newCodes.length > 0 && !newCodes[0].trim().isEmpty()) coverWindow.appendStablesInfo(newCodes[0].trim());
                         if (newCodes.length > 1 && !newCodes[1].trim().isEmpty()) coverWindow.appendTriplesInfo(newCodes[1].trim());
+                        if (newCodes.length > 2 && !newCodes[2].trim().isEmpty()) newEmpties.append(newCodes[2].trim()).append("\n");
 
                         loadCover.run();
                     }
@@ -194,12 +198,17 @@ public final class SmallCoverWindow {
 
             saveToFile();
 
+            System.out.print(newEmpties);
+
             stage.close();
         });
 
+        printInfoCb.setSelected(false);
+        printInfoCb.setText("Print Info");
+
         HBox inputHBox = new HBox();
         inputHBox.getChildren().addAll(mrrRdoBtn, allRdoBtn, digitsTextField, magnificationsTextField,
-                calcBtn, emptyTextField);
+                calcBtn, emptyTextField, printInfoCb);
         inputHBox.setSpacing(10);
         inputHBox.setAlignment(Pos.CENTER);
 

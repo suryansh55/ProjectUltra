@@ -72,7 +72,7 @@ public final class Wrapper {
 
     private static native String small_cover_wrapper(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
-                                            boolean mrr, Pointer pool);
+                                            boolean mrr, Pointer pool, boolean printInfo);
 
     private static native int cover_wrapper_duplicate_stables(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
@@ -93,9 +93,9 @@ public final class Wrapper {
 
     public static String smallCoverWrapper(final String polygon, final String codes, final String unstables,
                                        final int digits, final int subdivide, final int empty,
-                                       final boolean mrr, final ConnectionPool pool) {
+                                       final boolean mrr, final ConnectionPool pool, final boolean printInfo) {
 
-       return small_cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer);
+       return small_cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer, printInfo);
     }
 
     public static native String getNotFilledCoordinates(String polygon, String codes, String unstables,

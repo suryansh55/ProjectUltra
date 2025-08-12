@@ -125,7 +125,7 @@ const char* getNotFilledCoordinates(const char* poly_str,
 const char* small_cover_wrapper(const char* poly_str,
     const char* codes_str, const char* unstables_str,
     int32_t digits, int32_t subdivide, int32_t empty,
-    int32_t mrr, sqlite::ConnectionPool* pool);
+    int32_t mrr, sqlite::ConnectionPool* pool, bool printInfo);
 
 
 int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result,const char* const reqTypes);
