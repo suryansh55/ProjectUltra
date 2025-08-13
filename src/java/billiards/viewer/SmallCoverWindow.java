@@ -2,6 +2,8 @@ package billiards.viewer;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.InvalidCodeSequence;
+import billiards.cover.CoverStuff;
+import billiards.geometry.ConvexPolygon;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 import com.google.common.base.Splitter;
@@ -23,7 +25,10 @@ import org.eclipse.collections.api.list.primitive.ImmutableIntList;
 import org.eclipse.collections.api.list.primitive.IntList;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.Optional;
+
+import static billiards.viewer.Utils.readFromFile;
 
 public final class SmallCoverWindow {
 
@@ -63,7 +68,7 @@ public final class SmallCoverWindow {
 
     private final Stage stage = new Stage();
 
-    public SmallCoverWindow(final String windowTitle, final ConnectionPool pool, final Runnable loadCover, final CoverWindow coverWindow) {
+    public SmallCoverWindow(final String windowTitle, final ConnectionPool pool, final Runnable loadCover, final CoverWindow coverWindow, final ArrayList<ConvexPolygon> smallCoverAreas) {
         VBox base = new VBox();
         Scene scene = new Scene(base);
         stage.setScene(scene);
@@ -153,11 +158,14 @@ public final class SmallCoverWindow {
             final StringBuilder newEmpties = new StringBuilder();
 
             if (mrr) {
+                final ArrayList<ConvexPolygon> newSmallCoverAreas = new ArrayList<>();
+                smallCoverAreas.clear();  // Clear old ones before adding new ones
                 coverWindow.appendStablesInfo("// Small Cover");
                 coverWindow.appendTriplesInfo("// Small Cover");
                 String[] squares = polygonString.split("\n");
 
-                for (String square : squares) {
+                for (int i = 0; i < squares.length; i++) {
+                    String square = squares[i];
                     String[] coordinates = square.split(" ");
 
                     if (coordinates.length != 4) continue;
@@ -175,6 +183,14 @@ public final class SmallCoverWindow {
                         if (newCodes.length > 0 && !newCodes[0].trim().isEmpty()) coverWindow.appendStablesInfo(newCodes[0].trim());
                         if (newCodes.length > 1 && !newCodes[1].trim().isEmpty()) coverWindow.appendTriplesInfo(newCodes[1].trim());
                         if (newCodes.length > 2 && !newCodes[2].trim().isEmpty()) newEmpties.append(newCodes[2].trim()).append("\n");
+
+                        final String polygonString = readFromFile( "small_cover/polygon.txt").trim();
+                        final ConvexPolygon polygon = CoverStuff.parsePolygon(polygonString);
+                        newSmallCoverAreas.add(polygon);
+
+                        // Zhao Yu Li, Aug 13, 2025.
+                        // Add all new cover areas at the end, so all of them will be drawn once only.
+                        if (i == squares.length - 1) smallCoverAreas.addAll(newSmallCoverAreas);
 
                         loadCover.run();
                     }
@@ -194,7 +210,7 @@ public final class SmallCoverWindow {
                 Wrapper.coverWrapperAll(dir.getPath(), pool, magnifications);
             }
 
-            System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
+            if (printInfoCb.isSelected()) System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
 
             saveToFile();
 

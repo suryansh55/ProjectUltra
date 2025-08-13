@@ -218,6 +218,11 @@ public final class Viewer {
     Optional<ConvexPolygon> coverArea = Optional.empty();
     Optional<ConvexPolygon> autoVaryArea = Optional.empty();
 
+    // Zhao Yu Li, Aug 13, 2025.
+    // The small cover (LiCover) can handle multiple empty squares at the same time. Therefore, we need to be able to
+    // remember all of them and draw them.
+    ArrayList<ConvexPolygon> smallCoverAreas = new ArrayList<>();
+
     // the current storage and color from the OBO file
     Storage currentOBOStorage = null;
     Color currentOBOColor = Color.RED;
@@ -581,7 +586,7 @@ public final class Viewer {
 
         smallCoverWindow = new SmallCoverWindow(
                 String.format("Small Cover %s", version), pool,
-                () -> loadCover("small_cover", executor), coverWindow);
+                () -> loadCover("small_cover", executor, true), coverWindow, smallCoverAreas);
 
         final StablesWindow stablesWindow = new StablesWindow(coverWindow);
 
@@ -5756,6 +5761,7 @@ public final class Viewer {
             renderPolygon(poly, boundsImage, polyBoundColor);
         }
         coverArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
+        smallCoverAreas.forEach(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
         autoVaryArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
         for (final Entry<ConvexPolygon, Color> poly : mrrBounds.entrySet()) {
             final Color color;
@@ -7933,6 +7939,10 @@ public final class Viewer {
     }
 
     public void loadCover(final String dir, final ExecutorService executor) {
+        loadCover(dir, executor, false);
+    }
+
+    public void loadCover(final String dir, final ExecutorService executor, final boolean small) {
 
         final String polygonString = readFromFile(dir + "/polygon.txt").trim();
         final String squareString = readFromFile(dir + "/square.txt").trim();
@@ -7950,7 +7960,7 @@ public final class Viewer {
         mrrBounds.clear();
         coverRects.addStables(cover._1, Color.BLACK);
         coverRects.addTriples(cover._2, Color.BLACK);
-        coverArea = Optional.of(polygon);
+        if (!small) coverArea = Optional.of(polygon);
         renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
     }
 
