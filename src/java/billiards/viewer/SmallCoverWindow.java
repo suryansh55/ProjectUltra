@@ -422,7 +422,7 @@ public final class SmallCoverWindow {
         this.stage.toFront();
     }
 
-    void addPolygons(String newPolygons) {
-        this.topText.setText(newPolygons.trim() + "\n" + topText.getText());
+    void replacePolygons(String newPolygons) {
+        this.topText.setText(newPolygons.trim());
     }
 }
