@@ -1,5 +1,8 @@
 {
     "files.associations": {
-        "*.ipp": "cpp"
-    }
+        "*.dbclient-js": "javascript",
+        "*.ipp": "cpp",
+        "vector": "cpp"
+    },
+    "java.configuration.updateBuildConfiguration": "interactive"
 }
