@@ -207,7 +207,7 @@ public class SuperPolyVaryLoad {
 
 		autoSmallCoverBox.setIndeterminate(false);
 		autoSmallCoverBox.setAllowIndeterminate(false);
-		autoSmallCoverBox.setSelected(true);
+		autoSmallCoverBox.setSelected(false);
 
     	instructHBox.getChildren().add(instruct);
 

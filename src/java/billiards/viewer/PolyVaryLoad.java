@@ -149,7 +149,7 @@ public final class PolyVaryLoad {
 
         autoSmallCoverBox.setIndeterminate(false);
         autoSmallCoverBox.setAllowIndeterminate(false);
-        autoSmallCoverBox.setSelected(true);
+        autoSmallCoverBox.setSelected(false);
         autoSmallCoverBox.setText("Add codes to small cover");
 
         instructHBox.getChildren().add(instruct);

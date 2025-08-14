@@ -165,7 +165,7 @@ public class AutoPolyVaryLoad {
 
 		autoSmallCoverBox.setIndeterminate(false);
 		autoSmallCoverBox.setAllowIndeterminate(false);
-		autoSmallCoverBox.setSelected(true);
+		autoSmallCoverBox.setSelected(false);
 		autoSmallCoverBox.setText("Add codes to small cover");
 
 		addToAllPositiveCheckbox.setIndeterminate(false);
