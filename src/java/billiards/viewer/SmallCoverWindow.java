@@ -160,8 +160,6 @@ public final class SmallCoverWindow {
             if (mrr) {
                 final ArrayList<ConvexPolygon> newSmallCoverAreas = new ArrayList<>();
                 smallCoverAreas.clear();  // Clear old ones before adding new ones
-                coverWindow.appendStablesInfo("// Small Cover");
-                coverWindow.appendTriplesInfo("// Small Cover");
                 String[] squares = polygonString.split("\n");
 
                 for (int i = 0; i < squares.length; i++) {
@@ -424,7 +422,7 @@ public final class SmallCoverWindow {
         this.stage.toFront();
     }
 
-    void addPolygons(String newPolygons) {
-        this.topText.setText(newPolygons.trim() + "\n" + topText.getText());
+    void replacePolygons(String newPolygons) {
+        this.topText.setText(newPolygons.trim());
     }
 }

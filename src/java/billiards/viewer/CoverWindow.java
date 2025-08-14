@@ -201,7 +201,9 @@ public final class CoverWindow {
 //                System.out.println(cleanedStables);
 
                 String res = Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, mrr, pool);
-                if (viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected()) viewer.smallCoverWindow.addPolygons(res);
+                if (viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected()) {
+                    viewer.smallCoverWindow.replacePolygons(res);
+                }
                 //}
             } else {
 
