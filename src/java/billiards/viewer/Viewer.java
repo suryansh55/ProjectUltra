@@ -2732,6 +2732,10 @@ public final class Viewer {
             currentOBOStorage = null;
             lineNumberTxt.setText("");
             oboImageView.setImage(new WritableImage(SIDE, SIDE));
+
+            // Zhao Yu Li, Aug 14, 2025.
+            // Clear the small squares so they don't get printed again.
+            smallCoverAreas.clear();
         });
 
         saveRegionsCheckBox.setText("Save Regions");
