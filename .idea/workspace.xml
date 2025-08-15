@@ -5,24 +5,10 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="55294d7f-46a0-4f84-aaad-4aa3ad7a696a" name="Changes" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/gradle.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/jarRepositories.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/libraries-with-intellij-classes.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/cpp/common.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/common.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/cpp/database.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/database.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/cpp/verify.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/verify.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/cpp/wrapper.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/cpp/wrapper.cpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/headers/common.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/common.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/headers/database.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/database.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/headers/verify.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/verify.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/backend/headers/wrapper.hpp" beforeDir="false" afterPath="$PROJECT_DIR$/src/backend/headers/wrapper.hpp" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/billiards/viewer/CoverWindow.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/billiards/viewer/CoverWindow.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/billiards/viewer/Viewer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/billiards/viewer/Viewer.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/java/billiards/wrapper/Wrapper.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/java/billiards/wrapper/Wrapper.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/compiler.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/compiler.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build.gradle" beforeDir="false" afterPath="$PROJECT_DIR$/build.gradle" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -73,24 +59,33 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="ProjectColorInfo"><![CDATA[{
+  "associatedIndex": 6
+}]]></component>
   <component name="ProjectId" id="2TATU2Q5VV8l0bckif62jSS7mcY" />
   <component name="ProjectViewState">
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;WebServerToolWindowFactoryState&quot;: &quot;false&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/home/pbbandit/Desktop/BilliardsEverything 2023-07-27-Max-Kaiden-Triples&quot;,
-    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
-    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
-    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
-    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
-    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Gradle.billiards-scratchwork [run].executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "WebServerToolWindowFactoryState": "false",
+    "git-widget-placeholder": "build__gradle__windows",
+    "ignore.virus.scanning.warn.message": "true",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "D:/great periodic/w/billiards_everything",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
   }
-}</component>
+}]]></component>
   <component name="RunManager">
     <configuration name="billiards-scratchwork [run]" type="GradleRunConfiguration" factoryName="Gradle" temporary="true">
       <ExternalSystemSettings>
@@ -111,7 +106,7 @@
       <ExternalSystemDebugServerProcess>true</ExternalSystemDebugServerProcess>
       <ExternalSystemReattachDebugProcess>true</ExternalSystemReattachDebugProcess>
       <DebugAllEnabled>false</DebugAllEnabled>
-      <ForceTestExec>false</ForceTestExec>
+      <RunAsTest>false</RunAsTest>
       <method v="2" />
     </configuration>
     <recent_temporary>
@@ -119,6 +114,14 @@
         <item itemvalue="Gradle.billiards-scratchwork [run]" />
       </list>
     </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-125ca727e0f0-intellij.indexing.shared.core-IU-243.23654.189" />
+        <option value="bundled-js-predefined-d6986cc7102b-822845ee3bb5-JavaScript-IU-243.23654.189" />
+      </set>
+    </attachedChunks>
   </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
@@ -134,6 +137,7 @@
       <workItem from="1690750262482" duration="678000" />
       <workItem from="1690754722464" duration="324000" />
       <workItem from="1690764224191" duration="863000" />
+      <workItem from="1755290155178" duration="2897000" />
     </task>
     <servers />
   </component>

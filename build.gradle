@@ -14,6 +14,36 @@ def isMac = currentOs.isMacOsX()
 def isWindows = currentOs.isWindows()
 def javafxVersion = '21.0.1'
 
+/*
+    2025/08/15 Marco Mai
+    Detect where is Java for windows
+ */
+// detect where is mingw64
+if (isWindows){
+    try {
+        // Ask PowerShell for g++ locations
+        def cmd = [
+                'powershell', '-NoProfile', '-Command',
+                'Get-Command g++ -All | Select-Object -ExpandProperty Source'
+        ]
+        def proc = new ProcessBuilder(cmd).redirectErrorStream(true).start()
+        proc.waitFor()
+        def out = proc.inputStream.getText('UTF-8')
+        def lines = out.readLines().findAll { it?.trim() }
+
+        // Look specifically for mingw64\bin
+        def preferred = lines.find { it.toLowerCase().contains('\\mingw64\\bin\\g++.exe') }
+        if (!preferred)  {
+            throw new GradleException("mingw64 g++ not found in PATH. Install MSYS2 mingw64 and ensure it's first in PATH.")
+        }
+
+        ext.MINGW64_BIN = new File(preferred).parent
+        println "Using mingw64 g++ at: ${ext.MINGW64_BIN}"
+    } catch (Exception e) {
+        throw new GradleException("Error detecting mingw64 g++: ${e.message}")
+    }
+}
+
 mainClassName = 'billiards.viewer.Main'
 
 repositories {
@@ -100,13 +130,15 @@ applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend
 sourceCompatibility = 1.17
 targetCompatibility = 1.17
 
+
 model {
     // Zhao Yu Li, Aug 15, 2025.
     // These configurations are specific to MingW64 on Windows. Change the path to point to your MingW64 installation
     toolChains {
         if (isWindows) {
             mingw(Gcc) {
-                path "D:/msys64/mingw64/bin"
+                path  project.ext.MINGW64_BIN
+                //path  "C:/msys64/mingw64/bin" // fall back to specific options
                 target("x86_64-w64-mingw32")
             }
         }
@@ -135,7 +167,7 @@ model {
                     cppCompiler.args '-I/opt/homebrew/include'
                     linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system'
                 } else if (isWindows) {
-                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lboost_system-mgw15-mt-x64-1_88', '-lws2_32', '-Wl,--allow-multiple-definition'
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
                 } else {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 }
