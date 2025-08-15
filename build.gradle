@@ -101,11 +101,29 @@ sourceCompatibility = 1.17
 targetCompatibility = 1.17
 
 model {
+    // Zhao Yu Li, Aug 15, 2025.
+    // These configurations are specific to MingW64 on Windows. Change the path to point to your MingW64 installation
+    toolChains {
+        if (isWindows) {
+            mingw(Gcc) {
+                path "D:/msys64/mingw64/bin"
+                target("x86_64-w64-mingw32")
+            }
+        }
+    }
+    platforms {
+        if (isWindows) {
+            x86_64 {
+                architecture "x86_64"
+                operatingSystem "windows"
+            }
+        }
+    }
 
     components {
 
         backend(NativeLibrarySpec) {
-
+            if (isWindows) targetPlatform "x86_64"
 
             binaries.all {
 
@@ -113,11 +131,13 @@ model {
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
-                if (currentOs.isMacOsX()){
+                if (currentOs.isMacOsX()) {
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
+                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system'
+                } else if (isWindows) {
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lboost_system-mgw15-mt-x64-1_88', '-lws2_32', '-Wl,--allow-multiple-definition'
                 } else {
-                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread', '-lboost_system'
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 }
                 
                 if (toolChain in Clang) {
@@ -193,7 +213,11 @@ run.doFirst {
     //commandLine "./test.fish"
             // For native libraries
     environment 'JNA_LIBRARY_PATH', "$projectDir/build/libs/backend/shared"
-    
+
+    // Zhao Yu Li, Aug 15, 2025.
+    // For some reason, Gradle 8.0 on Windows seems to ignore applicationDefaultJvmArgs and environment 'JNA_LIBRARY_PATH'.
+    if (isWindows) jvmArgs '-Djna.library.path=./build/libs/backend/shared/'
+
     if (isMac) {
         environment 'DYLD_LIBRARY_PATH', "$projectDir/build/libs/backend/shared"
         jvmArgs = [

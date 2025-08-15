@@ -189,7 +189,7 @@ public class CodeAndPatternLookupWindow {
         tableView.getColumns().add(typeCol);
         tableView.getColumns().add(codeCol);
         tableView.getColumns().add(patternCol);
-        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        tableView.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_ALL_COLUMNS);
         tableView.setPrefSize(CELL_WIDTH * 3, CELL_WIDTH * 2);
         tableView.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
         tableView.getSelectionModel().selectFirst();
