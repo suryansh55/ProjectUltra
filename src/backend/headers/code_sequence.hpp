@@ -55,7 +55,7 @@ class CodeSequence final {
     //next3 function translated from CodeSequence.java
     static boost::variant<InvalidCodeSequence, CodeSequence> create(const std::vector<int32_t>&dirtyCodeNumbers);
 
-    static boost::optional<InvalidCodeSequence> validate(const std::vector<int32_t>& dirtyCodeNumbers);
+    // static boost::optional<InvalidCodeSequence> validate(const std::vector<int32_t>& dirtyCodeNumbers);
 
     static bool isLegal(const std::vector<int32_t>& codeNumbers);
 

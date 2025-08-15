@@ -288,7 +288,8 @@ boost::variant<InvalidCodeSequence, CodeSequence> CodeSequence::create(const std
             return InvalidCodeSequence::ILLEGAL_PATTERN;
         } else {
             std::cout << msg << std::endl;
-            throw std::runtime_error("Unknown InvalidCodeSequence");
+            // throw std::runtime_error("Unknown InvalidCodeSequence");
+            return InvalidCodeSequence::NONE;
         }
 
         
@@ -319,33 +320,33 @@ boost::variant<InvalidCodeSequence, CodeSequence> CodeSequence::create(const std
  * Note that there are two possible sources of ambiguity in the ordering of a code sequence.
  * First, every
 */
-boost::optional<InvalidCodeSequence> CodeSequence::validate(const std::vector<int32_t>& dirtyCodeNumbers){
-    // Must be nonempty
+// boost::optional<InvalidCodeSequence> CodeSequence::validate(const std::vector<int32_t>& dirtyCodeNumbers){
+//     // Must be nonempty
 
-    if (dirtyCodeNumbers.empty()) {
-        return InvalidCodeSequence::EMPTY;
-    }
+//     if (dirtyCodeNumbers.empty()) {
+//         return InvalidCodeSequence::EMPTY;
+//     }
 
-    // All numbers must be strictly positive
-    bool allPos = std::all_of(
-        dirtyCodeNumbers.begin(),
-        dirtyCodeNumbers.end(),
-        [](int32_t num) { return num > 0; }
-    );
-    if (!allPos) {
-        return InvalidCodeSequence::NEGATIVE_OR_ZERO_NUMBERS;
-    }
+//     // All numbers must be strictly positive
+//     bool allPos = std::all_of(
+//         dirtyCodeNumbers.begin(),
+//         dirtyCodeNumbers.end(),
+//         [](int32_t num) { return num > 0; }
+//     );
+//     if (!allPos) {
+//         return InvalidCodeSequence::NEGATIVE_OR_ZERO_NUMBERS;
+//     }
 
-    // Check if it is a combination of the legal patterns
-    bool legal = isLegal(dirtyCodeNumbers);
-    if (!legal) {
-        return InvalidCodeSequence::ILLEGAL_PATTERN;
-    }
+//     // Check if it is a combination of the legal patterns
+//     bool legal = isLegal(dirtyCodeNumbers);
+//     if (!legal) {
+//         return InvalidCodeSequence::ILLEGAL_PATTERN;
+//     }
 
 
-    // Otherwise, code sequence is valid
-    return boost::none;
-}
+//     // Otherwise, code sequence is valid
+//     return boost::none;
+// }
 
 bool CodeSequence::isLegal(const std::vector<int32_t>& codeNumbers) {
 

@@ -8,7 +8,8 @@
 enum class InvalidCodeSequence {
     EMPTY,
     NEGATIVE_OR_ZERO_NUMBERS,
-    ILLEGAL_PATTERN
+    ILLEGAL_PATTERN,
+    NONE
 };
 
 /*
