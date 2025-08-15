@@ -14,6 +14,36 @@ def isMac = currentOs.isMacOsX()
 def isWindows = currentOs.isWindows()
 def javafxVersion = '21.0.1'
 
+/*
+    2025/08/15 Marco Mai
+    Detect where is Java for windows
+ */
+// detect where is mingw64
+if (isWindows){
+    try {
+        // Ask PowerShell for g++ locations
+        def cmd = [
+                'powershell', '-NoProfile', '-Command',
+                'Get-Command g++ -All | Select-Object -ExpandProperty Source'
+        ]
+        def proc = new ProcessBuilder(cmd).redirectErrorStream(true).start()
+        proc.waitFor()
+        def out = proc.inputStream.getText('UTF-8')
+        def lines = out.readLines().findAll { it?.trim() }
+
+        // Look specifically for mingw64\bin
+        def preferred = lines.find { it.toLowerCase().contains('\\mingw64\\bin\\g++.exe') }
+        if (!preferred)  {
+            throw new GradleException("mingw64 g++ not found in PATH. Install MSYS2 mingw64 and ensure it's first in PATH.")
+        }
+
+        ext.MINGW64_BIN = new File(preferred).parent
+        println "Using mingw64 g++ at: ${ext.MINGW64_BIN}"
+    } catch (Exception e) {
+        throw new GradleException("Error detecting mingw64 g++: ${e.message}")
+    }
+}
+
 mainClassName = 'billiards.viewer.Main'
 
 repositories {
@@ -100,12 +130,32 @@ applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend
 sourceCompatibility = 1.17
 targetCompatibility = 1.17
 
+
 model {
+    // Zhao Yu Li, Aug 15, 2025.
+    // These configurations are specific to MingW64 on Windows. Change the path to point to your MingW64 installation
+    toolChains {
+        if (isWindows) {
+            mingw(Gcc) {
+                path  project.ext.MINGW64_BIN
+                //path  "C:/msys64/mingw64/bin" // fall back to specific options
+                target("x86_64-w64-mingw32")
+            }
+        }
+    }
+    platforms {
+        if (isWindows) {
+            x86_64 {
+                architecture "x86_64"
+                operatingSystem "windows"
+            }
+        }
+    }
 
     components {
 
         backend(NativeLibrarySpec) {
-
+            if (isWindows) targetPlatform "x86_64"
 
             binaries.all {
 
@@ -113,11 +163,13 @@ model {
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
-                if (currentOs.isMacOsX()){
+                if (currentOs.isMacOsX()) {
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
+                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system'
+                } else if (isWindows) {
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
                 } else {
-                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread', '-lboost_system'
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 }
                 
                 if (toolChain in Clang) {
@@ -193,7 +245,11 @@ run.doFirst {
     //commandLine "./test.fish"
             // For native libraries
     environment 'JNA_LIBRARY_PATH', "$projectDir/build/libs/backend/shared"
-    
+
+    // Zhao Yu Li, Aug 15, 2025.
+    // For some reason, Gradle 8.0 on Windows seems to ignore applicationDefaultJvmArgs and environment 'JNA_LIBRARY_PATH'.
+    if (isWindows) jvmArgs '-Djna.library.path=./build/libs/backend/shared/'
+
     if (isMac) {
         environment 'DYLD_LIBRARY_PATH', "$projectDir/build/libs/backend/shared"
         jvmArgs = [
