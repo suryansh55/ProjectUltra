@@ -95,7 +95,7 @@ public class SuperPolyVaryLoad {
     
     private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
     
-    public SuperPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName, final String stepFileName) {
+    public SuperPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName, final String boundsFileName, final String stepFileName, final CheckBox useSuper) {
     	polygonString = Utils.readFromFile(fileName);
     	String[] boundTokens = Utils.readFromFile(boundsFileName).trim().split(" ");
     	String[] stepTokens = Utils.readFromFile(stepFileName).trim().split(" ");
@@ -139,6 +139,10 @@ public class SuperPolyVaryLoad {
     		this.result = Optional.empty();
     		stage.close();
     	});
+
+		stage.setOnShowing(e -> {
+			autoSmallCoverBox.setSelected(useSuper.isSelected());
+		});
     	
     	text.setPrefColumnCount(40);
     	text.setPrefRowCount(10);

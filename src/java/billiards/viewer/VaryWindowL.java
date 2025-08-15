@@ -171,7 +171,7 @@ public final class VaryWindowL {
 
         autoSmallCoverBox.setIndeterminate(false);
         autoSmallCoverBox.setAllowIndeterminate(false);
-        autoSmallCoverBox.setSelected(false);
+        autoSmallCoverBox.setSelected(true);
         autoSmallCoverBox.setText("Add codes to small cover");
 
         firstLastBox.setIndeterminate(false);

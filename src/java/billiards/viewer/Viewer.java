@@ -2137,7 +2137,7 @@ public final class Viewer {
 
             // Zhao Yu Li, Jul 08, 2025.
             // Lazy initialization of superPolyVaryWindow.
-            if (superPolyVaryWindow == null) superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt");
+            if (superPolyVaryWindow == null) superPolyVaryWindow = new SuperPolyVaryLoad("SuperPolyVary", "SuperVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt", tmpDir + "SuperVaryStep.txt", superAutoCb);
 
             if (superPolyVaryWindow.stage.isShowing()) {
                 superPolyVaryWindow.stage.toFront();
