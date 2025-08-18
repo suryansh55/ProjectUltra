@@ -7238,7 +7238,7 @@ public final class Viewer {
                 final Location location = stable.polygon.location(rx, ry);
 
                 if (location == Location.INSIDE) {
-                    System.out.println("This coordinate was filled by a code from the previous coordinate.");
+                    System.out.println("// This coordinate was filled by a code from the previous coordinate.");
                     System.out.println(Utils.standard(storage.classCodeSeq, 1));
 
                     overallProgress.increment(Math.abs(stepIdx));
@@ -7352,8 +7352,7 @@ public final class Viewer {
                         addToOnScreenSequences(storage, color);
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
-                        if (mode == 0 || autoCover) {
-                            // print the code
+                        if (autoCover) {
                             final String msg;
                             final CodeType type = storage.codeType();
 
@@ -7368,7 +7367,6 @@ public final class Viewer {
                             }
                             msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
 
-                            if (mode == 0) System.out.println(msg);
                             if(autoCover) coverWindow.appendStablesInfo(msg);
                             if(autoSmallCover) smallCoverWindow.appendStablesInfo(msg);
                         }
