@@ -191,6 +191,7 @@ model {
         }
 
         test(NativeExecutableSpec) {
+            if (isWindows) targetPlatform "x86_64"
 
             sources.cpp {
                 lib library: 'backend', linkage: 'static'
@@ -205,6 +206,8 @@ model {
                 if (currentOs.isMacOsX()){
                     cppCompiler.args '-I/opt/homebrew/include'
                     linker.args '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lboost_unit_test_framework','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
+                } else if (isWindows) {
+                    linker.args '-lboost_unit_test_framework-mt', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
                 } else {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
                 }
