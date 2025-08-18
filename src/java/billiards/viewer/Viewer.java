@@ -7218,6 +7218,8 @@ public final class Viewer {
                                  final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
                                  final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
                                  final ArrayList<Storage> previousCodes) {
+        System.out.println("\n//------------- working on point " + (currIdx + 1) + "-------------");
+
         // Move the screen
         lineNumberTxt.setText(Integer.toString(currIdx + 1));
         setOBO(currIdx, pool, drawExecutor);
@@ -7236,7 +7238,7 @@ public final class Viewer {
                 final Location location = stable.polygon.location(rx, ry);
 
                 if (location == Location.INSIDE) {
-                    System.out.println("\n//------------- working on point " + (currIdx + 1) + "-------------\nThis coordinate was filled by a code from the previous coordinate.");
+                    System.out.println("This coordinate was filled by a code from the previous coordinate.");
                     System.out.println(Utils.standard(storage.classCodeSeq, 1));
 
                     overallProgress.increment(Math.abs(stepIdx));
@@ -7283,6 +7285,8 @@ public final class Viewer {
                         // Increment for superPoly
                         step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
                     }
+
+                    return 0;
                 }
             }
         }
