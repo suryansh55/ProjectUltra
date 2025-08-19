@@ -106,6 +106,7 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
 
         AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
+        AtomicInteger codeNum = new AtomicInteger(1);
         final int todo = this.coordList.size();
         this.updateProgress(0, todo);
 
@@ -113,13 +114,19 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         int empty = 0; // Number of empty pixels
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
-        for(Vector2 coord: this.coordList) {
+        for(int i = 0; i < this.coordList.size(); i++) {
+            Vector2 coord = this.coordList.get(i);
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
             // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
-            int color = pixelColor(coord);
+
             this.updateProgress(progress.incrementAndGet(), todo);
-            if(color != 0) continue; 
+
+            if (i != 0) {
+                int color = pixelColor(coord);
+                if (color != 0) continue;
+            }
+
             try {
                 localCodes = autoCodesFiltered(coord, shotExecutor);
             } catch(RuntimeException e) {
@@ -163,6 +170,7 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
                     if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
 
                     noCodes = loadStorageFromDB(classCodeSeq, usedCodes, futures, progress, todo);
+                    System.out.println(Utils.standard(classCodeSeq, codeNum.getAndIncrement()));
                     break;
                 }
 
