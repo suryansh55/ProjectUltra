@@ -2528,7 +2528,7 @@ public final class Viewer {
         txtCodeSequence.setTooltip(Utils.toolTip("here you put in a code sequence that you want to"
                 + " calculate"));
         txtCodeSequence.setStyle(textBoxColor);
-        txtCodeSequence.setPrefColumnCount(10);
+        txtCodeSequence.setPrefColumnCount(14);
         txtCodeSequence.textProperty().bindBidirectional(
                 new SimpleObjectProperty<MutableIntList[]>(currentCodeNumbers),
                 new StringConverter<MutableIntList[]>() {
