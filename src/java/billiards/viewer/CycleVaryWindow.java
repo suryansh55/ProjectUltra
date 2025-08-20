@@ -318,15 +318,15 @@ public class CycleVaryWindow {
         cyclesTextfield.setPrefWidth(40);
         cyclesTextfield.setText("1");
 
-        Label emptySquaresLabel = new Label("Empty Squares Per Cycle");
+        Label emptySquaresLabel = new Label("# of coordinates");
         emptySquaresTextfield.setPrefWidth(40);
         emptySquaresTextfield.setText("100");
 
-        Label changeDigitsLabel = new Label("Change Empty Squares By");
+        Label changeDigitsLabel = new Label("Change # of coordinates by");
         changeEmptySquaresText.setPrefWidth(40);
         changeEmptySquaresText.setText("-10");
 
-        Label changeMagnificationLabel = new Label("Change Magnification By");
+        Label changeMagnificationLabel = new Label("Change magnification by");
         changeMagnificationText.setPrefWidth(40);
         changeMagnificationText.setText("2");
 
@@ -947,6 +947,11 @@ public class CycleVaryWindow {
         final Image image = viewer.regionsImageView.getImage();
         final PixelReader reader = image.getPixelReader();
 
+        String[] coordinateStrings = coordinateCodeArea.getText().trim().split("\n");
+        String[] coordinateString = coordinateStrings[currIdx].trim().split(" ");
+        pointsFiltered.add(Math.toRadians(Double.parseDouble(coordinateString[0])));
+        pointsFiltered.add(Math.toRadians(Double.parseDouble(coordinateString[1])));
+
         // Filter out filled pixels
         for(int i = 0; i < points.size(); i += 2) {
             final int midX = (int) viewer.map.pixelX(points.get(i));
@@ -998,7 +1003,7 @@ public class CycleVaryWindow {
                         viewer.addToOnScreenSequences(storage, color);
                         viewer.renderRegion(storage, (WritableImage) viewer.regionsImageView.getImage(), color);
 
-                        if (mode == 0 || autoCover) {
+                        if (autoCover) {
                             // print the code
                             final String msg;
                             final CodeType type = storage.codeType();
@@ -1014,8 +1019,7 @@ public class CycleVaryWindow {
                             }
                             msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
 
-                            if (mode == 0) System.out.println(msg);
-                            if(autoCover) viewer.coverWindow.appendStablesInfo(msg);
+                            viewer.coverWindow.appendStablesInfo(msg);
                         }
 
                         // Zhao Yu Li, Jun 25, 2025.

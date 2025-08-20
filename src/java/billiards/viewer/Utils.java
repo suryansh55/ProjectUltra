@@ -451,48 +451,48 @@ public final class Utils {
     // based on a post on https://coderanch.com/t/622070/java/control-Tooltip-visible-time-duration
     public static void setupCustomTooltipBehavior(final int openDelayInMillis, final int visibleDurationInMillis,
                                                   final int closeDelayInMillis) {
-        Tooltip tooltip = new Tooltip("My tooltip");
-        tooltip.setShowDelay(Duration.millis(500));      // Wait 0.5s before showing
-        tooltip.setHideDelay(Duration.millis(200));      // Wait 0.2s before hiding
-        tooltip.setShowDuration(Duration.seconds(5));  
+//        Tooltip tooltip = new Tooltip("My tooltip");
+//        tooltip.setShowDelay(Duration.millis(500));      // Wait 0.5s before showing
+//        tooltip.setHideDelay(Duration.millis(200));      // Wait 0.2s before hiding
+//        tooltip.set(Duration.seconds(5));
         
-        // try {
+         try {
 
-        //     Class<?> TTBehaviourClass = null;
-        //     final Class<?>[] declaredClasses = Tooltip.class.getDeclaredClasses();
-        //     for (final Class<?> c : declaredClasses) {
-        //         if (c.getCanonicalName().equals("javafx.scene.control.Tooltip.TooltipBehavior")) {
-        //             TTBehaviourClass = c;
-        //             break;
-        //         }
-        //     }
+             Class<?> TTBehaviourClass = null;
+             final Class<?>[] declaredClasses = Tooltip.class.getDeclaredClasses();
+             for (final Class<?> c : declaredClasses) {
+                 if (c.getCanonicalName().equals("javafx.scene.control.Tooltip.TooltipBehavior")) {
+                     TTBehaviourClass = c;
+                     break;
+                 }
+             }
 
-        //     if (TTBehaviourClass == null) {
-        //         return;
-        //     }
-        //     final Constructor<?> constructor = TTBehaviourClass.getDeclaredConstructor(
-        //         Duration.class, Duration.class, Duration.class, boolean.class);
-        //     if (constructor == null) {
-        //         return;
-        //     }
-        //     constructor.setAccessible(true);
-        //     final Object newTTBehaviour = constructor.newInstance(
-        //         new Duration(openDelayInMillis), new Duration(visibleDurationInMillis),
-        //         new Duration(closeDelayInMillis), false);
-        //     if (newTTBehaviour == null) {
-        //         return;
-        //     }
-        //     final Field ttbehaviourField = Tooltip.class.getDeclaredField("BEHAVIOR");
-        //     if (ttbehaviourField == null) {
-        //         return;
-        //     }
+             if (TTBehaviourClass == null) {
+                 return;
+             }
+             final Constructor<?> constructor = TTBehaviourClass.getDeclaredConstructor(
+                 Duration.class, Duration.class, Duration.class, boolean.class);
+             if (constructor == null) {
+                 return;
+             }
+             constructor.setAccessible(true);
+             final Object newTTBehaviour = constructor.newInstance(
+                 new Duration(openDelayInMillis), new Duration(visibleDurationInMillis),
+                 new Duration(closeDelayInMillis), false);
+             if (newTTBehaviour == null) {
+                 return;
+             }
+             final Field ttbehaviourField = Tooltip.class.getDeclaredField("BEHAVIOR");
+             if (ttbehaviourField == null) {
+                 return;
+             }
 
-        //     ttbehaviourField.setAccessible(true);
-        //     ttbehaviourField.set(Tooltip.class, newTTBehaviour);
+             ttbehaviourField.setAccessible(true);
+             ttbehaviourField.set(Tooltip.class, newTTBehaviour);
 
-        // } catch (final Exception e) {
-        //     throw new RuntimeException(e);
-        // }
+         } catch (final Exception e) {
+             throw new RuntimeException(e);
+         }
     }
 
 

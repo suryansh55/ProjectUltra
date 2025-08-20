@@ -1647,7 +1647,7 @@ public final class Viewer {
         // Zhao Yu Li, Jun 09, 2025.
         // Iterate-to-Limit feature.
         iterateToLimitBtn.setText("LiPattern");
-        Utils.colorButton(iterateToLimitBtn, Color.SKYBLUE, clickColor);
+        Utils.colorButton(iterateToLimitBtn, Color.PALEVIOLETRED, clickColor);
         iterateToLimitBtn.setOnAction(event -> {
             // Lazy initialization
             if (iterateToLimitWindow == null) this.iterateToLimitWindow = new IterateToLimitWindow(pool);
@@ -1771,7 +1771,7 @@ public final class Viewer {
         // Pattern Calculator
         patternCalculatorBtn.setText("LiPattern Calc.");
         patternCalculatorBtn.setTooltip(Utils.toolTip("Opens the Pattern Calculator"));
-        Utils.colorButton(patternCalculatorBtn, Color.SKYBLUE, clickColor);
+        Utils.colorButton(patternCalculatorBtn, Color.PALEVIOLETRED, clickColor);
         patternCalculatorBtn.setOnAction(event -> new PatternCalculator());
 
         btnLoadOBOFile.setText("Load One By One File");
@@ -2528,7 +2528,7 @@ public final class Viewer {
         txtCodeSequence.setTooltip(Utils.toolTip("here you put in a code sequence that you want to"
                 + " calculate"));
         txtCodeSequence.setStyle(textBoxColor);
-        txtCodeSequence.setPrefColumnCount(10);
+        txtCodeSequence.setPrefColumnCount(14);
         txtCodeSequence.textProperty().bindBidirectional(
                 new SimpleObjectProperty<MutableIntList[]>(currentCodeNumbers),
                 new StringConverter<MutableIntList[]>() {
@@ -3625,7 +3625,11 @@ public final class Viewer {
         // backForOBOHBox, zoomHBox, clickActionHBox, backForthHBox);
         //final VBox leftVBox = new VBox(10, whatMenuHBox, twoHBox, colorsHBox1, varyMenuPane, oboHBox,
         //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
-        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, polyLoadDBButton, parallelogramButton);
+
+        // Zhao Yu Li, Aug 18, 2025.
+        // Replaced "Polygon", "PolygonDb", and "Para" with "Li PatternCalc." and "LiPattern".
+        // hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, polyLoadDBButton, parallelogramButton);
+        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, patternCalculatorBtn, iterateToLimitBtn);
 
         final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
                 backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
@@ -3766,14 +3770,19 @@ public final class Viewer {
                 mergeButton,loadCoverButton,calculateChooser);//george july15th hide the trimmer button and red button
         backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
-        twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton, iterateToLimitBtn);
+        twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton);
         boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
-        boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+
+        // Zhao Yu Li, Aug 18, 2025.
+        // Replaced "Load Directory" with "LiCover"
+        // boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+        boyanMenuExtra.getChildren().addAll(smallCoverButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+
         //coverExtraHBox.getChildren().addAll(halfTripleBtn, cornerBtn, unstableBtn);
         zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
         backForthHBox.getChildren().addAll(
                 zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
-        oboHBox.getChildren().addAll(smallCoverButton, patternCalculatorBtn, btnLoadOBOFile, lineNumberTxt, btnGo);
+        oboHBox.getChildren().addAll(btnLoadOBOFile, lineNumberTxt, btnGo);
         //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, cboxRegionColor2, clearBtn, resetBtn);//george may 2,2019
         colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
 
@@ -7238,7 +7247,7 @@ public final class Viewer {
                 final Location location = stable.polygon.location(rx, ry);
 
                 if (location == Location.INSIDE) {
-                    System.out.println("This coordinate was filled by a code from the previous coordinate.");
+                    System.out.println("// This coordinate was filled by a code from the previous coordinate.");
                     System.out.println(Utils.standard(storage.classCodeSeq, 1));
 
                     overallProgress.increment(Math.abs(stepIdx));
@@ -7352,8 +7361,7 @@ public final class Viewer {
                         addToOnScreenSequences(storage, color);
                         renderRegion(storage, (WritableImage) regionsImageView.getImage(), color);
 
-                        if (mode == 0 || autoCover) {
-                            // print the code
+                        if (autoCover) {
                             final String msg;
                             final CodeType type = storage.codeType();
 
@@ -7368,7 +7376,6 @@ public final class Viewer {
                             }
                             msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
 
-                            if (mode == 0) System.out.println(msg);
                             if(autoCover) coverWindow.appendStablesInfo(msg);
                             if(autoSmallCover) smallCoverWindow.appendStablesInfo(msg);
                         }

@@ -538,7 +538,6 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     }
 
     pool.join();
-std::cout<< "comb" << std::endl;
     // Merge thread_curves into the final curves
     CurvesLR curves;
     for (auto& tc : thread_curves) {
@@ -619,7 +618,6 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     }
 
     pool.join();
-    std::cout<< "comb" << std::endl;
     // Merge results
     CurvesLR curves;
     for (const auto& tc : thread_curves) {

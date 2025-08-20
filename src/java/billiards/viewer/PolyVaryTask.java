@@ -31,6 +31,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.image.PixelReader;
 
+//import jdk.jshell.execution.Util;
 import org.apache.commons.lang3.NotImplementedException;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
@@ -108,6 +109,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         final int todo = this.coordList.size();
         this.updateProgress(0, todo);
 
+        AtomicInteger codeNum = new AtomicInteger(1);
         int emptyMax = 8; // Max number of empty pixels. Hardcoded for now//george jan3,2025 you can change the 8 to whatever
         int empty = 0; // Number of empty pixels
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
@@ -187,6 +189,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                     if(this.onScreenCodes.contains(classCodeSeq) || usedCodes.contains(classCodeSeq)) continue;
 
                     noCodes = loadStorageFromDB(classCodeSeq, usedCodes, futures, progress, todo);
+                    System.out.println(Utils.standard(classCodeSeq, codeNum.getAndIncrement()));
                     break;
                 }
 

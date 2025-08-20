@@ -438,7 +438,7 @@ public class BoyanMenu {
         // Moved buildPolyCheckBox from to Viewr.java.
         // Added new MiddleVaryL button.
         final HBox vary3HBox =
-        		new HBox(10, cycleVaryButton, middleVaryLButton, varyLBtn, maxPrinting, polyAutoBtn,autoCycleText);
+        		new HBox(10, middleVaryLButton, varyLBtn, maxPrinting, polyAutoBtn,autoCycleText);
            // new HBox(10, vary4Btn, varyLBtn, hitsLabel, autoVaryButton, autoCycleText, //george june 18,2019 replaced vary3Btn with vary4Btn
             		//maxPrinting); //, autoIterText, autoStepText
 
@@ -451,7 +451,9 @@ public class BoyanMenu {
         newHBox.setPadding(new Insets(0, 10, 10, 0));
         newHBox.setAlignment(Pos.CENTER);
 
-        final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText, superAutoCb);
+        // Zhao Yu Li, Aug 18, 2025.
+        // Put "LiCycle" by "SuperLiLuVary".
+        final HBox superHBox = new HBox(10, cycleVaryButton, superPolyVaryBtn, cycleStepText, superAutoCb);
         superHBox.setPadding(new Insets(0, 10, 10, 0));
         superHBox.setAlignment(Pos.CENTER);
 
