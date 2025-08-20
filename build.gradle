@@ -5,7 +5,11 @@ apply plugin: TestingModelBasePlugin
 
 // At top level of build.gradle
 def currentOs = org.gradle.internal.os.OperatingSystem.current()
+def currentArch = System.getProperty("os.arch")
 def isWindows = currentOs.isWindows()
+def isLinux = currentOs.isLinux()
+def isMac = currentOs.isMacOsX()
+def platform  = isWindows ? "win" : (isMac ? (currentArch.contains("aarch64") || currentArch.contains("arm64") ? "mac-aarch64" : "mac-x64") : "linux")
 
 /*
     2025/08/15 Marco Mai
@@ -140,9 +144,13 @@ model {
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
-                if (currentOs.isMacOsX()) {
+                if (platform == "mac-aarch64" ) {
                     cppCompiler.args '-I/opt/homebrew/include'
                     linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system'
+                } else if (platform == "mac-x64" ) {
+                    linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt'
+                } else if (isLinux){
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 } else if (isWindows) {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
                 } else {
@@ -180,9 +188,11 @@ model {
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
-                if (currentOs.isMacOsX()){
+                if (platform == "mac-aarch64" ) {
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lboost_unit_test_framework','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
+                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system','-lboost_unit_test_framework'
+                } else if (platform == "mac-x64" ) {
+                    linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt','-lboost_unit_test_framework'
                 } else if (isWindows) {
                     linker.args '-lboost_unit_test_framework-mt', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
                 } else {
