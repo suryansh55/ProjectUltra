@@ -374,7 +374,7 @@ public class CycleVaryWindow {
 
             CycleVaryFunction(poly);
 
-            stage.close();
+            // stage.close();
         });
     }
 
@@ -800,7 +800,7 @@ public class CycleVaryWindow {
                 Color.PURPLE, Color.TURQUOISE);
 
         final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-        final double originalScale = viewer.map.getScale();
+        // final double originalScale = viewer.map.getScale();
 
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
@@ -855,7 +855,7 @@ public class CycleVaryWindow {
 
                 cyclesProgress.increment(1);
                 repsProgress.resetProgress();
-                viewer.map.setScale(originalScale);
+                // viewer.map.setScale(originalScale);
                 subdivisionsTextfield.setText(originalSubdivision + "");
                 emptySquaresTextfield.setText(empties + deltaEmpties + "");
                 viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
@@ -932,6 +932,11 @@ public class CycleVaryWindow {
                                final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
                                final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+        SimpleObjectProperty<Integer> stepValue = step.get();
+        int cycles = stepValue.get() / Reps + 1;
+        int reps = stepValue.get() % Reps + 1;
+        System.out.println("\n//------------- working on cycle " + cycles + ", rep " + reps + ", point " + (currIdx + 1) + " -------------");
+
         // Move the screen
         lineNumTextField.setText(Integer.toString(currIdx + 1));
         moveScreenToLine(currIdx);
