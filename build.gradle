@@ -157,7 +157,7 @@ sourceSets {
     }
 }
 
-applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend/shared/', '-Xss1000m']
+applicationDefaultJvmArgs = ['-server', '-Djna.library.path=backend/shared/', "-Djava.library.path=backend/shared", '-Xss1000m']
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8

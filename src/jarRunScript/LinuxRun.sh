@@ -1,4 +1,15 @@
-LD_LIBRARY_PATH=./backend/shared \
-java -Djna.library.path=build/libs/backend/shared \
-     -Djava.library.path=build/libs/backend/shared \
-     -jar ./billiard-viewer.jar
+#!/usr/bin/env bash
+set -euo pipefail
+DIR="$(cd -- "$(dirname "$0")" && pwd)"
+
+java \
+  -Djna.library.path="$DIR/backend/shared" \
+  -Djava.library.path="$DIR/backend/shared" \
+-jar ./billiard-viewer.jar
+
+# if you having issue of using the application in WSL use this line
+# java \
+# -Dprism.order=sw -Dprism.verbose=true \
+#   -Djna.library.path="$DIR/backend/shared" \
+#   -Djava.library.path="$DIR/backend/shared" \
+# -jar ./billiard-viewer.jar
