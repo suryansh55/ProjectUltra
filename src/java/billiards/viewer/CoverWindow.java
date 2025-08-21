@@ -117,7 +117,7 @@ public final class CoverWindow {
         labelTextField.setPrefColumnCount(3);
 
         // squaresCheckBox.setSelected(true);
-        addToSmallCoverCB.setSelected(true);
+        addToSmallCoverCB.setSelected(false);
 
         mrrRdoBtn.setSelected(true);
         mrrRdoBtn.setToggleGroup(calcGroup);

@@ -140,9 +140,9 @@ public class SuperPolyVaryLoad {
     		stage.close();
     	});
 
-		stage.setOnShowing(e -> {
-			autoSmallCoverBox.setSelected(useSuper.isSelected());
-		});
+//		stage.setOnShowing(e -> {
+//			autoSmallCoverBox.setSelected(useSuper.isSelected());
+//		});
     	
     	text.setPrefColumnCount(40);
     	text.setPrefRowCount(10);

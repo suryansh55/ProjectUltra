@@ -290,8 +290,8 @@ public class CycleVaryWindow {
 
         magnifyCheckBox.setText("Magnification:");
 
-        Label subdivisionsLabel = new Label("Subdivisions:");
-        Label subdivisionsStepLabel = new Label("Subdivisions Step:");
+        Label subdivisionsLabel = new Label("BoyanVary #");
+        Label subdivisionsStepLabel = new Label("Boyan Step");
         subdivisionsTextfield.setPrefColumnCount(3);
         subdivisionsTextfield.setText("3");
         subdivisionsStepTextfield.setPrefColumnCount(3);
