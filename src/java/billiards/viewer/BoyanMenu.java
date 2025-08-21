@@ -418,7 +418,7 @@ public class BoyanMenu {
         autoPolyVaryHBox.setAlignment(Pos.CENTER);
 
         final HBox codeTypesHBox =
-            new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb, Triplescb);//george june 18,2019 replaced vary4Btn with vary3Btn
+            new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb);  // , Triplescb);//george june 18,2019 replaced vary4Btn with vary3Btn
         codeTypesHBox.setPadding(new Insets(0, 10, 10, 0));
         codeTypesHBox.setAlignment(Pos.CENTER);
         
