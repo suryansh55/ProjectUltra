@@ -123,9 +123,9 @@ if (isLinux) {
 }
 
 def scriptByPlatform = [
-    "mac-aarch64": "src/jarRunScript/MacRun.sh",
-    "mac-x64"    : "src/jarRunScript/MacRun.sh",
-    "linux"      : "src/jarRunScript/LinuxRun.sh",
+    "mac-aarch64": "src/jarRunScript/Mac8Run.sh",
+    "mac-x64"    : "src/jarRunScript/Mac8Run.sh",
+    "linux"      : "src/jarRunScript/Linux8Run.sh",
 ]
 def srcFile = layout.projectDirectory.file(scriptByPlatform[platform])
 def dstFile = layout.buildDirectory.file("libs/run.sh")
