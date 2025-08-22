@@ -127,10 +127,10 @@ public class BoyanMenu {
 
         movesLbl.setText("SideSum");
         
-        maxMovesText.setPrefWidth(55);
+        maxMovesText.setPrefWidth(60);
         maxMovesText.setTooltip(Utils.toolTip("The maximum side sum to search for"));
         maxMovesText.setText("200");
-        minMovesText.setPrefWidth(35);
+        minMovesText.setPrefWidth(50);
         minMovesText.setTooltip(Utils.toolTip("The minimum side sum to search for"));
         minMovesText.setText("0");
         shotsText.setPrefWidth(35);//george set 40 instead of 60
@@ -447,7 +447,7 @@ public class BoyanMenu {
         //new HBox(10, buildPolyCheckBox, varyLBtn, hitsLabel, autoCycleText, //george june 18,2019 replaced vary3Btn with vary4Btn
             //    maxPrinting); //, autoIterText, autoStepText
 
-        final HBox newHBox= new HBox(10, middleVaryButton, vary3Btn, hitsLabel, minMovesText, maxMovesText, movesLbl, shotsText, sideSpacingLbl);
+        final HBox newHBox= new HBox(3, middleVaryButton, vary3Btn, hitsLabel, minMovesText, maxMovesText, movesLbl, shotsText, sideSpacingLbl);
         newHBox.setPadding(new Insets(0, 10, 10, 0));
         newHBox.setAlignment(Pos.CENTER);
 
