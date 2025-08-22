@@ -195,6 +195,10 @@ public class CycleVaryWindow {
         instruct.setText("The following polygon is synced with the current cover");
         instruct.setPadding(new Insets(5, 5, 5, 10));
 
+        Label marcoSpeed = new Label("Marco speed is ON");
+        marcoSpeed.setPadding(new Insets(5, 5, 5, 10));
+        marcoSpeed.setAlignment(Pos.CENTER_RIGHT);
+
         Label codel = new Label();
         codel.setText("Code length:");
         CSbox.setPrefWidth(150);
@@ -260,8 +264,7 @@ public class CycleVaryWindow {
         addToPlusMinusCheckbox.setSelected(false);
         addToPlusMinusCheckbox.setText("Add to plus/minus");
 
-        HBox instructHBox = new HBox();
-        instructHBox.getChildren().add(instruct);
+        HBox instructHBox = new HBox(10, instruct, marcoSpeed);
 
         HBox maxHBox = new HBox(10);
         maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
@@ -288,7 +291,7 @@ public class CycleVaryWindow {
         magnifyTextField.setPrefColumnCount(3);
         magnifyTextField.setText("2");
 
-        magnifyCheckBox.setText("Magnification:");
+        magnifyCheckBox.setText("Magnify x");
 
         Label subdivisionsLabel = new Label("BoyanVary #");
         Label subdivisionsStepLabel = new Label("Boyan Step");
