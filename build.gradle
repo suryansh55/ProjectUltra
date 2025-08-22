@@ -78,16 +78,48 @@ compileJava {
 }
 
 if (isLinux) {
+    // make sure you have the following lib
+    // sudo apt install -y libsqlite3-dev libgmp-dev libmpfr-dev 
+    // libmpfi-dev libboost-all-dev libeigen3-dev libtbb-dev
+    //  libjemalloc-dev libcanberra-gtk-module libcanberra-gtk3-module
     tasks.register('copyNativeLibs', Copy) {
         from("/usr/lib/x86_64-linux-gnu") {
             include "libmpfr.so*","libmpfi.so*","libgmp.so*","libsqlite3.so*","libtbb.so*","libtbbmalloc.so*"
-            include "libboost_thread.so*","libboost_system.so*"
+            include "libboost_thread.so*","libboost_system.so*","libjemalloc.so*","libcanberra.so*"
             exclude "libstdc++.so*","libgcc_s.so*","libc.so*","libm.so*"
         }
         duplicatesStrategy = DuplicatesStrategy.INCLUDE
         into "$buildDir/libs/backend/shared"
     }
-    build.dependsOn 'copyNativeLibs'
+
+    // "Linux-only: copy the JDK/JRE runtime into build/runtime (slimmed + chmod)."
+
+    tasks.register("copyRuntimeLinux", Copy) {
+
+        def home = new File(System.getenv("JAVA_HOME") ?: System.getProperty("java.home"))
+        def runtimeDir = new File(home, "jre").exists() ? new File(home, "jre") : home
+
+        from(runtimeDir) {
+            exclude "demo/**", "sample/**", "man/**", "include/**", "src.zip", "**/*.pdb"
+        }
+        into("$buildDir/libs/runtime")
+
+        doFirst {
+            def vendor = (System.getProperty("java.vendor") ?: "").toLowerCase()
+            if (vendor.contains("oracle")) {
+                println "⚠️ Oracle JDK detected. Redistribution may require a commercial license."
+            }
+        }
+        
+        doLast {
+            def binDir = file("$buildDir/libs/runtime/bin")
+            if (binDir.exists()) {
+                ant.chmod(perm: "a+rx", dir: binDir, includes: "*")
+            }
+        }
+    }
+    
+    build.dependsOn 'copyNativeLibs',"copyRuntimeLinux"
 }
 
 def scriptByPlatform = [
