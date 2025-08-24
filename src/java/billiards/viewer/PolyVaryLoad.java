@@ -152,7 +152,11 @@ public final class PolyVaryLoad {
         autoSmallCoverBox.setSelected(false);
         autoSmallCoverBox.setText("Add codes to small cover");
 
-        instructHBox.getChildren().add(instruct);
+        Label marcoSpeed = new Label("Marco speed is ON");
+        marcoSpeed.setPadding(new Insets(5, 5, 5, 10));
+        marcoSpeed.setAlignment(Pos.CENTER_RIGHT);
+
+        instructHBox.getChildren().addAll(instruct, marcoSpeed);
 
         /*
         typeVBox.getChildren().addAll(codel, ssuml);

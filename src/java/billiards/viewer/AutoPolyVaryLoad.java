@@ -165,7 +165,7 @@ public class AutoPolyVaryLoad {
 
 		autoSmallCoverBox.setIndeterminate(false);
 		autoSmallCoverBox.setAllowIndeterminate(false);
-		autoSmallCoverBox.setSelected(true);
+		autoSmallCoverBox.setSelected(false);
 		autoSmallCoverBox.setText("Add codes to small cover");
 
 		addToAllPositiveCheckbox.setIndeterminate(false);
@@ -178,7 +178,11 @@ public class AutoPolyVaryLoad {
 		addToPlusMinusCheckbox.setSelected(false);
 		addToPlusMinusCheckbox.setText("Add to plus/minus");
 
-    	instructHBox.getChildren().add(instruct);
+		Label marcoSpeed = new Label("Marco speed is ON");
+		marcoSpeed.setPadding(new Insets(5, 5, 5, 10));
+		marcoSpeed.setAlignment(Pos.CENTER_RIGHT);
+
+    	instructHBox.getChildren().addAll(instruct, marcoSpeed);
 
     	maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));

@@ -195,6 +195,10 @@ public class CycleVaryWindow {
         instruct.setText("The following polygon is synced with the current cover");
         instruct.setPadding(new Insets(5, 5, 5, 10));
 
+        Label marcoSpeed = new Label("Marco speed is ON");
+        marcoSpeed.setPadding(new Insets(5, 5, 5, 10));
+        marcoSpeed.setAlignment(Pos.CENTER_RIGHT);
+
         Label codel = new Label();
         codel.setText("Code length:");
         CSbox.setPrefWidth(150);
@@ -260,8 +264,7 @@ public class CycleVaryWindow {
         addToPlusMinusCheckbox.setSelected(false);
         addToPlusMinusCheckbox.setText("Add to plus/minus");
 
-        HBox instructHBox = new HBox();
-        instructHBox.getChildren().add(instruct);
+        HBox instructHBox = new HBox(10, instruct, marcoSpeed);
 
         HBox maxHBox = new HBox(10);
         maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
@@ -288,10 +291,10 @@ public class CycleVaryWindow {
         magnifyTextField.setPrefColumnCount(3);
         magnifyTextField.setText("2");
 
-        magnifyCheckBox.setText("Magnification:");
+        magnifyCheckBox.setText("Magnify x");
 
-        Label subdivisionsLabel = new Label("Subdivisions:");
-        Label subdivisionsStepLabel = new Label("Subdivisions Step:");
+        Label subdivisionsLabel = new Label("BoyanVary #");
+        Label subdivisionsStepLabel = new Label("Boyan Step");
         subdivisionsTextfield.setPrefColumnCount(3);
         subdivisionsTextfield.setText("3");
         subdivisionsStepTextfield.setPrefColumnCount(3);
@@ -374,7 +377,7 @@ public class CycleVaryWindow {
 
             CycleVaryFunction(poly);
 
-            stage.close();
+            // stage.close();
         });
     }
 
@@ -800,7 +803,7 @@ public class CycleVaryWindow {
                 Color.PURPLE, Color.TURQUOISE);
 
         final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-        final double originalScale = viewer.map.getScale();
+        // final double originalScale = viewer.map.getScale();
 
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
@@ -855,7 +858,7 @@ public class CycleVaryWindow {
 
                 cyclesProgress.increment(1);
                 repsProgress.resetProgress();
-                viewer.map.setScale(originalScale);
+                // viewer.map.setScale(originalScale);
                 subdivisionsTextfield.setText(originalSubdivision + "");
                 emptySquaresTextfield.setText(empties + deltaEmpties + "");
                 viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
@@ -932,6 +935,11 @@ public class CycleVaryWindow {
                                final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
                                final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+        SimpleObjectProperty<Integer> stepValue = step.get();
+        int cycles = stepValue.get() / Reps + 1;
+        int reps = stepValue.get() % Reps + 1;
+        System.out.println("\n//------------- working on cycle " + cycles + ", rep " + reps + ", point " + (currIdx + 1) + " -------------");
+
         // Move the screen
         lineNumTextField.setText(Integer.toString(currIdx + 1));
         moveScreenToLine(currIdx);

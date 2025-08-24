@@ -30,16 +30,23 @@ if (isWindows){
         def out = proc.inputStream.getText('UTF-8')
         def lines = out.readLines().findAll { it?.trim() }
 
-        // Look specifically for mingw64\bin
-        def preferred = lines.find { it.toLowerCase().contains('\\mingw64\\bin\\g++.exe') }
-        if (!preferred)  {
-            throw new GradleException("mingw64 g++ not found in PATH. Install MSYS2 mingw64 and ensure it's first in PATH.")
+        // Look for ucrt64\bin and mingw64\bin
+        def ucrt64 = lines.find { it.toLowerCase().contains('\\ucrt64\\bin\\g++.exe') }
+        def mingw64 = lines.find { it.toLowerCase().contains('\\mingw64\\bin\\g++.exe') }
+
+        if (!ucrt64 && !mingw64)  {
+            throw new GradleException("mingw64 and urt64 g++ not found in PATH. Install either MSYS2 mingw64 or ucrt64 and ensure it's in PATH.")
         }
 
-        ext.MINGW64_BIN = new File(preferred).parent
-        println "Using mingw64 g++ at: ${ext.MINGW64_BIN}"
+        if (ucrt64) {
+            ext.TOOLCHAINS_BIN = new File(ucrt64).parent
+            println "Using ucrt64 g++ at: ${ext.TOOLCHAINS_BIN}"
+        } else if (mingw64) {
+            ext.TOOLCHAINS_BIN = new File(mingw64).parent
+            println "Using mingw64 g++ at: ${ext.TOOLCHAINS_BIN}"
+        }
     } catch (Exception e) {
-        throw new GradleException("Error detecting mingw64 g++: ${e.message}")
+        throw new GradleException("Error detecting g++: ${e.message}")
     }
 }
 
@@ -201,7 +208,7 @@ model {
     toolChains {
         if (isWindows) {
             mingw(Gcc) {
-                path  project.ext.MINGW64_BIN
+                path  project.ext.TOOLCHAINS_BIN
                 //path  "C:/msys64/mingw64/bin" // fall back to specific options
                 target("x86_64-w64-mingw32")
             }

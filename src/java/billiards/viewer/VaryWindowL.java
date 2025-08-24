@@ -171,7 +171,7 @@ public final class VaryWindowL {
 
         autoSmallCoverBox.setIndeterminate(false);
         autoSmallCoverBox.setAllowIndeterminate(false);
-        autoSmallCoverBox.setSelected(true);
+        autoSmallCoverBox.setSelected(false);
         autoSmallCoverBox.setText("Add codes to small cover");
 
         firstLastBox.setIndeterminate(false);
@@ -180,9 +180,13 @@ public final class VaryWindowL {
         firstLastBox.setText("Include first and last");
 
         drawCB.setSelected(Draw);//changed true to false george oct 5,2017
-        drawCB.setText("Draw"); 
+        drawCB.setText("Draw");
 
-        instructHBox.getChildren().addAll(instruct);
+        Label marcoSpeed = new Label("Marco speed is ON");
+        marcoSpeed.setPadding(new Insets(5, 5, 5, 10));
+        marcoSpeed.setAlignment(Pos.CENTER_RIGHT);
+
+        instructHBox.getChildren().addAll(instruct, marcoSpeed);
 
         /*
         typeVBox.getChildren().addAll(codel, ssuml);

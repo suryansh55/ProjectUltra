@@ -7084,7 +7084,7 @@ public final class Viewer {
                             codeStr += " ";
                         }
                         final String msg = codeStr + " (" + storage.codeLength() + ", " + storage.codeSum() + ") " + storage.toString();
-                        System.out.println(msg);
+                        // System.out.println(msg);
                         if (autoCover) coverWindow.appendStablesInfo(msg);
                         if (autoSmallCover) smallCoverWindow.appendStablesInfo(msg);
                     }

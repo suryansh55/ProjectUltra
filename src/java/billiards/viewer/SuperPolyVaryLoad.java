@@ -140,9 +140,9 @@ public class SuperPolyVaryLoad {
     		stage.close();
     	});
 
-		stage.setOnShowing(e -> {
-			autoSmallCoverBox.setSelected(useSuper.isSelected());
-		});
+//		stage.setOnShowing(e -> {
+//			autoSmallCoverBox.setSelected(useSuper.isSelected());
+//		});
     	
     	text.setPrefColumnCount(40);
     	text.setPrefRowCount(10);
@@ -213,7 +213,11 @@ public class SuperPolyVaryLoad {
 		autoSmallCoverBox.setAllowIndeterminate(false);
 		autoSmallCoverBox.setSelected(false);
 
-    	instructHBox.getChildren().add(instruct);
+		Label marcoSpeed = new Label("Marco speed is ON");
+		marcoSpeed.setPadding(new Insets(5, 5, 5, 10));
+		marcoSpeed.setAlignment(Pos.CENTER_RIGHT);
+
+    	instructHBox.getChildren().addAll(instruct, marcoSpeed);
 
     	maxHBox.getChildren().addAll(codel, CSl, CSbox, OSOl, OSObox, OSNOl, OSNObox);
     	maxHBox.setPadding(new Insets(0, 10, 10, 0));

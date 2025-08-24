@@ -115,6 +115,7 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
         for(int i = 0; i < this.coordList.size(); i++) {
+            System.out.println("// pixel " + (i + 1));
             Vector2 coord = this.coordList.get(i);
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
