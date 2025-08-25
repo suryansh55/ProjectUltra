@@ -10,6 +10,8 @@ def isWindows = currentOs.isWindows()
 def isLinux = currentOs.isLinux()
 def isMac = currentOs.isMacOsX()
 def platform  = isWindows ? "win" : (isMac ? (currentArch.contains("aarch64") || currentArch.contains("arm64") ? "mac-aarch64" : "mac-x64") : "linux")
+ext.requestedTasks = gradle.startParameter.taskNames;
+ext.isBuild = requestedTasks.any { it == 'build' || it.endsWith(':build') }
 
 /*
     2025/08/15 Marco Mai
@@ -82,6 +84,87 @@ compileJava {
     options.compilerArgs << '-Xlint'
 }
 
+if (isLinux) {
+    // make sure you have the following lib
+    // sudo apt install -y libsqlite3-dev libgmp-dev libmpfr-dev 
+    // libmpfi-dev libboost-all-dev libeigen3-dev libtbb-dev
+    //  libjemalloc-dev libcanberra-gtk-module libcanberra-gtk3-module
+    tasks.register('copyNativeLibs', Copy) {
+        from("/usr/lib/x86_64-linux-gnu") {
+            include "libmpfr.so*","libmpfi.so*","libgmp.so*","libsqlite3.so*","libtbb.so*","libtbbmalloc.so*"
+            include "libboost_thread.so*","libboost_system.so*","libjemalloc.so*","libcanberra.so*"
+            exclude "libstdc++.so*","libgcc_s.so*","libc.so*","libm.so*"
+        }
+        duplicatesStrategy = DuplicatesStrategy.INCLUDE
+        into "$buildDir/libs/backend/shared"
+    }
+
+    // "Linux-only: copy the JDK/JRE runtime into build/runtime (slimmed + chmod)."
+
+    tasks.register("copyRuntimeLinux", Copy) {
+
+        def home = new File(System.getenv("JAVA_HOME") ?: System.getProperty("java.home"))
+        def runtimeDir = new File(home, "jre").exists() ? new File(home, "jre") : home
+
+        from(runtimeDir) {
+            exclude "demo/**", "sample/**", "man/**", "include/**", "src.zip", "**/*.pdb"
+        }
+        into("$buildDir/libs/runtime")
+
+        doFirst {
+            def vendor = (System.getProperty("java.vendor") ?: "").toLowerCase()
+            if (vendor.contains("oracle")) {
+                println "⚠️ Oracle JDK detected. Redistribution may require a commercial license."
+            }
+        }
+        
+        doLast {
+            def binDir = file("$buildDir/libs/runtime/bin")
+            if (binDir.exists()) {
+                ant.chmod(perm: "a+rx", dir: binDir, includes: "*")
+            }
+        }
+    }
+    
+    build.dependsOn 'copyNativeLibs',"copyRuntimeLinux"
+}
+
+def scriptByPlatform = [
+    "mac-aarch64": "src/jarRunScript/Mac8Run.sh",
+    "mac-x64"    : "src/jarRunScript/Mac8Run.sh",
+    "linux"      : "src/jarRunScript/Linux8Run.sh",
+]
+def srcFile = layout.projectDirectory.file(scriptByPlatform[platform])
+def dstFile = layout.buildDirectory.file("libs/run.sh")
+
+
+tasks.register("copyRunScript") {
+
+    inputs.file(srcFile)
+    outputs.file(dstFile)
+
+    // Only run on Unix-like OS (Linux/macOS)
+    onlyIf {
+        org.gradle.internal.os.OperatingSystem.current().isUnix()
+    }
+
+    doLast {
+        def src = srcFile.asFile
+        def dst = dstFile.get().asFile
+        dst.parentFile.mkdirs()
+
+        // Use OS cp
+        project.exec {
+            commandLine "cp", src.absolutePath, dst.absolutePath
+        }
+
+        // Make it executable
+        dst.setExecutable(true)
+    }
+}
+tasks.named("build") { finalizedBy("copyRunScript") }
+
+
 jar {
     archivesBaseName = 'billiard-viewer'
     if (System.getProperty('os.name').toLowerCase().contains('linux')) {
@@ -145,6 +228,16 @@ model {
         backend(NativeLibrarySpec) {
             if (isWindows) targetPlatform "x86_64"
 
+            sources.cpp {
+
+                exportedHeaders{
+                    srcDir "src/backend/headers"
+                    srcDir "src/test/cpp"
+                    srcDir "Eigen"
+                    srcDir "boost"
+                }
+            }
+
             binaries.all {
 
                 cppCompiler.define "NDEBUG"
@@ -157,6 +250,9 @@ model {
                 } else if (platform == "mac-x64" ) {
                     linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt'
                 } else if (isLinux){
+                    if (ext.isBuild) {
+                     linker.args '-Wl,-z,origin','-Wl,-rpath,$ORIGIN','-Wl,-rpath,$ORIGIN/backend/shared'
+                    }
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 } else if (isWindows) {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
@@ -173,7 +269,7 @@ model {
                 }
 
                 if (toolChain in Gcc) {
-                    cppCompiler.args '-Wextra', '-Wpedantic', '-Werror',
+                    cppCompiler.args '-Wextra', '-Wpedantic', '-Werror',"-fPIC",
                                      '-Wno-c++11-compat', '-Wno-c++14-compat',
                                      '-std=c++14'
                 }
@@ -203,7 +299,7 @@ model {
                 } else if (isWindows) {
                     linker.args '-lboost_unit_test_framework-mt', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
                 } else {
-                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system', '-lboost_unit_test_framework','-pthread'
                 }
 
                 if (toolChain in Clang) {
