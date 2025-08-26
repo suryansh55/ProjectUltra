@@ -9,9 +9,9 @@ public class Spattern {
 	final private ImmutableIntList base;
 	
 	public Spattern(ImmutableIntList pat, ImmutableIntList ex) {
-		if (pat.max() == 0) {
-			throw new RuntimeException("Bad pattern");
-		}
+//		if (pat.max() == 0) {
+//			throw new RuntimeException("Bad pattern");
+//		}
 		this.pat = pat;
 		this.base = makeBase(pat, ex);
 	}
@@ -21,11 +21,9 @@ public class Spattern {
 		final MutableIntList coefs = new IntArrayList();
 		for (int i = 0; i < p.size(); i++) {
 			if (p.get(i) != 0) {
-				int coef = ex.get(i)/(2 * p.get(i));
-				if (ex.get(i) - coef * 2 * p.get(i) == 0) {
+				int coef = ex.get(i)/(2 * Math.abs(p.get(i)));
+				if (ex.get(i) - coef * 2 * Math.abs(p.get(i)) == 0) {
 					coef -= 1;
-					
-
 				}
 				coefs.add(coef);
 			}
@@ -34,7 +32,7 @@ public class Spattern {
 		
 		final MutableIntList base = new IntArrayList();
 		for (int i = 0; i < p.size(); i++) {
-			base.add(ex.get(i) - min * 2 * p.get(i));
+			base.add(ex.get(i) - min * 2 * Math.abs(p.get(i)));
 		}
 
 		return base.toImmutable();
@@ -65,7 +63,7 @@ public class Spattern {
 		for (int i = 0; i < pat.size(); i++) {
 			if (pat.get(i) != 0) {
 				n = (trip.getCode().get(i) - base.get(i)) / pat.get(i);
-				return n / 2;
+				return Math.abs(n / 2);
 			}
 		}
 		return 0;

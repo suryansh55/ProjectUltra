@@ -23,7 +23,8 @@ public class PatUtils {
         line = line.split("//")[0];
 
         if (line.contains("-")) {
-            line = line.split("-")[1];
+			if (line.indexOf("-") < line.indexOf("#"))
+            	line = line.split("-", 2)[1];
         }
 
         // Remove all the stuff from the other file format
@@ -64,13 +65,13 @@ public class PatUtils {
     }
 
     public static ImmutableIntList listGCD(int[] l, Integer coef) {
-    	int gcd = l[0];
+    	int gcd = Math.abs(l[0]);
 
     	for (int i = 1; i < l.length; i++) {
     		if (gcd == 0) {
-    			gcd = l[i];
+    			gcd = Math.abs(l[i]);
     		} else {
-    			gcd = GCD(gcd, l[i]);
+    			gcd = GCD(gcd, Math.abs(l[i]));
     		}
     	}
 
@@ -128,7 +129,8 @@ public class PatUtils {
     public static String printPat(ImmutableIntList pat) {
     	String result = "";
 		for (int j = 0; j < pat.size(); j++) {
-			result += repeat(" " + (j + 1), pat.get(j));
+			int patFactor = pat.get(j);
+			result += repeat(" " + (patFactor < 0 ? -(j + 1) : (j + 1)), Math.abs(patFactor));
 		}
     	return result.trim();
     }
@@ -171,8 +173,8 @@ public class PatUtils {
 
     	final int[] muteCode = code.toArray();
     	for (int i = 0; i < pat.size(); i++) {
-    		int value = muteCode[pat.get(i) - 1];
-    		muteCode[pat.get(i) - 1] = value + (2 * times);
+    		int value = muteCode[Math.abs(pat.get(i)) - 1];
+    		muteCode[Math.abs(pat.get(i)) - 1] = value + ((pat.get(i) < 0 ? -2 : 2) * times);
     	}
 
     	for (int i = 0; i < code.size(); i++) {

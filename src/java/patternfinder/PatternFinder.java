@@ -331,8 +331,7 @@ public class PatternFinder {
 		    	final Either<InvalidCodeSequence, ClassifiedCodeSequence> codeSeq
 		    						= ClassifiedCodeSequence.create(code.getCode());
 				if (codeSeq.isRight()) {
-					if (correctType(codeSeq.get().codeType))
-    				singleTasks.add(code);
+					if (correctType(codeSeq.get().codeType)) singleTasks.add(code);
 				}
 			} else if(tripLine.isPresent()) {
 				final Triple code = tripLine.get();
@@ -684,7 +683,7 @@ public class PatternFinder {
     	final LinkedHashMap<Spattern, MutableSet<Single>> map = new LinkedHashMap<>();
     	for (int i = 0; i < lines.size() - 1; i++) {
     		for (int j = i+1; j < lines.size(); j++) {
-    			if (lines.get(i).isEmpty() || lines.get(i).isEmpty()) {
+    			if (lines.get(i).isEmpty() || lines.get(j).isEmpty()) {
     				continue;
     			}
         		final Optional<Spattern> optPat = subtCodes(lines.get(i).getCode(), lines.get(j).getCode());
@@ -895,6 +894,7 @@ public class PatternFinder {
 		}
 
 		ThreeState negative = ThreeState.UNSET;
+		boolean plusMinus = false;
 		final int[] result = new int[line1.size()];
 		for (int i = 0; i < line1.size(); i++) {
 			int value = line1.get(i) - line2.get(i);
@@ -906,22 +906,22 @@ public class PatternFinder {
 			}
 			if (value < 0) {
 				if (negative == ThreeState.FALSE) {
-					return Optional.empty();
+					plusMinus = true;
 				}
 				negative = ThreeState.TRUE;
 
 				for (int j=0; j < -value/2; j++) {
-					result[i] = -value / 2;
+					result[i] = (plusMinus ? value : -value) / 2;
 				}
 
 			} else if (value > 0) {
 				if (negative == ThreeState.TRUE) {
-					return Optional.empty();
+					plusMinus = true;
 				}
 				negative = ThreeState.FALSE;
 
 				for (int j=0; j < value/2; j++) {
-					result[i] = value / 2;
+					result[i] = (plusMinus ? -value : value) / 2;
 				}
 			}
 		}

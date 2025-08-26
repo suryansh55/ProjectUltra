@@ -82,7 +82,7 @@ public final class DBGui {
 
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        //programBox.getChildren().addAll(vwrRadio, patRadio);
+        programBox.getChildren().addAll(vwrRadio, patRadio);
         //programBox.getChildren().addAll(vwrRadio);
         programBox.setSpacing(10);
         programBox.setAlignment(Pos.CENTER);
