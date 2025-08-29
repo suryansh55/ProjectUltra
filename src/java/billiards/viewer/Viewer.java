@@ -1931,6 +1931,7 @@ public final class Viewer {
                     final boolean autoCover = VaryWindowL.AutoCover;
                     final boolean autoSmallCover = varyWindow.getAddToSmallCover();
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
+                    final int minMoves = Integer.parseInt(boyanMenu.minMovesText.getText());
                     final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
                     final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
 
@@ -1939,7 +1940,7 @@ public final class Viewer {
                     if (overrideSS) {
                         System.out.printf("// Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
                     } else {
-                        System.out.printf("// varyL: %d shots and %d moves%n", shots, sum);
+                        System.out.printf("// varyL: %d shots and %d to %d moves%n", shots, minMoves, sum);
                     }
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
@@ -2008,7 +2009,7 @@ public final class Viewer {
                     final boolean autoCover = VaryWindowL.AutoCover;
                     final boolean autoSmallCover = middleVaryWindow.getAddToSmallCover();
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
-
+                    final int minMoves = Integer.parseInt(boyanMenu.minMovesText.getText());
                     final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
                     final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
 
@@ -2017,7 +2018,7 @@ public final class Viewer {
                     if (overrideSS) {
                         System.out.printf("// Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
                     } else {
-                        System.out.printf("// MVL: %d shots and %d moves%n", shots, sum);
+                        System.out.printf("// MVL: %d shots and %d to %d moves%n", shots, minMoves, sum);
                     }
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
@@ -6967,14 +6968,16 @@ public final class Viewer {
         // of the application appearing to freeze (note that in the latter case, as far as the program is concerned, the screen
         // _is_ updating, but the user is unable to see this happen).
         final int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+        final int minMoves = Integer.parseInt(boyanMenu.minMovesText.getText());
         final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
         System.out.println("// Looking for " + boyanMenu.typeString());
         System.out.printf(
-                "// +---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+%n",
+                "// +---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d to %d moves----------+%n",
                 endIdx - startIdx + 1,
                 shots,
                 subdivisions,
+                minMoves,
                 maxMoves
         );
         System.out.printf("// Max code length: CS-%d OSO-%d OSNO-%d\n", maxList[0], maxList[1], maxList[2]);
@@ -7008,6 +7011,7 @@ public final class Viewer {
         final int[] maxList = {polyVals._2, polyVals._3, polyVals._4, polyVals._5, polyVals._6, polyVals._7};
         final ConvexPolygon area = polyVals._1;
         int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+        final int minMoves = Integer.parseInt(boyanMenu.minMovesText.getText());
         final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
 
@@ -7019,7 +7023,7 @@ public final class Viewer {
         // shooting at points determined by subdivision
         //george may 3,2019 changed the name to polyvary instead of auto vary3
         String headerString = !overrideSS ?
-                String.format("// +----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, subdivisions) +
+                String.format("// +----- poly vary: %d shots, %d to %d moves and %d subdivisions,", shots, minMoves, sum, subdivisions) +
                         " looking for: " + boyanMenu.typeString() + "-----+" :
                 String.format("// +----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, subdivisions) +
                         " looking for: Overrided -----+" ;
@@ -7133,9 +7137,9 @@ public final class Viewer {
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 
             final int endHoles = findHoles(area).size();
-            if (overrideSS) {
-                System.out.printf("// Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
-            }
+//            if (overrideSS) {
+//                System.out.printf("// Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+//            }
 
             // Zhao Yu Li, Aug 6, 2025.
             // Also add to the small cover
@@ -7185,9 +7189,9 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
 
-            if (overrideSS) {
-                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
-            }
+//            if (overrideSS) {
+//                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+//            }
 
             // Zhao Yu Li, Aug 6, 2025.
             // Also add to the small cover
