@@ -1931,10 +1931,15 @@ public final class Viewer {
                     final boolean autoCover = VaryWindowL.AutoCover;
                     final boolean autoSmallCover = varyWindow.getAddToSmallCover();
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
+                    final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
+                    final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
 
-                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
-                    if(overrideSS) {
-                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
+                    System.out.println("// Looking for: " + boyanMenu.typeString());
+                    System.out.printf("// Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
+                    if (overrideSS) {
+                        System.out.printf("// Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
+                    } else {
+                        System.out.printf("// varyL: %d shots and %d moves%n", shots, sum);
                     }
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
@@ -2004,9 +2009,15 @@ public final class Viewer {
                     final boolean autoSmallCover = middleVaryWindow.getAddToSmallCover();
                     final int maxPrint = Integer.parseInt(boyanMenu.maxPrinting.getText());
 
-                    System.out.printf("Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
-                    if(overrideSS) {
-                        System.out.printf("Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
+                    final int sum = Integer.parseInt(boyanMenu.maxMovesText.getText());
+                    final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
+
+                    System.out.println("// Looking for: " + boyanMenu.typeString());
+                    System.out.printf("// Max code length: CS-%d OSO-%d OSNO-%d\n", maximums[0], maximums[1], maximums[2]);
+                    if (overrideSS) {
+                        System.out.printf("// Override side sums: CS-%d OSO-%d OSNO-%d\n", maximums[3], maximums[4], maximums[5]);
+                    } else {
+                        System.out.printf("// MVL: %d shots and %d moves%n", shots, sum);
                     }
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
@@ -6958,15 +6969,17 @@ public final class Viewer {
         final int subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
         final int maxMoves = Integer.parseInt(boyanMenu.maxMovesText.getText());
         final int shots = Integer.parseInt(boyanMenu.shotsText.getText());
+        System.out.println("// Looking for " + boyanMenu.typeString());
         System.out.printf(
-                "+---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+%n",
+                "// +---------- AutoPolyVary running on %d hole(s): %d shots, %d subdivisions, and %d moves----------+%n",
                 endIdx - startIdx + 1,
                 shots,
                 subdivisions,
                 maxMoves
         );
-        if(overrideSS) {
-            System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
+        System.out.printf("// Max code length: CS-%d OSO-%d OSNO-%d\n", maxList[0], maxList[1], maxList[2]);
+        if (overrideSS) {
+            System.out.printf("// Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
         }
         final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         progress.show();
@@ -7006,16 +7019,17 @@ public final class Viewer {
         // shooting at points determined by subdivision
         //george may 3,2019 changed the name to polyvary instead of auto vary3
         String headerString = !overrideSS ?
-                String.format("+----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, subdivisions) +
+                String.format("// +----- poly vary: %d shots, %d moves and %d subdivisions,", shots, sum, subdivisions) +
                         " looking for: " + boyanMenu.typeString() + "-----+" :
-                String.format("+----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, subdivisions) +
+                String.format("// +----- poly vary: %d shots, Overrided moves and %d subdivisions,", shots, subdivisions) +
                         " looking for: Overrided -----+" ;
         if (proverCheckBox.isSelected()) {
             headerString += "  (with prover)";
         }
         System.out.println(headerString);
-        if(overrideSS) {
-            System.out.println(String.format("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d", maxList[3], maxList[4], maxList[5]));
+        System.out.printf("// Max code length: CS-%d OSO-%d OSNO-%d\n", maxList[0], maxList[1], maxList[2]);
+        if (overrideSS) {
+            System.out.printf("// Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
         }
 
         // 2024-05-23 complete redesign of PolyVary to support multi-threading
@@ -7120,7 +7134,7 @@ public final class Viewer {
 
             final int endHoles = findHoles(area).size();
             if (overrideSS) {
-                System.out.printf("Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                System.out.printf("// Overrided Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
 
             // Zhao Yu Li, Aug 6, 2025.
@@ -7129,21 +7143,21 @@ public final class Viewer {
                 if (autoCover) {
                     coverWindow.show();
                     System.out.printf(
-                            "+---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
+                            "// +---- Completed, CODES ARE IN COVER; started with %d holes, filled %d, %d remain ----+%n",
                             startHoles, startHoles - endHoles, endHoles);
                 }
 
                 if (autoSmallCover) {
                     smallCoverWindow.show();
                     System.out.printf(
-                            "+---- Completed, CODES ARE IN SMALL COVER; started with %d holes, filled %d, %d remain ----+%n",
+                            "// +---- Completed, CODES ARE IN SMALL COVER; started with %d holes, filled %d, %d remain ----+%n",
                             startHoles, startHoles - endHoles, endHoles);
                 }
 
                 System.out.println();
             } else {
                 System.out.printf(
-                        "+-------------- Completed; started with %d holes, filled %d, %d remain --------------+%n",
+                        "// +-------------- Completed; started with %d holes, filled %d, %d remain --------------+%n",
                         startHoles, startHoles - endHoles, endHoles);
                 System.out.println();
             }

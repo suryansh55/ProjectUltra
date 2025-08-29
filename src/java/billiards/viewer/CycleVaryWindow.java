@@ -791,6 +791,16 @@ public class CycleVaryWindow {
         alert.showAndWait();
     }
 
+    String typeString() {
+        final StringBuilder typeString = new StringBuilder();
+
+        if (CSCb.isSelected()) typeString.append("CS ");
+        if (OSOCb.isSelected()) typeString.append("OSO ");
+        if (OSNOCb.isSelected()) typeString.append("OSNO ");
+
+        return typeString.toString().trim();
+    }
+
     private void CycleVaryFunction(ConvexPolygon polygon) {
         final int cycles = extractNumberFromTextField(cyclesTextfield);
         final int originalSubdivision = extractNumberFromTextField(subdivisionsTextfield);
@@ -912,14 +922,16 @@ public class CycleVaryWindow {
         final int subdivisionsStep = Integer.parseInt(subdivisionsStepTextfield.getText());
         subdivisionsTextfield.setText((subdivisions + subdivisionsStep) + "");
         final int shots = Integer.parseInt(shotsText.getText());
+        System.out.println("// Looking for " + typeString());
         System.out.printf(
-                "+---------- CycleVary running on %d hole(s): %d shots, and %d subdivisions----------+%n",
+                "// +---------- CycleVary running on %d hole(s): %d shots, and %d subdivisions----------+%n",
                 (int) Math.ceil((double) (endIdx - startIdx + 1) / stepIdx),
                 shots,
                 subdivisions
         );
-        if(overrideSS) {
-            System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
+        System.out.printf("// Max code length: CS-%d OSO-%d OSNO-%d\n", maxList[0], maxList[1], maxList[2]);
+        if (overrideSS) {
+            System.out.printf("// Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", maxList[3], maxList[4], maxList[5]);
         }
         final ProgressMultiTask progress = new ProgressMultiTask("Line: %d, Stopping at: %d", true, startIdx+1, endIdx+1);
         progress.show();
@@ -1087,9 +1099,9 @@ public class CycleVaryWindow {
                 Utils.safeShutdownExecutor(storageExecutor);
                 Utils.safeShutdownExecutor(shotExecutor);
                 if(overrideSS) {
-                    System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                    System.out.printf("// Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
-                System.out.println("+------------------------------ CycleVary Cancelled ------------------------------+");
+                System.out.println("// +------------------------------ CycleVary Cancelled ------------------------------+");
                 overallProgress.close();
                 if(autoCover) viewer.coverWindow.show();
                 // Propagate cancellation for Super
@@ -1102,14 +1114,14 @@ public class CycleVaryWindow {
                 Utils.safeShutdownExecutor(shotExecutor);
 
                 if(overrideSS) {
-                    System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                    System.out.printf("// Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
                 }
 
                 if(autoCover) {
                     viewer.coverWindow.show();
-                    System.out.println("+-------------- CycleVary finished successfully, CODES ARE IN COVER --------------+");
+                    System.out.println("// +-------------- CycleVary finished successfully, CODES ARE IN COVER --------------+");
                 } else {
-                    System.out.println("+------------------------ CycleVary finished successfully ------------------------+");
+                    System.out.println("// +------------------------ CycleVary finished successfully ------------------------+");
                 }
 
                 overallProgress.close();
@@ -1178,9 +1190,9 @@ public class CycleVaryWindow {
             Utils.safeShutdownExecutor(storageExecutor);
             Utils.safeShutdownExecutor(shotExecutor);
             if(overrideSS) {
-                System.out.printf("Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                System.out.printf("// Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
             }
-            System.out.println("+------------------------------ CycleVary Cancelled ------------------------------+");
+            System.out.println("// +------------------------------ CycleVary Cancelled ------------------------------+");
             overallProgress.close();
             if(autoCover) viewer.coverWindow.show();
             // Propagate cancellation for Super
