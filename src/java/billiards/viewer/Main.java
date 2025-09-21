@@ -20,6 +20,9 @@ public final class Main extends Application {
 
     private final String versionNumber = "BilliardsEverythingSpecialOpt";
 
+    boolean viewerSelected;
+    Viewer viewer;
+
     // Order is constructor, init, start, stop
     // It would be a lot simpler if these methods didn't exist, and I just did
     // stuff myself. A lot less magic that way.
@@ -42,14 +45,14 @@ public final class Main extends Application {
 
         // since we just have two programs for now, this is just a boolean telling if we're
         // using viewer or not.
-        final boolean viewerSelected = dbGui.getProgram();
+        viewerSelected = dbGui.getProgram();
 
         databaseName.ifPresent(dbName -> {
 
             // 2024-06-06 Austin experimenting with thread and connection pool sizes
             pool = Admin.getConnectionPool(dbName, Utils.numThreads);
             if (viewerSelected) {
-	            final Viewer viewer = new Viewer(mainWindow, versionNumber, executor, pool, dbName);
+	            viewer = new Viewer(mainWindow, versionNumber, executor, pool, dbName);
 	            viewer.start(executor);
             } else {
             	final PatternFinder pFinder = new PatternFinder(mainWindow, versionNumber, pool, dbName);
@@ -60,6 +63,11 @@ public final class Main extends Application {
 
     @Override
     public void stop() {
+        // Zhao Yu Li, Sept 20, 2025.
+        // Shuts down the scheduled executors in iterationToLimitWindow
+        if (viewerSelected) {
+            viewer.shutdown();
+        }
 
         if (pool != null) {
             pool.destroy();

@@ -9,6 +9,7 @@ import billiards.utils.BatchLoadStorage;
 import billiards.utils.Polygon;
 import billiards.wrapper.ConnectionPool;
 import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -28,10 +29,7 @@ import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import java.util.*;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 /**
  * Zhao Yu Li, Jun 06, 2025.
@@ -56,6 +54,14 @@ public class IterateToLimitWindow {
     private final TextArea unstablesTextArea = new TextArea();
     private final TextArea pmUnstablesTextArea = new TextArea();  // "pm" stands for +/-
     private final TextArea triplesTextArea = new TextArea();
+
+    private final TextAreaAppender stablesTextAreaAppender = new TextAreaAppender(stablesTextArea);
+    private final TextAreaAppender pmStablesTextAreaAppender = new TextAreaAppender(pmStablesTextArea);
+    private final TextAreaAppender unstablesTextAreaAppender = new TextAreaAppender(unstablesTextArea);
+    private final TextAreaAppender pmUnstablesTextAreaAppender = new TextAreaAppender(pmUnstablesTextArea);
+    private final TextAreaAppender triplesTextAreaAppender = new TextAreaAppender(triplesTextArea);
+
+    private final TextAreaAppender[] textAreaAppenders = {stablesTextAreaAppender, pmStablesTextAreaAppender, unstablesTextAreaAppender, pmUnstablesTextAreaAppender, triplesTextAreaAppender};
 
     private final HashMap<String, TextArea> textAreaMap = new HashMap<>();
 
@@ -672,10 +678,7 @@ public class IterateToLimitWindow {
         String[] codeComponents = code.trim().split(",");
 
         if (codeComponents.length == 3) {
-            triplesTextArea.setText(
-                    triplesTextArea.getText().trim() + "\n" +
-                            code.trim() + " & " + pattern.trim()
-            );
+            triplesTextAreaAppender.append(code.trim() + " & " + pattern.trim() + "\n");
         }
 
         if (codeComponents.length == 1) {
@@ -687,16 +690,14 @@ public class IterateToLimitWindow {
                 if (either.isRight()) {
                     ClassifiedCodeSequence codeSequence = either.get();
                     String coverCodeString = Utils.getCoverCodeString(codeSequence);
-                    String stringToAdd = coverCodeString + " & " + pattern.trim();
+                    String stringToAdd = coverCodeString + " & " + pattern.trim() + "\n";
 
-                    final TextArea textArea;
+                    final TextAreaAppender textAreaAppender;
 
-                    if (codeSequence.stable) textArea = allPositive ? stablesTextArea : pmStablesTextArea;
-                    else textArea = allPositive ? unstablesTextArea : pmUnstablesTextArea;
+                    if (codeSequence.stable) textAreaAppender = allPositive ? stablesTextAreaAppender : pmStablesTextAreaAppender;
+                    else textAreaAppender = allPositive ? unstablesTextAreaAppender : pmUnstablesTextAreaAppender;
 
-                    if (!textArea.getText().trim().isEmpty())
-                        stringToAdd = textArea.getText().trim() + "\n" + stringToAdd;
-                    textArea.setText(stringToAdd);
+                    textAreaAppender.append(stringToAdd);
                 }
             }
         }
@@ -884,5 +885,47 @@ public class IterateToLimitWindow {
         int abs = Math.abs(number);
         int magnitude = (int) Math.pow(10, (int) Math.log10(abs));
         return Math.round(number / (float) magnitude) * magnitude;
+    }
+
+    public void shutdown() {
+        // Zhao Yu Li, Sept 20, 2025.
+        // Shuts down the scheduled executors
+        for (TextAreaAppender textAreaAppender : textAreaAppenders) textAreaAppender.shutdown();
+    }
+}
+
+/*
+Zhao Yu Li, Sept 20, 2025.
+From ChatGPT: I need to append text to a text area at high frequency without corrupting the Java FX Application thread
+ */
+class TextAreaAppender {
+    private final TextArea textArea;
+    private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
+    private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
+
+    public TextAreaAppender(TextArea textArea) {
+        this.textArea = textArea;
+
+        // Flush buffer ~20 times per second (every 50 ms)
+        scheduler.scheduleAtFixedRate(() -> {
+            if (!queue.isEmpty()) {
+                StringBuilder sb = new StringBuilder();
+                String s;
+                while ((s = queue.poll()) != null) {
+                    sb.append(s);
+                }
+                String batch = sb.toString();
+
+                Platform.runLater(() -> this.textArea.appendText(batch));
+            }
+        }, 0, 50, TimeUnit.MILLISECONDS);
+    }
+
+    public void append(String text) {
+        queue.add(text);
+    }
+
+    public void shutdown() {
+        scheduler.shutdownNow();
     }
 }

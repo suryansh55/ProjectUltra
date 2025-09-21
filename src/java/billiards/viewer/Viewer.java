@@ -8290,4 +8290,12 @@ public final class Viewer {
         final double yRad = Math.toRadians(y);
         zoom(xRad, xRad, yRad, yRad, executorService);
     }
+
+    public void shutdown() {
+        // Zhao Yu Li, Sept 20, 2025.
+        // Shuts down the scheduled executors in iterationToLimitWindow
+        if (iterateToLimitWindow != null) {
+            iterateToLimitWindow.shutdown();
+        }
+    }
 }
