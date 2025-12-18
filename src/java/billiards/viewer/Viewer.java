@@ -3796,7 +3796,8 @@ public final class Viewer {
                 zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
         oboHBox.getChildren().addAll(btnLoadOBOFile, lineNumberTxt, btnGo);
         //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, cboxRegionColor2, clearBtn, resetBtn);//george may 2,2019
-        colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
+        //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
+        colorsHBox1.getChildren().addAll(clearBtn, resetBtn, cboxRegionColor0, cboxRegionColor1);//george sept25,2025 changed the order
 
         zoomHBox.getChildren().addAll( hbox1, zoomRegionHBox,oboHBox,backForOBOHBox,zoomFeildsVBox,clickActionHBox,backForthHBox);
 
@@ -6070,6 +6071,7 @@ public final class Viewer {
                         -> 17 * Math.PI / 45 - x,
                 0, 17 * Math.PI / 45,
                 y -> 17 * Math.PI / 45 - y, 0, 17 * Math.PI / 45, pixelWriter, lineColor);
+        
 
         // This is the line x + y = 67.7
         drawObliqueLine(x
@@ -6083,11 +6085,24 @@ public final class Viewer {
                 0, 169 * Math.PI / 450,
                 y -> 169 * Math.PI / 450 - y, 0, 169 * Math.PI / 450, pixelWriter, lineColor);
 
-        // This is the line x + y = 67.55
+        // This is the line x + y = 67.5500
         drawObliqueLine(x
                         -> 1351 * Math.PI / 3600 - x,
                 0, 1351 * Math.PI / 3600,
                 y -> 1351 * Math.PI / 3600 - y, 0, 1351 * Math.PI / 3600, pixelWriter, lineColor);
+        
+
+        // This is the line x + y = 67.5250//george nov28,2025
+         drawObliqueLine(x
+                         -> 2701 * Math.PI / 7200 - x,
+                 0, 2701 * Math.PI / 7200,
+                 y -> 2701 * Math.PI / 7200 - y, 0, 2701 * Math.PI / 7200, pixelWriter, lineColor);
+
+         // This is the line x + y = 67.5125//george nov28,2025
+         drawObliqueLine(x
+                         -> 5401 * Math.PI / 14400 - x,
+                 0, 5401 * Math.PI / 14400,
+                 y -> 5401 * Math.PI / 14400 - y, 0, 5401 * Math.PI / 14400, pixelWriter, lineColor);
 
         // This is the line x + y = 67.5
         drawObliqueLine(x
@@ -8115,6 +8130,8 @@ public final class Viewer {
                     // Lifted the print mid and load storage functionalities into their own utility files.
                     ArrayList<ClassifiedCodeSequence> codesPrinted = PrintMid.printMid(cList.get(0), finalNumToPrint);
 
+                    // Zhao Yu Li, Dec 17, 2025
+                    // Filters empty codes before adding to cover
                     // Zhao Yu Li, Jun 3, 2025.
                     // Add codes to cover.
                     // if (addToCover) {
@@ -8125,27 +8142,25 @@ public final class Viewer {
                     //     }
                     // }
 
-                    // Zhao Yu Li, Dec 17, 2025.
-                    // Filters empty code sequences before adding to cover
                     if (draw || addToCover) {
                         ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
-
+                        
                         if (addToCover) {
-                            for (Storage storage : storages) {
-                                if (storage.classCodeSeq.stable) {
-                                    coverWindow.appendStablesInfo(getCoverCodeString(storage));
-                                }
-                            }
+                        	for (Storage storage : storages) {
+                        		if (storage.classCodeSeq.stable) {
+                        			coverWindow.appendStablesInfo(getCoverCodeString(storage));
+                        		}
+                        	}
                         }
-
-                        if (draw) {
-                            final int colorIndex = cycle.get();
+                    	
+                    	if (draw) {
+                    		final int colorIndex = cycle.get();
                             Color color = comboBoxColors.get(colorIndex);
 
                             for (Storage storage : storages) {
                                 addToOnScreenSequences(storage, color);
                             }
-                        }
+                    	}
                     }
                 }
 
