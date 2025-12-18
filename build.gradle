@@ -255,7 +255,7 @@ model {
                     }
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 } else if (isWindows) {
-                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition','-lboost_system-mgw15-mt-x64-1_88'
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread-mt', '-lws2_32', '-Wl,--allow-multiple-definition'  // ,'-lboost_system-mgw15-mt-x64-1_88'
                 } else {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
                 }
