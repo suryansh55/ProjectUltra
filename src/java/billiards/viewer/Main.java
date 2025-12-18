@@ -66,7 +66,8 @@ public final class Main extends Application {
         // Zhao Yu Li, Sept 20, 2025.
         // Shuts down the scheduled executors in iterationToLimitWindow
         if (viewerSelected) {
-            viewer.shutdown();
+            if (viewer != null)
+                viewer.shutdown();
         }
 
         if (pool != null) {
