@@ -1748,12 +1748,15 @@ public final class Viewer {
         tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
         Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
         tetrabarButton.setOnAction(event -> {
-            Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams = new TetraBar(mainWindow).getVaryParams();
+            TetraBar tetraBar = new TetraBar(mainWindow, this);
+            Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams = tetraBar.getVaryParams();
 
             if (varyParams._3 == -1) return;
+            boolean addToAllPositive = tetraBar.getAddToAllPositiveSelected();
+            boolean addToPlusMinus = tetraBar.getAddToPlusMinusSelected();
 
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6);
+            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6, addToAllPositive, addToPlusMinus);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -8047,7 +8050,9 @@ public final class Viewer {
                                final int step,
                                final int numToPrint,
                                final boolean draw,
-                               final boolean addToCover)
+                               final boolean addToCover,
+                               final boolean addToAllPositive,
+                               final boolean addToPlusMinus)
     {
         int next = index + 1;
 
@@ -8064,6 +8069,9 @@ public final class Viewer {
         if (index == 0) {
             System.out.println("// Start " + mode + ".");
             if (addToCover) coverWindow.appendStablesInfo("// Start " + mode + ".");
+
+            Tuple2<Double, Double> point = originalPoints.get(index / step);
+            moveScreen(point._1, point._2);
         }
 
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
@@ -8105,7 +8113,14 @@ public final class Viewer {
             if (next % step == 0) {
                 assert step == tetrahedronCodes.size();
 
-                System.out.println("// " + finalMode +  " results for (" + originalPoints.get(index / step)._1 + ", " + originalPoints.get(index / step)._2 + ")");
+                Tuple2<Double, Double> point = originalPoints.get(index / step);
+
+                System.out.println("// " + finalMode +  " results for " + (next/step) + " - (" + point._1 + ", " + point._2 + ")");
+
+                if (index / step + 1 < originalPoints.size()) {
+                    point = originalPoints.get(index / step + 1);
+                    moveScreen(point._1, point._2);
+                }
 
                 ArrayList<Collection<ClassifiedCodeSequence>> cList = new ArrayList<>();
 
@@ -8162,6 +8177,16 @@ public final class Viewer {
                             }
                     	}
                     }
+
+                    if (addToAllPositive || addToPlusMinus) {
+                        if (iterateToLimitWindow == null) {
+                            iterateToLimitWindow = new IterateToLimitWindow(pool);
+                        }
+
+                        for (ClassifiedCodeSequence code : codesPrinted) {
+                            addToIterToLimitCover(code.toString(), addToAllPositive, addToPlusMinus, iterateToLimitWindow);
+                        }
+                    }
                 }
 
                 tetrahedronCodes.clear();
@@ -8171,7 +8196,7 @@ public final class Viewer {
                 }
             }
 
-            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw, addToCover);
+            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw, addToCover, addToAllPositive, addToPlusMinus);
         });
 
         varyTask.setOnCancelled(cancelled -> {
