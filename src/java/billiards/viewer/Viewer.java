@@ -8117,22 +8117,34 @@ public final class Viewer {
 
                     // Zhao Yu Li, Jun 3, 2025.
                     // Add codes to cover.
-                    if (addToCover) {
-                        for (ClassifiedCodeSequence code : codesPrinted) {
-                            if (ClassifiedCodeSequence.isStableCodeType(code.codeType)) {
-                                coverWindow.appendStablesInfo(getCoverCodeString(code));
-                            }
-                        }
-                    }
+                    // if (addToCover) {
+                    //     for (ClassifiedCodeSequence code : codesPrinted) {
+                    //         if (ClassifiedCodeSequence.isStableCodeType(code.codeType)) {
+                    //             coverWindow.appendStablesInfo(getCoverCodeString(code));
+                    //         }
+                    //     }
+                    // }
 
-                    if (draw) {
-                        final int colorIndex = cycle.get();
-                        Color color = comboBoxColors.get(colorIndex);
-
+                    // Zhao Yu Li, Dec 17, 2025.
+                    // Filters empty code sequences before adding to cover
+                    if (draw || addToCover) {
                         ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
 
-                        for (Storage storage : storages) {
-                            addToOnScreenSequences(storage, color);
+                        if (addToCover) {
+                            for (Storage storage : storages) {
+                                if (storage.classCodeSeq.stable) {
+                                    coverWindow.appendStablesInfo(getCoverCodeString(storage));
+                                }
+                            }
+                        }
+
+                        if (draw) {
+                            final int colorIndex = cycle.get();
+                            Color color = comboBoxColors.get(colorIndex);
+
+                            for (Storage storage : storages) {
+                                addToOnScreenSequences(storage, color);
+                            }
                         }
                     }
                 }
