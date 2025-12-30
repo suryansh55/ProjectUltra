@@ -1754,9 +1754,10 @@ public final class Viewer {
             if (varyParams._3 == -1) return;
             boolean addToAllPositive = tetraBar.getAddToAllPositiveSelected();
             boolean addToPlusMinus = tetraBar.getAddToPlusMinusSelected();
+            Tuple3<Integer, Integer, Integer> startStepEnd = tetraBar.getStartStepEnd(varyParams._1.size());
 
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6, addToAllPositive, addToPlusMinus);
+            queuedVaryTask(varyParams._1, varyParams._2, startStepEnd._1 - 1, startStepEnd._1 - 1, startStepEnd._3 * varyParams._3, startStepEnd._2, executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6, addToAllPositive, addToPlusMinus);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -8045,7 +8046,9 @@ public final class Viewer {
     public void queuedVaryTask(final List<Tuple2<Double, Double>> originalPoints,
                                final List<Tuple2<Double, Double>> points,
                                final int index,
+                               final int start,
                                final int max,
+                               final int codeStep,
                                ExecutorService executor,
                                final int step,
                                final int numToPrint,
@@ -8066,7 +8069,7 @@ public final class Viewer {
             return;
         }
 
-        if (index == 0) {
+        if (index == start) {
             System.out.println("// Start " + mode + ".");
             if (addToCover) coverWindow.appendStablesInfo("// Start " + mode + ".");
 
@@ -8194,9 +8197,11 @@ public final class Viewer {
                 if (draw) {
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
                 }
-            }
 
-            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw, addToCover, addToAllPositive, addToPlusMinus);
+                queuedVaryTask(originalPoints, points, next + (codeStep - 1) * step, start, max, codeStep, executor, step, numToPrint, draw, addToCover, addToAllPositive, addToPlusMinus);
+            } else {
+                queuedVaryTask(originalPoints, points, next, start, max, codeStep, executor, step, numToPrint, draw, addToCover, addToAllPositive, addToPlusMinus);
+            }
         });
 
         varyTask.setOnCancelled(cancelled -> {

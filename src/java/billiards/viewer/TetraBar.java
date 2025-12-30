@@ -9,6 +9,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javaslang.Tuple;
 import javaslang.Tuple2;
 import javaslang.Tuple3;
 import javaslang.Tuple6;
@@ -46,6 +47,10 @@ public final class TetraBar {
 
     private final CheckBox drawCheckBox = new CheckBox("Draw");
     private final CheckBox addToCoverCheckBox = new CheckBox("Add to cover");
+
+    private final TextField startTextField = new TextField();
+    private final TextField stepTextField = new TextField();
+    private final TextField endTextField = new TextField();
 
     private final CheckBox addToAllPositiveCB = new CheckBox();
     private final CheckBox addToPlusMinusCB = new CheckBox();
@@ -117,7 +122,7 @@ public final class TetraBar {
 
         Label label = new Label("Enter coordinates on each line. The x and y coordinates should be separated by a whitespace.");
         root.getChildren().addAll(
-                label, coordsTextArea, hbox, bottomHbox);
+                label, coordsTextArea, hbox, bottomHbox, getStartStepEndHBox());
         root.setSpacing(10);
         root.setPadding(new Insets(10));
 
@@ -389,5 +394,100 @@ public final class TetraBar {
 
     private int getCoordinatesListLength() {
         return coordsTextArea.getText().trim().split("\n").length;
+    }
+
+    private HBox getStartStepEndHBox() {
+        startTextField.setPromptText("Start");
+        startTextField.setPrefWidth(60);
+        stepTextField.setPromptText("Step");
+        stepTextField.setPrefWidth(60);
+        endTextField.setPromptText("End");
+        endTextField.setPrefWidth(60);
+        HBox hBox = new HBox(10, startTextField, stepTextField, endTextField);
+        return hBox;
+    }
+
+    private static void showInvalidNumberError(final String invalidNumber) {
+        final Alert alert = new Alert(AlertType.ERROR);
+
+        alert.setTitle("Invalid Number");
+        alert.setHeaderText("Invalid Number");
+        alert.setContentText(String.format("Input %s is an invalid number.", invalidNumber));
+        alert.showAndWait();
+    }
+
+    private static void showEnterLineNumberErrorAutoVary() {
+        final Alert alert = new Alert(AlertType.ERROR);
+
+        alert.setTitle("Enter Line Numbers");
+        alert.setHeaderText("Enter Line Numbers");
+        alert.setContentText("Please enter start and end line numbers for AutoPolyVary.");
+        alert.showAndWait();
+    }
+
+    private static void showStepErrorAutoVary() {
+        final Alert alert = new Alert(AlertType.ERROR);
+
+        alert.setTitle("Bad Step Value");
+        alert.setHeaderText("Bad Step Value");
+        alert.setContentText("AutoPolyVary step value must be >= 1");
+        alert.showAndWait();
+
+    }
+
+    private static void showInvalidLineRangeError(final int max) {
+        final Alert alert = new Alert(AlertType.ERROR);
+        alert.setTitle("Invalid Line Range");
+        alert.setHeaderText("Invalid Line Range");
+        alert.setContentText(String.format("Must have 1 <= Start <= End <= %d.", max));
+        alert.showAndWait();
+    }
+
+    public Tuple3<Integer, Integer, Integer> getStartStepEnd(int defaultEnd) {
+        final String lineStartText = startTextField.getText();
+        final String lineStepText = stepTextField.getText();
+        final String lineEndText = endTextField.getText();
+        // The indexes that the user sees (will be converted later)
+        int startIdxUser;
+        int stepIdxUser;
+        int endIdxUser;
+        // 2024-05-06 Fixed broken logic (Not all fields filled was not detected properly)
+        if (lineStartText.isEmpty() && lineEndText.isEmpty() && lineStepText.isEmpty()) { // All fields empty
+            startIdxUser = 1;
+            stepIdxUser = 1;
+            endIdxUser = defaultEnd;
+        } else if (lineStartText.isEmpty() || lineEndText.isEmpty() || lineStepText.isEmpty()) { // At least 1, but not all fields are empty
+            showEnterLineNumberErrorAutoVary();
+            return Tuple.of(null, null, null);
+        } else { // All fields filled
+            try {
+                startIdxUser = Integer.parseInt(lineStartText);
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineStartText);
+                return Tuple.of(null, null, null);
+            }
+            try {
+                endIdxUser = Integer.parseInt(lineEndText);
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineEndText);
+                return Tuple.of(null, null, null);
+            }
+            try {
+                stepIdxUser = Math.min(defaultEnd, Integer.parseInt(lineStepText)); // Max step is all elements
+            } catch (final NumberFormatException e) {
+                showInvalidNumberError(lineStepText);
+                return Tuple.of(null, null, null);
+            }
+            if (!(1 <= startIdxUser && startIdxUser <= endIdxUser)) {
+                showInvalidLineRangeError(defaultEnd);
+                return Tuple.of(null, null, null);
+            }
+            if(stepIdxUser < 1) {
+                showStepErrorAutoVary();
+                return Tuple.of(null, null, null);
+            }
+        }
+
+        return Tuple.of(startIdxUser, stepIdxUser, Math.min(endIdxUser, defaultEnd));
     }
 }
