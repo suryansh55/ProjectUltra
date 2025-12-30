@@ -1757,7 +1757,7 @@ public final class Viewer {
             Tuple3<Integer, Integer, Integer> startStepEnd = tetraBar.getStartStepEnd(varyParams._1.size());
 
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(varyParams._1, varyParams._2, startStepEnd._1 - 1, startStepEnd._1 - 1, startStepEnd._3 * varyParams._3, startStepEnd._2, executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6, addToAllPositive, addToPlusMinus);
+            queuedVaryTask(varyParams._1, varyParams._2, (startStepEnd._1 - 1) * varyParams._3, (startStepEnd._1 - 1) * varyParams._3, startStepEnd._3 * varyParams._3, startStepEnd._2, executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6, addToAllPositive, addToPlusMinus);
         });
 
         lineNumberTxt.setPromptText("Line");
