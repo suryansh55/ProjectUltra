@@ -555,6 +555,7 @@ public final class Viewer {
     VaryWindowL middleVaryWindow = null;
     AutoPolyVaryLoad autoPolyVaryWindow = null;
     SuperPolyVaryLoad superPolyVaryWindow = null;
+    TetraBar tetraBar = null;
 
     // Zhao Yu Li, Jul 7, 2025.
     // Pattern calculator
@@ -1748,7 +1749,15 @@ public final class Viewer {
         tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
         Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
         tetrabarButton.setOnAction(event -> {
-            TetraBar tetraBar = new TetraBar(mainWindow, this);
+            if (tetraBar == null) {
+                tetraBar = new TetraBar(mainWindow, this);
+            }
+
+            if (tetraBar.isShowing()) {
+                tetraBar.toFront();
+                return;
+            }
+
             Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams = tetraBar.getVaryParams();
 
             if (varyParams._3 == -1) return;
@@ -8075,6 +8084,8 @@ public final class Viewer {
 
             Tuple2<Double, Double> point = originalPoints.get(index / step);
             moveScreen(point._1, point._2);
+
+            tetraBar.clearRelist();
         }
 
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
@@ -8121,8 +8132,8 @@ public final class Viewer {
                 System.out.println("// " + finalMode +  " results for " + (next/step) + " - (" + point._1 + ", " + point._2 + ")");
 
                 if (index / step + 1 < originalPoints.size()) {
-                    point = originalPoints.get(index / step + 1);
-                    moveScreen(point._1, point._2);
+                    Tuple2<Double, Double> newPoint = originalPoints.get(index / step + 1);
+                    moveScreen(newPoint._1, newPoint._2);
                 }
 
                 ArrayList<Collection<ClassifiedCodeSequence>> cList = new ArrayList<>();
@@ -8139,6 +8150,7 @@ public final class Viewer {
 
                 if (cList.get(0).isEmpty()) {
                     System.out.println("// None matching...");
+                    tetraBar.appendToRelist(point);
                 } else {
                     System.out.println("// Found " + cList.get(0).size() + " matching codes.");
 

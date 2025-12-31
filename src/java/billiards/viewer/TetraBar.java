@@ -36,6 +36,7 @@ public final class TetraBar {
     private static String coordsDefault = "";
     private static String epsDefault = "0.00000001";
     private static String printCountDefault = "1";
+    private static String relist = "";
     // ------------------------------------------------------------
 
     private final TextArea coordsTextArea = new TextArea();
@@ -51,6 +52,8 @@ public final class TetraBar {
     private final TextField startTextField = new TextField();
     private final TextField stepTextField = new TextField();
     private final TextField endTextField = new TextField();
+
+    private final Button relistBtn = new Button("Relist");
 
     private final CheckBox addToAllPositiveCB = new CheckBox();
     private final CheckBox addToPlusMinusCB = new CheckBox();
@@ -125,6 +128,8 @@ public final class TetraBar {
                 label, coordsTextArea, hbox, bottomHbox, getStartStepEndHBox());
         root.setSpacing(10);
         root.setPadding(new Insets(10));
+
+        relistBtn.setOnAction(event -> printRelist());
 
         loadButton.setText("Calculate");
         loadButton.setOnAction(event -> {
@@ -403,7 +408,7 @@ public final class TetraBar {
         stepTextField.setPrefWidth(60);
         endTextField.setPromptText("End");
         endTextField.setPrefWidth(60);
-        HBox hBox = new HBox(10, startTextField, stepTextField, endTextField);
+        HBox hBox = new HBox(10, startTextField, stepTextField, endTextField, relistBtn);
         return hBox;
     }
 
@@ -489,5 +494,32 @@ public final class TetraBar {
         }
 
         return Tuple.of(startIdxUser, stepIdxUser, Math.min(endIdxUser, defaultEnd));
+    }
+
+    boolean isShowing() {
+        return this.stage.isShowing();
+    }
+
+    void toFront() {
+        this.stage.toFront();
+    }
+
+    void appendToRelist(Tuple2<Double, Double> point) {
+        if (relist.isEmpty()) {
+            relist = point._1 + " " + point._2;
+        } else {
+            relist = relist + "\n" + point._1 + " " + point._2;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
+    }
+
+    void printRelist() {
+        if (!relist.isEmpty()) {
+            System.out.println("// LiBainT/B relist:");
+            System.out.println(relist);
+        }
     }
 }
