@@ -1958,6 +1958,9 @@ public final class Viewer {
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
+                    
+                    varyWindow.clearRelist();
+                    
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor, shotExecutor, false, false);
                 }
             }
@@ -2037,6 +2040,9 @@ public final class Viewer {
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
                     final boolean firstLastSelected = middleVaryWindow.getFirstLastSelected();
+
+                    middleVaryWindow.clearRelist();
+
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor, shotExecutor, true, firstLastSelected);
                 }
             }
@@ -4471,6 +4477,14 @@ public final class Viewer {
                 if (autoCover && storage.classCodeSeq.stable) coverWindow.appendStablesInfo(getCoverCodeString(storage));
                 if (autoSmallCover && storage.classCodeSeq.stable) smallCoverWindow.appendStablesInfo(getCoverCodeString(storage));
             });
+
+            if (storages.size() == 0) {
+                if (printMid) {
+                    middleVaryWindow.appendToRelist(point);
+                } else {
+                    varyWindow.appendToRelist(point);
+                }
+            }
 
             overallProgress.increment(Math.abs(step));
 

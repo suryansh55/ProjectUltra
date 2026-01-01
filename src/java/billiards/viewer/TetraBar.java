@@ -520,6 +520,8 @@ public final class TetraBar {
         if (!relist.isEmpty()) {
             System.out.println("// LiBainT/B relist:");
             System.out.println(relist);
+        } else {
+            System.out.println("// LiBainT/B relist: (empty)");
         }
     }
 }

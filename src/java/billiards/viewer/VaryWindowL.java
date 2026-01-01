@@ -26,6 +26,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
+import javaslang.Tuple2;
 import javaslang.Tuple7;
 
 import static billiards.utils.Polygon.cleanPolygon;
@@ -85,6 +86,8 @@ public final class VaryWindowL {
     private final Viewer viewer;
     private final String windowTitle;
     private Integer lineNumber = null;
+    private Button relistButton = new Button("Relist");
+    private String relist = "";
 
     private final CheckBox autoSmallCoverBox = new CheckBox();
 
@@ -272,6 +275,10 @@ public final class VaryWindowL {
             Utils.writeToFile(varyBoundFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
         });
+
+        relistButton.setOnAction(event -> {
+            printRelist();
+        });
     }
 
     // Zhao Yu Li, Jun 29, 2025.
@@ -346,7 +353,7 @@ public final class VaryWindowL {
             moveScreenToLine(userLineNumber - 1);
         });
 
-        final HBox lineNavigateHBox = new HBox(10, backwardButton, lineNumTextField, goToLineButton, forwardButton);
+        final HBox lineNavigateHBox = new HBox(10, backwardButton, lineNumTextField, goToLineButton, forwardButton, relistButton);
 
         return new VBox(10, bottomHBox, controlHBox, lineNavigateHBox);
     }
@@ -487,5 +494,33 @@ public final class VaryWindowL {
 
     public boolean getAddToSmallCover() {
         return autoSmallCoverBox.isSelected();
+    }
+
+    void printRelist() {
+        String mode = "";
+        if (windowTitle == "varyL") {
+            mode = "VaryL";
+        } else {
+            mode = "LiMVL";
+        }
+
+        if (!relist.isEmpty()) {
+            System.out.println("// " + mode + " relist:");
+            System.out.println(relist);
+        } else {
+            System.out.println("// " + mode + " relist: (empty)");
+        }
+    }
+
+    void appendToRelist(Vector2 point) {
+        if (relist.isEmpty()) {
+            relist = point.x + " " + point.y;
+        } else {
+            relist = relist + "\n" + point.x + " " + point.y;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
     }
 }
