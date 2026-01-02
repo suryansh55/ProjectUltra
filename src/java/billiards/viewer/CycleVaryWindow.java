@@ -46,6 +46,8 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
+import afu.org.checkerframework.checker.units.qual.C;
+
 import static billiards.codeseq.CodeType.OSNO;
 import static billiards.utils.Polygon.cleanPolygon;
 import static billiards.utils.Polygon.createConvexPolygon;
@@ -66,6 +68,7 @@ public class CycleVaryWindow {
     public static Integer BoundOSNOstep = 0;
     public static Integer Reps = 1;
     public static Boolean ColorCycle = true;
+    public static Integer Cycles = 1;
     // ------------------------------------------------------------
 
     private final TextArea polygonText = new TextArea();
@@ -116,6 +119,9 @@ public class CycleVaryWindow {
 
     private final TextField changeEmptySquaresText = new TextField();
     private final TextField changeMagnificationText = new TextField();
+
+    private String relist = "";
+    private final Button relistButton = new Button("Relist");
 
     private final Viewer viewer;
 
@@ -319,7 +325,7 @@ public class CycleVaryWindow {
         Label cyclesLabel = new Label("Cycles:");
         cyclesTextfield.setPromptText("Cycles");
         cyclesTextfield.setPrefWidth(40);
-        cyclesTextfield.setText("1");
+        cyclesTextfield.setText(Cycles.toString());
 
         Label emptySquaresLabel = new Label("# of coordinates");
         emptySquaresTextfield.setPrefWidth(40);
@@ -346,6 +352,10 @@ public class CycleVaryWindow {
         root.setSpacing(10);
         root.setPadding(new Insets(10));
 
+        relistButton.setOnAction(event -> {
+            printRelist();
+        });
+
         loadButton.setText(buttonText);
         Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
         loadButton.setOnAction(event -> {
@@ -361,6 +371,7 @@ public class CycleVaryWindow {
                 BoundCSstep = Integer.parseInt(CSstepbox.getText().trim());
                 BoundOSOstep = Integer.parseInt(OSOstepbox.getText().trim());
                 BoundOSNOstep = Integer.parseInt(OSNOstepbox.getText().trim());
+                Cycles = Integer.parseInt(cyclesTextfield.getText().trim());
             } catch (NumberFormatException e) {
                 final Alert alert = new Alert(AlertType.ERROR);
                 alert.setTitle("AutoPolyVary Error");
@@ -374,6 +385,8 @@ public class CycleVaryWindow {
             final ConvexPolygon poly = createConvexPolygon(lines);
             //Utils.writeToFile(fileName, polygonString);
             Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS, BoundCSstep, BoundOSOstep, BoundOSNOstep));
+
+            clearRelist();
 
             CycleVaryFunction(poly);
 
@@ -593,7 +606,7 @@ public class CycleVaryWindow {
         endTextField.setPromptText("End");
         endTextField.setPrefWidth(60);
 
-        return new HBox(10, startTextField, stepTextField, endTextField, backwardButton, lineNumTextField, goToLineButton, forwardButton);
+        return new HBox(10, startTextField, stepTextField, endTextField, backwardButton, lineNumTextField, goToLineButton, forwardButton, relistButton);
     }
 
     /**
@@ -657,6 +670,30 @@ public class CycleVaryWindow {
 
     /**
      * <b>Zhao Yu Li</b><br>
+     * <b>Jan 02, 2026</b>
+     * <p>
+     *     Gets the <code>index</code>'th coordinate.
+     * </p>
+     * @param index The index of the coordinate to get.
+     */
+    private String[] getLine(int index) {
+        if (index < 0) {
+            showMoveScreenAlert("Line number must be a positive, non-zero integer.");
+            return null;
+        }
+
+        String[] coordinateStrings = coordinateCodeArea.getText().trim().split("\n");
+
+        if (coordinateStrings.length <= index) {
+            showMoveScreenAlert("Line number must be between 1 and " + coordinateStrings.length);
+            return null;
+        }
+
+        return coordinateStrings[index].trim().split(" ");
+    }
+
+    /**
+     * <b>Zhao Yu Li</b><br>
      * <b>Jun 29, 2025</b>
      * <p>
      *     Center the screen to the <code>index</code>'th coordinate.
@@ -664,20 +701,9 @@ public class CycleVaryWindow {
      * @param index The index of the coordinate to move to.
      */
     private void moveScreenToLine(int index) {
-        if (index < 0) {
-            showMoveScreenAlert("Line number must be a positive, non-zero integer.");
-            return;
-        }
+        String[] coordinateString = getLine(index);
 
-        String[] coordinateStrings = coordinateCodeArea.getText().trim().split("\n");
-
-        if (coordinateStrings.length <= index) {
-            showMoveScreenAlert("Line number must be between 1 and " + coordinateStrings.length);
-            return;
-        }
-
-        String[] coordinateString = coordinateStrings[index].trim().split(" ");
-
+        if (coordinateString == null) return;
         viewer.moveScreen(coordinateString[0], coordinateString[1]);
     }
 
@@ -802,10 +828,9 @@ public class CycleVaryWindow {
     }
 
     private void CycleVaryFunction(ConvexPolygon polygon) {
-        final int cycles = extractNumberFromTextField(cyclesTextfield);
         final int originalSubdivision = extractNumberFromTextField(subdivisionsTextfield);
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
-        final ProgressMultiTask cyclesProgress = new ProgressMultiTask("CycleVary Cycles %d out of %d", false, 0, cycles);
+        final ProgressMultiTask cyclesProgress = new ProgressMultiTask("CycleVary Cycles %d out of %d", false, 0, Cycles);
         final ProgressMultiTask repsProgress = new ProgressMultiTask("CycleVary Reps %d out of %d", false, 0, useRepsCheckBox.isSelected() ? Reps : 1);
         final Array<Color> cycleColors = Array.of(
                 Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA,
@@ -847,7 +872,7 @@ public class CycleVaryWindow {
                 final String cleanedTriples = cleanedTriplesPre._1;
                 final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 
-                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * cycles);
+                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * Cycles);
 
                 coordinateCodeArea.replaceText(newCoordinates);
 
@@ -856,8 +881,9 @@ public class CycleVaryWindow {
                 // Move exit check after updating the code area so we can see the coordinates of the newly found empty
                 // squares after the end of the last cycle. (Whereas before we would see the coordinates from the second
                 // last cycle.)
-                if (newVal >= Reps * cycles || newCoordinates.isEmpty()) {
+                if (newVal >= Reps * Cycles || newCoordinates.isEmpty()) {
                     if (newCoordinates.isEmpty()) System.out.println("Covered");
+                    else System.out.println("Not covered");
 
                     viewer.loadCover("cover", executor);
                     shutdown(cyclesProgress, repsProgress, executor);
@@ -992,6 +1018,10 @@ public class CycleVaryWindow {
 
         if (numGroupToPrint == null) return;
 
+        if (pointsFiltered.isEmpty()) {
+            System.out.println("// Cannot find an initial list of empty pixels.");
+        }
+
         // Create the task
         final CycleVaryTask task = new CycleVaryTask(pointsFiltered, onScreenCodes, Array.ofAll(max), viewer.pool, storageExecutor, extractNumberFromTextField(shotsText), shotExecutor, viewer.regionsImageView, viewer.map, mode, numGroupToPrint, CSCb.isSelected(), OSOCb.isSelected(), OSNOCb.isSelected());
         final ObservableList<Storage> partials = task.getPartials();
@@ -1058,6 +1088,18 @@ public class CycleVaryWindow {
             } catch (InterruptedException | ExecutionException exception) {
                 throw new RuntimeException(exception);
             }
+
+            // If this is the last rep, add coordinates with too empty pixels to relist.
+            step.ifPresent(integerSimpleObjectProperty -> {
+                if (integerSimpleObjectProperty.getValue() == Reps * Cycles - 1) {
+                    if (storages.isEmpty()) {
+                        String[] coords = getLine(currIdx);
+                        if (coords != null) {
+                            appendToRelist(coords[0], coords[1]);
+                        }
+                    }
+                }
+            });
 
             // This takes care of the very last codes completed, in case the listChangeListener doesn't catch them in time
             storages.forEach(storage -> {
@@ -1209,5 +1251,26 @@ public class CycleVaryWindow {
             throw new RuntimeException(task.getException());
         });
         drawExecutor.execute(task);
+    }
+
+    void appendToRelist(String x, String y) {
+        if (relist.isEmpty()) {
+            relist = x + " " + y;
+        } else {
+            relist = relist + "\n" + x + " " + y;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
+    }
+
+    void printRelist() {
+        if (!relist.isEmpty()) {
+            System.out.println("// LiCycle relist:");
+            System.out.println(relist);
+        } else {
+            System.out.println("// LiCycle relist: (empty)");
+        }
     }
 }

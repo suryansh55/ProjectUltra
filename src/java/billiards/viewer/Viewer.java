@@ -37,8 +37,6 @@ import billiards.cover.Triple;
 import billiards.database.*;
 import billiards.geometry.*;
 import billiards.geometry.Rectangle;
-
-import billiards.geometry.Vector2;
 import billiards.math.XYPi;
 import billiards.utils.BatchLoadStorage;
 import billiards.utils.PrintMid;
@@ -2180,11 +2178,11 @@ public final class Viewer {
 
             final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = superPolyVaryWindow.getLoad();
             if (!polyOpt.isPresent()) {
-//        		final Alert alert = new Alert(AlertType.ERROR);
-//        		alert.setTitle("AutoPolyVary");
-//        		alert.setHeaderText("Operation Aborted");
-//        		alert.setContentText("AutoPolyVary was aborted because the polygon selection window was closed.");
-//        		alert.showAndWait();
+       		// final Alert alert = new Alert(AlertType.ERROR);
+       		// alert.setTitle("AutoPolyVary");
+       		// alert.setHeaderText("Operation Aborted");
+       		// alert.setContentText("AutoPolyVary was aborted because the polygon selection window was closed.");
+       		// alert.showAndWait();
                 return;
             }
 
@@ -7469,13 +7467,18 @@ public final class Viewer {
                 throw new RuntimeException(exception);
             }
 
-            if (storages.isEmpty()) {
-                if (isSuper) {
-                    superPolyVaryWindow.appendToRelist(coords[0], coords[1]);
-                } else {
-                    autoPolyVaryWindow.appendToRelist(coords[0], coords[1]);
+            // If this is the last rep, add coordinates with too empty pixels to relist.
+            step.ifPresent(integerSimpleObjectProperty -> {
+                if (integerSimpleObjectProperty.getValue() == SuperPolyVaryLoad.Reps - 1) {
+                    if (storages.isEmpty()) {
+                        if (isSuper) {
+                            superPolyVaryWindow.appendToRelist(coords[0], coords[1]);
+                        } else {
+                            autoPolyVaryWindow.appendToRelist(coords[0], coords[1]);
+                        }
+                    }
                 }
-            }
+            });
 
             // This takes care of the very last codes completed, in case the listChangeListener doesn't catch them in time
             storages.forEach(storage -> {
@@ -7552,6 +7555,7 @@ public final class Viewer {
 
                 }
                 overallProgress.close();
+
                 // Increment for superPoly
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
             }
