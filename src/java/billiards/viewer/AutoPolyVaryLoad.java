@@ -74,6 +74,9 @@ public class AutoPolyVaryLoad {
 	private final ToggleGroup modesToggleGroup = new ToggleGroup();
 	private final TextField numToPrintTextField = new TextField();
 
+	private String relist = "";
+	private final Button relistButton = new Button("Relist");
+
 	// Zhao Yu Li, Jun 25, 2025.
 	// Two new checkboxes for adding codes to the IterateToLimitWindow Cover
 	private final CheckBox addToAllPositiveCheckbox = new CheckBox();
@@ -198,7 +201,7 @@ public class AutoPolyVaryLoad {
         controlVBox.setPadding(new Insets(0, 10, 10, 0));
         controlVBox.setAlignment(Pos.CENTER_LEFT);
 
-		final HBox controlHBox = new HBox(10, autoCoverBox, autoSmallCoverBox, addToAllPositiveCheckbox, addToPlusMinusCheckbox);
+		final HBox controlHBox = new HBox(10, autoCoverBox, autoSmallCoverBox, addToAllPositiveCheckbox, addToPlusMinusCheckbox, relistButton);
 
         bottomHBox.getChildren().addAll(maxVBox, controlVBox);
 
@@ -207,6 +210,10 @@ public class AutoPolyVaryLoad {
     	root.getChildren().addAll(instructHBox, text, bottomVBox);
     	root.setSpacing(10);
     	root.setPadding(new Insets(10));
+
+		relistButton.setOnAction(event -> {
+			printRelist();
+		});
     
     	loadButton.setText(buttonText);
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
@@ -316,4 +323,25 @@ public class AutoPolyVaryLoad {
 	public boolean getAutoSmallCover() {
 		return autoSmallCoverBox.isSelected();
 	}
+
+	void appendToRelist(String x, String y) {
+        if (relist.isEmpty()) {
+            relist = x + " " + y;
+        } else {
+            relist = relist + "\n" + x + " " + y;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
+    }
+
+    void printRelist() {
+        if (!relist.isEmpty()) {
+            System.out.println("// LiLuMaxVary relist:");
+            System.out.println(relist);
+        } else {
+            System.out.println("// LiLuMaxVary relist: (empty)");
+        }
+    }
 }

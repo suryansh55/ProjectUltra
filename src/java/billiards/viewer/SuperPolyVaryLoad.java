@@ -1,10 +1,6 @@
 package billiards.viewer;
 
-import billiards.geometry.Vector2;
-
 import javafx.scene.text.Text;
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.list.mutable.FastList;
 
 import java.util.Optional;
 
@@ -92,6 +88,9 @@ public class SuperPolyVaryLoad {
     private final Label instruct = new Label();
 	private final CheckBox magnifyCheckBox = new CheckBox();
 	private final TextField magnifyTextField = new TextField();
+
+	private String relist = "";
+	private final Button relistButton = new Button("Relist");
     
     private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
     
@@ -243,7 +242,7 @@ public class SuperPolyVaryLoad {
 
 		magnifyCheckBox.setText("Magnification:");
 
-		HBox magnifyHBox = new HBox(10, magnifyCheckBox, magnifyTextField);
+		HBox magnifyHBox = new HBox(10, magnifyCheckBox, magnifyTextField, relistButton);
 		magnifyHBox.setAlignment(Pos.CENTER_LEFT);
 
         //controlVBox.getChildren().addAll(loadHBox, overrideBox, autoCoverBox);
@@ -256,6 +255,10 @@ public class SuperPolyVaryLoad {
     	root.getChildren().addAll(instructHBox, text, bottomHBox, magnifyHBox);
     	root.setSpacing(10);
     	root.setPadding(new Insets(10));
+
+		relistButton.setOnAction(event -> {
+			printRelist();
+		});
     
     	loadButton.setText(buttonText);
     	Utils.colorButton(loadButton, Color.SKYBLUE, Color.GOLD);
@@ -327,4 +330,25 @@ public class SuperPolyVaryLoad {
 	public boolean getAutoSmallCover() {
 		return autoSmallCoverBox.isSelected();
 	}
+
+	void appendToRelist(String x, String y) {
+        if (relist.isEmpty()) {
+            relist = x + " " + y;
+        } else {
+            relist = relist + "\n" + x + " " + y;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
+    }
+
+    void printRelist() {
+        if (!relist.isEmpty()) {
+            System.out.println("// SuperLiLuVary relist:");
+            System.out.println(relist);
+        } else {
+            System.out.println("// SuperLiLuVary relist: (empty)");
+        }
+    }
 }

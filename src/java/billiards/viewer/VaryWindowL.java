@@ -26,7 +26,6 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
-import javaslang.Tuple2;
 import javaslang.Tuple7;
 
 import static billiards.utils.Polygon.cleanPolygon;
