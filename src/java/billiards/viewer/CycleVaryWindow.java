@@ -4,6 +4,7 @@ import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeType;
 import billiards.codeseq.Storage;
 import billiards.geometry.Interval;
+import billiards.geometry.Location;
 import billiards.wrapper.Wrapper;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.ListChangeListener;
@@ -45,8 +46,6 @@ import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
-
-import afu.org.checkerframework.checker.units.qual.C;
 
 import static billiards.codeseq.CodeType.OSNO;
 import static billiards.utils.Polygon.cleanPolygon;
@@ -966,13 +965,14 @@ public class CycleVaryWindow {
 
         if(autoCover) viewer.coverWindow.appendStablesInfo("// Start CycleVary");
 
-        drawCycleVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
+        drawCycleVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor, new ArrayList<>());
     }
 
     private void drawCycleVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
                                final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-                               final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor) {
+                               final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
+                               final ArrayList<Storage> previousCodes) {
         SimpleObjectProperty<Integer> stepValue = step.get();
         int cycles = stepValue.get() / Reps + 1;
         int reps = stepValue.get() % Reps + 1;
@@ -981,6 +981,90 @@ public class CycleVaryWindow {
         // Move the screen
         lineNumTextField.setText(Integer.toString(currIdx + 1));
         moveScreenToLine(currIdx);
+
+        String[] coordinate = getLine(currIdx);
+        final double rx = Math.toRadians(Double.parseDouble(coordinate[0]));
+        final double ry = Math.toRadians(Double.parseDouble(coordinate[1]));
+        
+        for (Storage storage : previousCodes) {
+            if (storage.classCodeSeq.stable) {
+                final Storage.Stable stable = (Storage.Stable) storage;
+                final Location location = stable.polygon.location(rx, ry);
+
+                if (location == Location.INSIDE) {
+                    System.out.println("// This coordinate was filled by a code from the previous coordinate.");
+                    System.out.println(Utils.standard(storage.classCodeSeq, 1));
+
+                    overallProgress.increment(Math.abs(stepIdx));
+                    // Run at the next hole
+                    if(overallProgress.isCancelled()) { // It is possible for cancel to occur before the task is created
+                        viewer.callRenderRegions();
+                        Utils.safeShutdownExecutor(storageExecutor);
+                        Utils.safeShutdownExecutor(shotExecutor);
+                        if(overrideSS) {
+                            System.out.printf("// Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                        }
+                        System.out.println("// +------------------------------ CycleVary Cancelled ------------------------------+");
+                        overallProgress.close();
+                        if(autoCover) viewer.coverWindow.show();
+                        // Propagate cancellation for Super
+                        step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
+                    } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
+                        drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, previousCodes);
+                    } else {
+                        viewer.callRenderRegions();
+                        Utils.safeShutdownExecutor(storageExecutor);
+                        Utils.safeShutdownExecutor(shotExecutor);
+
+                        if(overrideSS) {
+                            System.out.printf("// Override Side Sum maximums: CS - %d, OSO - %d, OSNO - %d%n", max[3], max[4], max[5]);
+                        }
+
+                        if(autoCover) {
+                            viewer.coverWindow.show();
+                            System.out.println("// +-------------- CycleVary finished successfully, CODES ARE IN COVER --------------+");
+                        } else {
+                            System.out.println("// +------------------------ CycleVary finished successfully ------------------------+");
+                        }
+
+                        overallProgress.close();
+
+                        // Zhao Yu Li, Jul 08, 2025.
+                        // Scale only if the user selected to scale
+                        boolean magnificationIsSelected = getMagnificationIsSelected();
+
+                        if (magnificationIsSelected) {
+                            // Zhao Yu Li, Jul 08, 2025.
+                            // Try to get the user enter scale factor
+                            double scaleFactor = getMagnification();
+
+                            // Zhao Yu Li, Jul 7, 2025.
+                            // Scale after every rep
+                            Interval oldXInterval = viewer.map.getViewRectangle().intervalX;
+                            Interval oldYInterval = viewer.map.getViewRectangle().intervalY;
+                            double oldCenterX = (oldXInterval.min + oldXInterval.max) / 2;
+                            double oldCenterY = (oldYInterval.min + oldYInterval.max) / 2;
+
+                            viewer.map.scaleBy(scaleFactor);
+
+                            Interval newXInterval = viewer.map.getViewRectangle().intervalX;
+                            Interval newYInterval = viewer.map.getViewRectangle().intervalY;
+                            double newCenterX = (newXInterval.min + newXInterval.max) / 2;
+                            double newCenterY = (newYInterval.min + newYInterval.max) / 2;
+
+                            viewer.map.translateXBy(oldCenterX - newCenterX);
+                            viewer.map.translateYBy(oldCenterY - newCenterY);
+
+                            viewer.viewRectangleBF.add(viewer.map.getViewRectangle());
+                        }
+
+                        // Increment for superPoly
+                        step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
+                    }
+                    return;
+                }
+            }
+        }
 
         final double xMin = Math.max(area.projectX().min, viewer.map.getViewRectangle().intervalX.min);
         final double xMax = Math.min(area.projectX().max, viewer.map.getViewRectangle().intervalX.max);
@@ -1149,7 +1233,7 @@ public class CycleVaryWindow {
                 // Propagate cancellation for Super
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
+                drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>(storages));
             } else {
                 viewer.callRenderRegions();
                 Utils.safeShutdownExecutor(storageExecutor);
