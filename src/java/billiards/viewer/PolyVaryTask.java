@@ -119,6 +119,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         // the previous coordinate. If yes, then we don't need to run Vary for this coordinate because a code from the
         // last coordinate fills the square.
         for(Vector2 coord: this.coordList) {
+            this.updateProgress(progress.incrementAndGet(), todo);
+
             boolean skip = false;
 
             for (Storage storage : storages) {
@@ -126,8 +128,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
                 final Location location = stable.polygon.location(coord.x, coord.y);
 
                 if (location == Location.INSIDE) {
-//                    System.out.println("Skipped because a code sequence from previous coordinate covers this coordinate.");
-//                    System.out.println(Utils.standard(storage.classCodeSeq, 1));
+                    // System.out.println("Skipped because a code sequence from previous coordinate covers this coordinate.");
+                    // System.out.println(Utils.standard(storage.classCodeSeq, 1));
 
                     skip = true;
                     break;
@@ -144,7 +146,6 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
             // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
             int color = pixelColor(coord);
-            this.updateProgress(progress.incrementAndGet(), todo);
             if(color != 0) continue; 
             try {
                 localCodes = autoCodesFiltered(coord, shotExecutor);
