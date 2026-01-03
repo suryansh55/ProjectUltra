@@ -4503,7 +4503,7 @@ public final class Viewer {
             } else if (idx + step < end) {
                 recurseDrawVaryL(points, max, codeList, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor,
                         shotExecutor, printMid, firstLast, addToAllPositive, addToPlusMinus, idx + step, step, end,
-                        storages.size() + codesFound, overallProgress, new ArrayList<>(storages));
+                        storages.size() + codesFound, overallProgress, storages.isEmpty() ? previousCodes : new ArrayList<>(storages));
             } else {
                 overallProgress.close();
 
@@ -7529,7 +7529,7 @@ public final class Viewer {
                 // Propagate cancellation for Super
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                drawAutoPolyVary(max, maxSubdivisions, autoCover, autoSmallCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>(storages), isSuper);
+                drawAutoPolyVary(max, maxSubdivisions, autoCover, autoSmallCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, storages.isEmpty() ? previousCodes : new ArrayList<>(storages), isSuper);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
                 Utils.safeShutdownExecutor(storageExecutor);
