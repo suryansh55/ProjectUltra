@@ -121,6 +121,7 @@ public class CycleVaryWindow {
 
     private String relist = "";
     private final Button relistButton = new Button("Relist");
+    private ArrayList<Storage> previousCodes = new ArrayList<>();
 
     private final Viewer viewer;
 
@@ -828,9 +829,10 @@ public class CycleVaryWindow {
 
     private void CycleVaryFunction(ConvexPolygon polygon) {
         final int originalSubdivision = extractNumberFromTextField(subdivisionsTextfield);
+        int reps = useRepsCheckBox.isSelected() ? Reps : 1;
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
         final ProgressMultiTask cyclesProgress = new ProgressMultiTask("CycleVary Cycles %d out of %d", false, 0, Cycles);
-        final ProgressMultiTask repsProgress = new ProgressMultiTask("CycleVary Reps %d out of %d", false, 0, useRepsCheckBox.isSelected() ? Reps : 1);
+        final ProgressMultiTask repsProgress = new ProgressMultiTask("CycleVary Reps %d out of %d", false, 0, reps);
         final Array<Color> cycleColors = Array.of(
                 Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA,
                 Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME,
@@ -838,6 +840,7 @@ public class CycleVaryWindow {
 
         final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
         // final double originalScale = viewer.map.getScale();
+        previousCodes.clear();
 
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
@@ -846,7 +849,7 @@ public class CycleVaryWindow {
                 return;
             }
 
-            final int rep = newVal % Reps;
+            final int rep = newVal % reps;
 
             if (newVal != 0 && rep == 0) {
                 final int empties = extractNumberFromTextField(emptySquaresTextfield);
@@ -880,7 +883,7 @@ public class CycleVaryWindow {
                 // Move exit check after updating the code area so we can see the coordinates of the newly found empty
                 // squares after the end of the last cycle. (Whereas before we would see the coordinates from the second
                 // last cycle.)
-                if (newVal >= Reps * Cycles || newCoordinates.isEmpty()) {
+                if (newVal >= reps * Cycles || newCoordinates.isEmpty()) {
                     if (newCoordinates.isEmpty()) System.out.println("Covered");
                     else System.out.println("Not covered");
 
@@ -965,18 +968,19 @@ public class CycleVaryWindow {
 
         if(autoCover) viewer.coverWindow.appendStablesInfo("// Start CycleVary");
 
-        drawCycleVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor, new ArrayList<>());
+        drawCycleVary(maxList, subdivisions, autoCover, overrideSS, startIdx, endIdx, stepIdx, area, progress, step, colorOpt, executor, storageExecutor, shotExecutor);
     }
 
     private void drawCycleVary(final int[] max, final int maxSubdivisions, final boolean autoCover, final boolean overrideSS,
                                final int currIdx, final int endIdx, final int stepIdx, final ConvexPolygon area, final ProgressMultiTask overallProgress,
                                final Optional<SimpleObjectProperty<Integer>> step, final Optional<Color> colorOpt,
-                               final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor,
-                               final ArrayList<Storage> previousCodes) {
+                               final ExecutorService drawExecutor, final ExecutorService storageExecutor, final ExecutorService shotExecutor
+    ) {
         SimpleObjectProperty<Integer> stepValue = step.get();
-        int cycles = stepValue.get() / Reps + 1;
-        int reps = stepValue.get() % Reps + 1;
-        System.out.println("\n//------------- working on cycle " + cycles + ", rep " + reps + ", point " + (currIdx + 1) + " -------------");
+        int reps = useRepsCheckBox.isSelected() ? Reps : 1;
+        int cycles = stepValue.get() / reps + 1;
+        int rep = stepValue.get() % reps + 1;
+        System.out.println("\n//------------- working on cycle " + cycles + ", rep " + rep + ", point " + (currIdx + 1) + " -------------");
 
         // Move the screen
         lineNumTextField.setText(Integer.toString(currIdx + 1));
@@ -1010,7 +1014,7 @@ public class CycleVaryWindow {
                         // Propagate cancellation for Super
                         step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
                     } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                        drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, previousCodes);
+                        drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
                     } else {
                         viewer.callRenderRegions();
                         Utils.safeShutdownExecutor(storageExecutor);
@@ -1175,7 +1179,7 @@ public class CycleVaryWindow {
 
             // If this is the last rep, add coordinates with too empty pixels to relist.
             step.ifPresent(integerSimpleObjectProperty -> {
-                if (integerSimpleObjectProperty.getValue() == Reps * Cycles - 1) {
+                if (integerSimpleObjectProperty.getValue() == reps * Cycles - 1) {
                     if (storages.isEmpty()) {
                         String[] coords = getLine(currIdx);
                         if (coords != null) {
@@ -1233,7 +1237,8 @@ public class CycleVaryWindow {
                 // Propagate cancellation for Super
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
-                drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, new ArrayList<>(storages));
+                if (!storages.isEmpty()) this.previousCodes = new ArrayList<>(storages);
+                drawCycleVary(max, maxSubdivisions, autoCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor);
             } else {
                 viewer.callRenderRegions();
                 Utils.safeShutdownExecutor(storageExecutor);
