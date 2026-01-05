@@ -2,8 +2,10 @@ package billiards.viewer;
 
 import javafx.scene.text.Text;
 
+import java.util.ArrayList;
 import java.util.Optional;
 
+import billiards.codeseq.Storage;
 import billiards.geometry.ConvexPolygon;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -91,6 +93,8 @@ public class SuperPolyVaryLoad {
 
 	private String relist = "";
 	private final Button relistButton = new Button("Relist");
+
+	public ArrayList<Storage> previousCodes = new ArrayList<>();
     
     private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
     

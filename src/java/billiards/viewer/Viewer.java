@@ -2187,6 +2187,7 @@ public final class Viewer {
             }
 
             superPolyVaryWindow.clearRelist();
+            superPolyVaryWindow.previousCodes.clear();
 
             superPolyVaryFunction(polyOpt.get(), executor);
         });
@@ -7306,7 +7307,12 @@ public final class Viewer {
         // To save time, we check if the current coordinate is inside any of the polygons formed the codes found from
         // the previous coordinate. If yes, then we don't need to run Vary for this coordinate because a code from the
         // last coordinate fills the square.
-        for (Storage storage : previousCodes) {
+        ArrayList<Storage> previousCodesLocal;
+
+        if (isSuper) previousCodesLocal = superPolyVaryWindow.previousCodes;
+        else previousCodesLocal = previousCodes;
+
+        for (Storage storage : previousCodesLocal) {
             if (storage.classCodeSeq.stable) {
                 final Storage.Stable stable = (Storage.Stable) storage;
                 final Location location = stable.polygon.location(rx, ry);
@@ -7527,6 +7533,7 @@ public final class Viewer {
                 // Propagate cancellation for Super
                 step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
             } else if((currIdx + stepIdx <= endIdx && !AutoPolyVaryLoad.Reverse) || (currIdx + stepIdx >= endIdx && AutoPolyVaryLoad.Reverse)) {
+                if (isSuper && !storages.isEmpty()) superPolyVaryWindow.previousCodes = new ArrayList<>(storages);
                 drawAutoPolyVary(max, maxSubdivisions, autoCover, autoSmallCover, overrideSS, currIdx + stepIdx, endIdx, stepIdx, area, overallProgress, step, colorOpt, drawExecutor, storageExecutor, shotExecutor, storages.isEmpty() ? previousCodes : new ArrayList<>(storages), isSuper);
             } else {
                 renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, drawExecutor);
