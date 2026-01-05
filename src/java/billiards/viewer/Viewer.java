@@ -7467,18 +7467,16 @@ public final class Viewer {
                 throw new RuntimeException(exception);
             }
 
-            // If this is the last rep, add coordinates with too empty pixels to relist.
-            step.ifPresent(integerSimpleObjectProperty -> {
-                if (integerSimpleObjectProperty.getValue() == SuperPolyVaryLoad.Reps - 1) {
-                    if (storages.isEmpty()) {
-                        if (isSuper) {
-                            superPolyVaryWindow.appendToRelist(coords[0], coords[1]);
-                        } else {
-                            autoPolyVaryWindow.appendToRelist(coords[0], coords[1]);
-                        }
+            if (isSuper) {  // SuperLiLuVary with LiLuMaxVary
+                // If this is the last rep, add coordinates with too many empty pixels to relist.
+                step.ifPresent(integerSimpleObjectProperty -> {
+                    if (integerSimpleObjectProperty.getValue() == SuperPolyVaryLoad.Reps - 1) {
+                        if (storages.isEmpty()) superPolyVaryWindow.appendToRelist(coords[0], coords[1]);
                     }
-                }
-            });
+                });
+            } else {  // LiLuMaxVary
+                if (storages.isEmpty()) autoPolyVaryWindow.appendToRelist(coords[0], coords[1]);
+            }
 
             // This takes care of the very last codes completed, in case the listChangeListener doesn't catch them in time
             storages.forEach(storage -> {
