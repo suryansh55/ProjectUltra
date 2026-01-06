@@ -1180,7 +1180,7 @@ public class CycleVaryWindow {
             // If this is the last rep, add coordinates with too empty pixels to relist.
             step.ifPresent(integerSimpleObjectProperty -> {
                 if (integerSimpleObjectProperty.getValue() == reps * Cycles - 1) {
-                    if (storages.isEmpty()) {
+                    if (storages.isEmpty() && !pointsFiltered.isEmpty()) {
                         String[] coords = getLine(currIdx);
                         if (coords != null) {
                             appendToRelist(coords[0], coords[1]);
