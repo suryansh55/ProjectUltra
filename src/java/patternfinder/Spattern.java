@@ -32,7 +32,7 @@ public class Spattern {
 		
 		final MutableIntList base = new IntArrayList();
 		for (int i = 0; i < p.size(); i++) {
-			base.add(ex.get(i) - min * 2 * Math.abs(p.get(i)));
+			base.add(ex.get(i) - min * 2 * p.get(i));
 		}
 
 		return base.toImmutable();
