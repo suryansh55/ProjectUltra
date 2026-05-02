@@ -246,9 +246,13 @@ model {
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (platform == "mac-aarch64" ) {
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system'
+                    //linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system'
+                      linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread'// removed '-lboost_system' george dec18,2025
+                
                 } else if (platform == "mac-x64" ) {
-                    linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt'
+                    //linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt'
+                      linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread'//george dec18,225 removed '-lboost_thread-mt', '-lboost_system-mt',  '-lboost_system'/
+                
                 } else if (isLinux){
                     if (ext.isBuild) {
                      linker.args '-Wl,-z,origin','-Wl,-rpath,$ORIGIN','-Wl,-rpath,$ORIGIN/backend/shared'

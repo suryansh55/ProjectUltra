@@ -25,7 +25,9 @@ using CodeNumber = int32_t;
 // what is changing if you alter the typedef. It keeps things separate.
 // There would be some cases where it would be nice to use an unsigned integer
 // (such as when doing the gradient bounds), but we can't because those are unchecked
-using Coeff16 = int16_t; // would be nice to use as coefficients
+//using Coeff16 = int16_t; // would be nice to use as coefficients
+using Coeff16 = int32_t; // would be nice to use as coefficients//jan23,2026 Shahzaib Ahmed changed the top line to this line
+// Changed the variable to a signed 32 bit integer, instead of 16, to prevent numerical overflow
 using Coeff32 = int32_t; // used for coefficients in the equations
 using Coeff64 = int64_t; // used for sums of those coefficients
 
