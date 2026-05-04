@@ -1,5 +1,6 @@
 package billiards.viewer;
 
+import java.util.Comparator;
 import java.util.HashMap;
 
 import javafx.geometry.Insets;
@@ -201,7 +202,7 @@ public class PatternCalculator {
 
 		// Build the string with the reduced number of pattern elements
 		StringBuilder reducedPatternBuilder = new StringBuilder();
-		for (int key : patternCounter.keySet().stream().sorted().mapToInt(i -> i).toArray()) {
+		for (int key : patternCounter.keySet().stream().sorted(Comparator.comparingInt(Math::abs)).mapToInt(i -> i).toArray()) {
 			for (int i = 0; i < patternCounter.get(key) / gcd; ++i) {
 				reducedPatternBuilder.append(key).append(" ");
 			}
