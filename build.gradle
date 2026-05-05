@@ -71,12 +71,15 @@ dependencies {
     implementation 'org.xerial:sqlite-jdbc:3.41.2.2'
     implementation 'net.java.dev.jna:jna:5.13.0'
     implementation 'org.fxmisc.richtext:richtextfx:0.10.4'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.2.0'
-    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.2.0'
+	testImplementation 'org.junit.jupiter:junit-jupiter:5.10.0'
 }
 
 test {
     useJUnitPlatform()
+	testLogging {
+        events "passed", "skipped", "failed"
+        showStandardStreams = true
+    }
 }
 
 compileJava {
