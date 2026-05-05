@@ -27,7 +27,7 @@ public class Spattern {
 	 * calculated base in standard form. A base is defined as the lexicographically
 	 * least code sequence that is a part of the pattern.
 	 * </p>
-	 * 
+	 * @precondition Code must be in standard form and pattern must correspond to the code
 	 * @param pattern A pattern encoded as an int list where each index corresponds
 	 *                to the index in the given code and represents the number of
 	 *                multiples of two added/subtracted from the code for each
@@ -37,14 +37,6 @@ public class Spattern {
 	 * @return Returns an immutable int list representing the base in standard form
 	 */
 	private static ImmutableIntList makeBase(ImmutableIntList pattern, ImmutableIntList code) {
-		// Pattern: [0, -1, 0, 2]
-		// Code: [1, 4, 1, 6]
-		/*
-		 * find the number of twos able to fit in first non-zero pattern index, call
-		 * this the coefficient
-		 * subtract each value of the code by the coefficient * 2 * pattern
-		 */
-
 		MutableIntList base = new IntArrayList();
 
 		int coefficient = 0;
