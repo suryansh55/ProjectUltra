@@ -1751,10 +1751,10 @@ public final class Viewer {
                 tetraBar = new TetraBar(mainWindow, this);
             }
 
-            if (tetraBar.isShowing()) {
-                tetraBar.toFront();
-                return;
-            }
+			if (tetraBar.isShowing()) {
+			             tetraBar.toFront();
+			             return;
+			}
 
             Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams = tetraBar.getVaryParams();
 

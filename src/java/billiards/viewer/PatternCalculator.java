@@ -1,5 +1,6 @@
 package billiards.viewer;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 
@@ -14,6 +15,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import patternfinder.PatUtils;
 
 /**
  * <b>Zhao Yu Li</b><br>
@@ -114,13 +116,15 @@ public class PatternCalculator {
 
 		// Take a substring to exclude the final comma
 		final String patternStr = codePattern.toString().trim().substring(0, codePattern.length() - 2);
-		final String reducedPattern = reduceToLowestTerms(patternStr);
 
+		final String reducedPattern = reduceToLowestTerms(patternStr);
+		final String reducedPatternStr = reducedPattern.trim().substring(0, reducedPattern.length() - 2);
+		
 		System.out.println("The full pattern is: ");
 		System.out.println(patternStr);
 
 		System.out.println("The pattern in lowest terms is:");
-		System.out.println(reducedPattern);
+		System.out.println(reducedPatternStr);
 	}
 
 	private static String calcSequencePattern(String string1, String string2) {
@@ -178,64 +182,44 @@ public class PatternCalculator {
 	 */
 	private static String reduceToLowestTerms(String codePattern) {
 		// Build a counter of the occurrences of each number in the code pattern
-		HashMap<Integer, Integer> patternCounter = new HashMap<>();
-		for (String patternStrElem : codePattern.split(" ")) {
-			int patternElem = Integer.parseInt(patternStrElem);
-			if (patternCounter.containsKey(patternElem)) {
-				patternCounter.put(patternElem, patternCounter.get(patternElem) + 1);
-			} else {
-				patternCounter.put(patternElem, 1);
+		ArrayList<HashMap<Integer, Integer>> subPatterns = new ArrayList<>();
+
+		String[] subSequence = codePattern.split(",");
+		for (int i = 0; i < subSequence.length; ++i) {
+			HashMap<Integer, Integer> patternCount = new HashMap<>();
+			for (String patternStrElem : subSequence[i].trim().split(" ")) {
+				int patternElem = Integer.parseInt(patternStrElem);
+				if (patternCount.containsKey(patternElem)) {
+					patternCount.put(patternElem, patternCount.get(patternElem) + 1);
+				} else {
+					patternCount.put(patternElem, 1);
+				}
 			}
+			subPatterns.add(patternCount);
 		}
 
 		// Find the greastest common divisor of all the elements in the sequence
-		int[] patternOccurences = patternCounter.values().stream().mapToInt(i -> i).toArray();
-		int gcd = patternOccurences[0];
-
-		if (patternOccurences.length >= 2) {
-			for (int i = 1; i < patternOccurences.length; ++i) {
-				gcd = gcd(gcd, patternOccurences[i]);
-				if (gcd == 1)
-					break;
-			}
+		ArrayList<Integer> patternOccurences = new ArrayList<>();
+		for (HashMap<Integer, Integer> count : subPatterns) {
+			count.values().stream().mapToInt(i -> i).forEach(i -> patternOccurences.add(i));
 		}
+
+		int gcd = PatUtils.gcd(patternOccurences.stream().mapToInt(i -> i).toArray());
 
 		// Build the string with the reduced number of pattern elements
 		StringBuilder reducedPatternBuilder = new StringBuilder();
-		for (int key : patternCounter.keySet().stream().sorted(Comparator.comparingInt(Math::abs)).mapToInt(i -> i).toArray()) {
-			for (int i = 0; i < patternCounter.get(key) / gcd; ++i) {
-				reducedPatternBuilder.append(key).append(" ");
+		for(HashMap<Integer, Integer> count : subPatterns) {
+			StringBuilder subPatternBuilder = new StringBuilder();
+			for (int key : count.keySet().stream().sorted(Comparator.comparingInt(Math::abs)).mapToInt(i -> i)
+			.toArray()) {
+				for (int i = 0; i < count.get(key) / gcd; ++i) {
+					subPatternBuilder.append(key).append(" ");
+				}
 			}
+			reducedPatternBuilder.append(subPatternBuilder.toString().trim()).append(", ");
 		}
 
 		return reducedPatternBuilder.toString();
-	}
-
-	/**
-	 * <b>Jeff Khuu</b><br>
-	 * <b>May 01, 2026</b>
-	 * <p>
-	 * Calculates and returns the greatest common divisor between two integers a and
-	 * b
-	 * using an iterative approach
-	 * </p>
-	 * 
-	 * @param a int
-	 * @param b int
-	 * @return int representing the greatest common divisor
-	 */
-	private static int gcd(int a, int b) {
-		int i = a < b ? a : b; // find the minimum of a and b
-
-		// Iterate from the smaller number to 1
-		for (; i > 1; i--) {
-			// Check if i is a divisor
-			if (a % i == 0 && b % i == 0)
-				return i;
-		}
-		// Otherwise, return 1
-		return 1;
-
 	}
 
 	private static void showAlert(String content) {
