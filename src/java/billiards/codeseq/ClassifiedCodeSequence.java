@@ -23,7 +23,7 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
     public final boolean stable;
     public final String oddEvenPattern;
 
-    private ClassifiedCodeSequence(final CodeSequence codeSequence) {
+    public ClassifiedCodeSequence(final CodeSequence codeSequence) {
         this.codeSequence = codeSequence;
         this.codeLength = codeSequence.codeNumbers.size();
         this.codeSum = calculateCodeSum(codeSequence.codeNumbers);

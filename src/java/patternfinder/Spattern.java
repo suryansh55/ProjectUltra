@@ -1,15 +1,17 @@
 package patternfinder;
 
-import java.util.Arrays;
-import java.util.stream.IntStream;
+import java.util.Optional;
 
 import org.eclipse.collections.api.list.primitive.ImmutableIntList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
+import billiards.codeseq.CodeSequence;
+import billiards.codeseq.InvalidCodeSequence;
 
 public class Spattern {
 	final private ImmutableIntList pat;
 	final private ImmutableIntList base;
+	final private CodeSequence baseCode;
 
 	public Spattern(ImmutableIntList pat, ImmutableIntList ex) {
 		// if (pat.max() == 0) {
@@ -17,17 +19,21 @@ public class Spattern {
 		// }
 		this.pat = pat;
 		this.base = makeBase(pat, ex);
+		this.baseCode = CodeSequence.create(this.base).get();
 	}
 
 	/**
 	 * <b>Jeff Khuu</b><br>
 	 * <b>May 03, 2026 (Refactored)</b>
 	 * <p>
-	 * <i>makeBase</i> takes a pattern and sequence code in standard form and returns the
-	 * calculated base in standard form. A base is defined as the lexicographically
-	 * least code sequence that is a part of the pattern.
+	 * <i>makeBase</i> takes a pattern and sequence code in standard form and
+	 * returns the calculated base possibly not in standard form. A base is defined
+	 * as the lexicographically least standard code sequence that is a part of the
+	 * pattern.
 	 * </p>
-	 * @precondition Code must be in standard form and pattern must correspond to the code
+	 * 
+	 * @precondition Code must be in standard form and pattern must correspond to
+	 *               the code
 	 * @param pattern A pattern encoded as an int list where each index corresponds
 	 *                to the index in the given code and represents the number of
 	 *                multiples of two added/subtracted from the code for each
@@ -39,21 +45,39 @@ public class Spattern {
 	private static ImmutableIntList makeBase(ImmutableIntList pattern, ImmutableIntList code) {
 		MutableIntList base = new IntArrayList();
 
-		int coefficient = 0;
+		// Find all coefficients - a coefficient is the number of multiples of twos that
+		// result in a non-zero and non-negative pattern
+		MutableIntList coefficients = new IntArrayList();
 		for (int i = 0; i < pattern.size(); ++i) {
 			if (pattern.get(i) == 0)
 				continue;
-			coefficient = code.get(i) / (pattern.get(i) * 2);
+			int coefficient = code.get(i) / (pattern.get(i) * 2);
+			coefficient = coefficient < 0 ? coefficient + 1 : coefficient - 1;
+			coefficients.add(coefficient);
+		}
 
-			if (code.get(i) - coefficient * 2 * pattern.get(i) == 0) {
-				coefficient = coefficient < 0 ? coefficient + 1 : coefficient - 1;
+		// Iterate through the coefficients, calculate the corresponding
+		// base, check whether the code sequence it generates is valid and then compare
+		// with our last known "good" base to see if its lexigraphically lesser
+		for (int i = 0; i < coefficients.size(); ++i) {
+			int k = coefficients.get(i);
+			MutableIntList potentialBase = new IntArrayList();
+			for (int j = 0; j < code.size(); ++j) {
+				potentialBase.add(code.get(j) - pattern.get(j) * k * 2);
 			}
 
-			break;
+			Optional<InvalidCodeSequence> invalid = CodeSequence.validate(potentialBase);
+			if (invalid.isPresent()) {
+				continue; // If the code sequeunce is invalid (i.e present in the option)
+			}
+
+			if (base.size() == 0) {
+				base = potentialBase;
+				continue;
+			}
+			base = PatUtils.findLeastCode(base, potentialBase).toList();
 		}
-		for (int i = 0; i < code.size(); ++i) {
-			base.add(code.get(i) - coefficient * 2 * pattern.get(i));
-		}
+
 		return base.toImmutable();
 	}
 
@@ -75,6 +99,10 @@ public class Spattern {
 
 	public ImmutableIntList getBase() {
 		return base;
+	}
+
+	public CodeSequence getBaseCode() {
+		return baseCode;
 	}
 
 	public int getN(final Single trip) {

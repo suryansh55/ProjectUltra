@@ -1,6 +1,7 @@
 package patternfinder;
 
 import org.eclipse.collections.api.list.primitive.ImmutableIntList;
+import org.eclipse.collections.api.list.primitive.IntList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
@@ -10,6 +11,7 @@ import java.util.Optional;
 import java.util.regex.Pattern;
 
 import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeSequence;
 import billiards.viewer.Utils;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
@@ -69,10 +71,10 @@ public class PatUtils {
 	 * </p>
 	 * 
 	 * @param l Array of Integers
-	 * @return Returns the greatest non-negative common divisor. Guaranteed to be
+	 * @return Returns the greatest non-negative common divisor. Guaranteed to b
 	 *         greater than or equal to 1.
 	 */
-	public static ImmutableIntList listGCD(int[] l) {
+	public static ImmutableIntList reduce(int[] l) {
 		// Find the greatest common divisor between all non-zero values in the list
 		// Find the non-zero elements of l
 		int[] filtered = Arrays.stream(l).filter(n -> n != 0).map(n -> Math.abs(n)).toArray();
@@ -138,8 +140,112 @@ public class PatUtils {
 
 	}
 
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>May 05, 2026</b>
+	 * <p>
+	 * <i>absMin</i> finds the minimum of the absolute value of the elements of a
+	 * sequence. In other terms finds the value closest to zero.
+	 * </p>
+	 * 
+	 * @param l MutableIntList
+	 * @return The element from l with the least absolute value as its original
+	 *         value
+	 * 
+	 * @example absMin([-5, -2, 1, 3]) -> 1
+	 * @example absMin([-5, -2, -1, 3]) -> -1
+	 */
+	public static int absMin(final IntList l) {
+		int min = l.get(0);
+		for (int i = 1; i < l.size(); i++) {
+			if (Math.abs(l.get(i)) < Math.abs(min))
+				min = l.get(i);
+		}
+		return min;
+	}
+
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>May 05, 2026</b>
+	 * <p>
+	 * <i>absMax</i> finds the maximum of the absolute value of the elements of a
+	 * sequence. In other terms finds the value closest to zero.
+	 * </p>
+	 * 
+	 * @param l MutableIntList
+	 * @return The element from l with the greatest absolute value as its original
+	 *         value
+	 * 
+	 * @example absMax([-5, -2, 1, 3]) -> -5
+	 * @example absMax([-2, -1, 3]) -> 3
+	 */
+	public static int absMax(final IntList l) {
+		int max = l.get(0);
+		for (int i = 1; i < l.size(); i++) {
+			if (Math.abs(l.get(i)) > Math.abs(max))
+				max = l.get(i);
+		}
+		return max;
+	}
+
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>May 06, 2026</b>
+	 * <p>
+	 * <i>findLeastBase</i> finds the lexigraphically lesser of two code sequences
+	 * in the form they are given.
+	 * </p>
+	 * 
+	 * @preconditions code1.size() == code2.size()
+	 * @param code1 IntList representing a code sequence of n numbers
+	 * @param code2 IntList representing a code sequence of n numbers
+	 * @return Returns the lesser of the two given bases or the first base if
+	 *         they're the same
+	 * 
+	 * @example findLeastCode([1, 2, 1, 4], [1, 8, 1, 16]) -> [1, 2, 1, 4]
+	 * @example findLeastCode([1, 6, 1, 6], [1, 4, 1, 8]) -> [1, 4, 1, 8]
+	 */
+	public static IntList findLeastCode(final IntList code1, final IntList code2) {
+		for (int i = 0; i < code1.size(); ++i) {
+			if (code1.get(i) < code2.get(i))
+				return code1;
+			else if (code2.get(i) < code1.get(i))
+				return code2;
+		}
+		return code1; // Same base
+	}
+
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>May 06, 2026</b>
+	 * <p>
+	 * <i>diff</i> finds the difference between the code numbers of two given code
+	 * sequences. The two code sequences MUST be the same length.
+	 * </p>
+	 * 
+	 * @param left  Left hand code sequeunce
+	 * @param right Right hand code sequence
+	 * @return A list where each index corresponds to the index of the given code
+	 *         sequences
+	 */
+	public static IntList diff(CodeSequence left, CodeSequence right) {
+		IntArrayList diff = new IntArrayList();
+
+		IntList leftSeq = left.codeNumbers;
+		IntList rightSeq = right.codeNumbers;
+
+		assert leftSeq.size() == rightSeq.size();
+
+		for (int i = 0; i < leftSeq.size(); ++i) {
+			diff.add(leftSeq.get(i) - rightSeq.get(i));
+		}
+
+		return diff;
+	}
+
 	public static String printAndTestTrip(final Triple trip, final ConnectionPool pool) {
 		String result = "";
+
 		for (int i = 0; i < 3; i++) {
 			if (!PatUtils.emptyVerify(trip.getCode(i), pool)) {
 				result += "empty " + PatUtils.printImm(trip.getCode(i));

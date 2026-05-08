@@ -13,31 +13,6 @@ public class Tpattern implements Comparable<Tpattern> {
 	}
 
 	/**
-	 * <b>Jeff Khuu</b><br>
-	 * <b>May 05, 2026</b>
-	 * <p>
-	 * <i>absMin</i> finds the minimum of the absolute value of the elements of a
-	 * sequence.
-	 * In other terms finds the value closest to zero.
-	 * </p>
-	 * 
-	 * @param l MutableIntList
-	 * @return The element from l with the least absolute value as its original
-	 *         value
-	 * 
-	 * @example absMin([-5, -2, 1, 3]) -> 1
-	 * @example absMin([-5, -2, -1, 3]) -> -1
-	 */
-	private static int absMin(MutableIntList l) {
-		int min = l.get(0);
-		for (int i = 1; i < l.size(); i++) {
-			if (Math.abs(l.get(i)) < Math.abs(min))
-				min = l.get(i);
-		}
-		return min;
-	}
-
-	/**
 	 * <i>makeBase</i> takes a pattern and sequence code in standard form and
 	 * returns the calculated base in standard form. A base is defined as the
 	 * lexicographically least code sequence that is a part of the pattern.
@@ -58,14 +33,11 @@ public class Tpattern implements Comparable<Tpattern> {
 					coef = coef < 0 ? coef + 1 : coef - 1;
 				}
 				coefs.add(coef);
-				break;
 			}
 		}
 
-		System.err.printf("Coefs: %s\n", coefs);
-
 		coefs.forEach(i -> Math.abs(i));
-		int min = absMin(coefs);
+		int min = PatUtils.absMin(coefs);
 
 		final MutableIntList[] muteBase = { new IntArrayList(), new IntArrayList(), new IntArrayList() };
 		for (int i = 0; i < 3; i++) {

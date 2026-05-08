@@ -903,6 +903,6 @@ public class PatternFinder {
 			result[i] = diff / 2;
 		}
 
-		return Optional.of(new Spattern(PatUtils.listGCD(result), line1));
+		return Optional.of(new Spattern(PatUtils.reduce(result), line1));
 	}
 }

@@ -5,6 +5,8 @@ import javaslang.Tuple2;
 import javaslang.collection.Array;
 
 import org.eclipse.collections.api.list.primitive.IntList;
+import org.eclipse.collections.api.list.primitive.MutableIntList;
+import org.eclipse.collections.impl.factory.primitive.IntLists;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import org.junit.jupiter.api.Test;
@@ -94,5 +96,15 @@ public final class CodeSequenceTest {
             final CodeSequence codeSeq = CodeSequence.create(pair._1).get();
             Assertions.assertEquals(codeSeq.codeNumbers, pair._2);
         }
+    }
+
+    @Test
+    void testComparison() {
+		MutableIntList codeNums1 = IntLists.mutable.with(1, 2, 1, 4);
+		MutableIntList codeNums2 = IntLists.mutable.with(1, 4, 1, 6);
+		CodeSequence code1 = CodeSequence.create(codeNums1).get();
+		CodeSequence code2 = CodeSequence.create(codeNums2).get();
+
+		Assertions.assertEquals(code1.compareTo(code2) < 0, true);
     }
 }
