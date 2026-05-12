@@ -3,7 +3,14 @@ package billiards.viewer;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.Optional;
 
+import billiards.codeseq.CodeSequence;
+import billiards.pattern.InvalidSinglePattern;
+import billiards.pattern.InvalidTriplePattern;
+import billiards.pattern.SinglePattern;
+import billiards.pattern.Triple;
+import billiards.pattern.TriplePattern;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -15,6 +22,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
+import javaslang.control.Either;
 import patternfinder.PatUtils;
 
 /**
@@ -94,8 +102,6 @@ public class PatternCalculator {
 			return;
 		}
 
-		StringBuilder codePattern = new StringBuilder();
-
 		final String[] subSequence1 = string1.split(",");
 		final String[] subSequence2 = string2.split(",");
 
@@ -107,119 +113,41 @@ public class PatternCalculator {
 		if (subSequence1.length != 1 && subSequence1.length != 3) {
 			System.out.println(
 					"Unorthodox number of subsequences. i.e. The code sequences are neither a single nor a triple.");
+			return;
 		}
 
-		for (int i = 0; i < subSequence1.length; i++) {
-			final String subPattern = calcSequencePattern(subSequence1[i].trim(), subSequence2[i].trim());
-			codePattern.append(subPattern).append(", ");
-		}
-
-		// Take a substring to exclude the final comma
-		final String patternStr = codePattern.toString().trim().substring(0, codePattern.length() - 2);
-
-		final String reducedPattern = reduceToLowestTerms(patternStr);
-		final String reducedPatternStr = reducedPattern.trim().substring(0, reducedPattern.length() - 2);
-		
-		System.out.println("The full pattern is: ");
-		System.out.println(patternStr);
-
-		System.out.println("The pattern in lowest terms is:");
-		System.out.println(reducedPatternStr);
-	}
-
-	private static String calcSequencePattern(String string1, String string2) {
-		final String[] code1 = string1.split(" ");
-		final String[] code2 = string2.split(" ");
-
-		if (code1.length != code2.length)
-			showAlert("The length of the code sequences do not match.");
-
-		StringBuilder codePattern = new StringBuilder();
-
-		for (int i = 0; i < code1.length; i++) {
-			int code1Val;
-			int code2Val;
-			try {
-				code1Val = Integer.parseInt(code1[i]);
-				code2Val = Integer.parseInt(code2[i]);
-			} catch (Exception e) {
-				showAlert("An exception occurred while converting code sequence at index " + (i + 1)
-						+ " into integers: " + e);
-				return "";
+		if (subSequence1.length == 1) { // Case if the pattern is a single
+			Optional<CodeSequence> code1 = Utils.strToCodeSequence(subSequence1[0]);
+			Optional<CodeSequence> code2 = Utils.strToCodeSequence(subSequence2[0]);
+			if (!code1.isPresent() || !code2.isPresent()) {
+				showAlert("Failed to parse a code sequence from the given patterns.");
+				return;
 			}
 
-			final int difference = code2Val - code1Val;
+			Either<InvalidSinglePattern, SinglePattern> singlePattern = SinglePattern.create(code1.get(), code2.get());
+			if (singlePattern.isLeft()) {
+				showAlert("Error creating pattern: " + singlePattern.getLeft().getErrorMessage());
+				return;
+			}
+			System.out.printf("The full pattern is:\n%s\n", singlePattern.get().toStringFull());
+			System.out.printf("The reduced pattern is:\n%s\n", singlePattern.get());
+		} else { // Case if the pattern is a triple
+			Optional<Triple> triple1 = Utils.strToTriple(subSequence1);
+			Optional<Triple> triple2 = Utils.strToTriple(subSequence2);
 
-			if (difference % 2 != 0) {
-				showAlert("Difference between the code value at index " + (i + 1) + " is not a multiple of 2.");
-				return "";
+			if(!triple1.isPresent() || !triple2.isPresent()) {
+				showAlert("Failed to parse a triple from the given patterns");
+				return;
 			}
 
-			if (difference > 0) {
-				for (int k = 0; k < difference / 2; k++) {
-					codePattern.append((i + 1)).append(" ");
-				}
-			} else if (difference < 0) {
-				for (int k = 0; k < -difference / 2; k++) {
-					codePattern.append(-(i + 1)).append(" ");
-				}
+			Either<InvalidTriplePattern, TriplePattern> triplePattern = TriplePattern.create(triple1.get(), triple2.get());
+			if(triplePattern.isLeft()) {
+				showAlert("Error creating pattern: " + triplePattern.getLeft().getErrorMessage());
+				return;
 			}
+			System.out.printf("The full pattern is:\n%s\n", triplePattern.get().toStringFull());
+			System.out.printf("The reduced pattern is:\n%s\n", triplePattern.get());
 		}
-
-		return codePattern.toString().trim();
-	}
-
-	/**
-	 * <b>Jeff Khuu</b><br>
-	 * <b>May 01, 2026</b>
-	 * <p>
-	 * Reduces a given code pattern into "lowest terms". A code pattern is in lowest
-	 * terms if the occurrences of each addition of two have no common factors
-	 * </p>
-	 * 
-	 * @param codePattern String representing a valid code pattern
-	 * @return String representing the given code pattern in "lowest terms"
-	 */
-	private static String reduceToLowestTerms(String codePattern) {
-		// Build a counter of the occurrences of each number in the code pattern
-		ArrayList<HashMap<Integer, Integer>> subPatterns = new ArrayList<>();
-
-		String[] subSequence = codePattern.split(",");
-		for (int i = 0; i < subSequence.length; ++i) {
-			HashMap<Integer, Integer> patternCount = new HashMap<>();
-			for (String patternStrElem : subSequence[i].trim().split(" ")) {
-				int patternElem = Integer.parseInt(patternStrElem);
-				if (patternCount.containsKey(patternElem)) {
-					patternCount.put(patternElem, patternCount.get(patternElem) + 1);
-				} else {
-					patternCount.put(patternElem, 1);
-				}
-			}
-			subPatterns.add(patternCount);
-		}
-
-		// Find the greastest common divisor of all the elements in the sequence
-		ArrayList<Integer> patternOccurences = new ArrayList<>();
-		for (HashMap<Integer, Integer> count : subPatterns) {
-			count.values().stream().mapToInt(i -> i).forEach(i -> patternOccurences.add(i));
-		}
-
-		int gcd = PatUtils.gcd(patternOccurences.stream().mapToInt(i -> i).toArray());
-
-		// Build the string with the reduced number of pattern elements
-		StringBuilder reducedPatternBuilder = new StringBuilder();
-		for(HashMap<Integer, Integer> count : subPatterns) {
-			StringBuilder subPatternBuilder = new StringBuilder();
-			for (int key : count.keySet().stream().sorted(Comparator.comparingInt(Math::abs)).mapToInt(i -> i)
-			.toArray()) {
-				for (int i = 0; i < count.get(key) / gcd; ++i) {
-					subPatternBuilder.append(key).append(" ");
-				}
-			}
-			reducedPatternBuilder.append(subPatternBuilder.toString().trim()).append(", ");
-		}
-
-		return reducedPatternBuilder.toString();
 	}
 
 	private static void showAlert(String content) {

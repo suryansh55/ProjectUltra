@@ -42,6 +42,7 @@ public class SinglePattern {
 	 * sequences.
 	 * Creation fails when one of the following is true:
 	 * (1) The given code sequences are not the same length
+	 * (2) The given code sequences are exactly the same
 	 * 
 	 * @param code1 A legal code sequence in standard form
 	 * @param code2 A legal code sequence in standard form
@@ -49,6 +50,9 @@ public class SinglePattern {
 	public static Either<InvalidSinglePattern, SinglePattern> create(CodeSequence code1, CodeSequence code2) {
 		if (code1.codeNumbers.size() != code2.codeNumbers.size()) {
 			return Either.left(InvalidSinglePattern.MISMATCHED_CODE_LENGTHS);
+		}
+		if(code1.equals(code2)) {
+			return Either.left(InvalidSinglePattern.NON_DISTINCT_CODES);
 		}
 
 		ImmutableIntList diff = PatUtils.diff(code2, code1).toImmutable();
