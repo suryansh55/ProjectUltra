@@ -1,7 +1,11 @@
+plugins {
+	id 'com.github.johnrengelman.shadow' version '7.1.2'
+}
 apply plugin: 'application'
 apply plugin: 'cpp'
 apply plugin: TestingModelBasePlugin
 //apply plugin: 'findbugs'
+
 
 // At top level of build.gradle
 def currentOs = org.gradle.internal.os.OperatingSystem.current()
@@ -203,6 +207,38 @@ applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+// Task to create a jar containing a command line program for vary4
+// See the Main class (Vary4Cmd) for more information
+tasks.register('vary4Jar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+	archiveFileName = 'vary4cmd.jar'
+
+    manifest {
+        attributes 'Main-Class': 'billiards.viewer.Vary4Cmd'
+    }
+
+    from sourceSets.main.output
+    configurations = [project.configurations.runtimeClasspath]
+	exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
+
+// Task to create a jar containing a command line program for vary3
+// See the Main class (Vary3Cmd) for more information
+tasks.register('vary3Jar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+	archiveFileName = 'vary3cmd.jar'
+
+    manifest {
+        attributes 'Main-Class': 'billiards.viewer.Vary3Cmd'
+    }
+
+    from sourceSets.main.output
+    configurations = [project.configurations.runtimeClasspath]
+	exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
 
 
 model {

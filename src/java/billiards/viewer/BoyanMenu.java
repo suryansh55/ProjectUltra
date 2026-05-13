@@ -920,7 +920,7 @@ public class BoyanMenu {
     }
 
     // boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
-    private static MutableSet<ClassifiedCodeSequence> findCodes4(
+    public static MutableSet<ClassifiedCodeSequence> findCodes4(
         final double xCoord, final double yCoord, final int min, final int max, final double shots,
         final boolean[] types) {
 
