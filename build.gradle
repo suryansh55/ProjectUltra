@@ -187,7 +187,7 @@ jar {
             it.isDirectory() ? it : zipTree(it)
         }
     }
-exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+	exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
     manifest.attributes 'Main-Class': 'billiards.viewer.Main'
 }
 
