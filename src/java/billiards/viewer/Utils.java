@@ -51,8 +51,11 @@ import javaslang.control.Either;
 // add option to draw picture when searching
 
 public final class Utils {
+	// AllianceCan HPC Clusters use the environment variable SLURM_CPUS_PER_TASK to find the number of threads
+	private static final Optional<String> slurmThreads = Optional.ofNullable(System.getenv("SLURM_CPUS_PER_TASK"));
 	// TODO find the best value for this
-	public static final int numThreads = (int) (Runtime.getRuntime().availableProcessors() * 0.5);
+	public static final int numThreads = slurmThreads.isPresent() ? Integer.parseInt(slurmThreads.get())
+			: (int) (Runtime.getRuntime().availableProcessors() * 0.5);
 
 	public static Optional<ImmutableIntList> splitString(String textCodeSeq) {
 

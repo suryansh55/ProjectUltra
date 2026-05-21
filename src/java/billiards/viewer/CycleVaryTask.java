@@ -7,6 +7,7 @@ import billiards.database.Database;
 import billiards.geometry.Location;
 import billiards.geometry.Vector2;
 import billiards.utils.PrintMid;
+import billiards.vary.Vary;
 import billiards.wrapper.ConnectionPool;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -396,9 +397,9 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
         final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
         if(CSmaxSS > 0) {
-            unfilteredCodesFound.addAll(BoyanMenu.findCodes3(point.x, point.y, CSmin, CSmaxSS + CSstep, shots, onlyCS, exe));
+            unfilteredCodesFound.addAll(Vary.findCodes3(point.x, point.y, CSmin, CSmaxSS + CSstep, shots, onlyCS, exe));
         }
-        unfilteredCodesFound.addAll(BoyanMenu.findCodes3(point.x, point.y, OSmin, Math.max(OSOmaxSS, OSNOmaxSS) + OSstep, shots, noCS, exe));
+        unfilteredCodesFound.addAll(Vary.findCodes3(point.x, point.y, OSmin, Math.max(OSOmaxSS, OSNOmaxSS) + OSstep, shots, noCS, exe));
 
         for(final ClassifiedCodeSequence code: unfilteredCodesFound) { // Filter out overly large OSO/OSNO
             final CodeType type = code.codeType;

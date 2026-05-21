@@ -9,7 +9,7 @@ import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.geometry.ConvexPolygon;
 import billiards.geometry.Location;
 import billiards.math.CoverSquare;
-import billiards.viewer.BoyanMenu;
+import billiards.vary.Vary;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 
@@ -45,7 +45,7 @@ public class AutoVary {
         final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
         if (polygon.location(cnt[0], cnt[1]).equals(Location.INSIDE)) {
             for (int i = 0; i < shots; i++) {
-                codes.addAll(BoyanMenu.findCodes3(cnt[0], cnt[1], movesMin, movesMax, i, types, executor));
+                codes.addAll(Vary.findCodes3(cnt[0], cnt[1], movesMin, movesMax, i, types, executor));
             }
 
             covered = Wrapper.coverWrapper(square.toString(), codes.toString(), "", 0, 1, 0, true, pool).isEmpty();

@@ -1,19 +1,15 @@
 package billiards.viewer;
 
-import java.util.concurrent.ExecutionException;
+import java.util.ArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
-import org.apache.commons.math3.util.FastMath;
-import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.MutableSet;
-import org.eclipse.collections.impl.list.mutable.FastList;
-import org.eclipse.collections.impl.set.mutable.UnifiedSet;
+import org.eclipse.collections.api.set.sorted.MutableSortedSet;
+import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 
+import billiards.vary.Vary;
 import billiards.codeseq.ClassifiedCodeSequence;
-import billiards.vary.VaryCS;
-import billiards.vary.Vary3;
 
 public final class Vary3Cmd {
 
@@ -64,14 +60,22 @@ public final class Vary3Cmd {
 			checked(types[4])
 		);
 		int count = 0;
+		System.out.printf("// Found %d threads\n", Utils.numThreads);
 		final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-		for (ClassifiedCodeSequence code : findCodes3(x, y, min, max, shots, types, executor)) {
+		MutableSet<ClassifiedCodeSequence> allCodes = Vary.findCodes3(x, y, min, max, shots, types, executor);
+		MutableSortedSet<ClassifiedCodeSequence> sortedCodes = new TreeSortedSet<>();
+		sortedCodes.addAll(allCodes);
+		ArrayList<ClassifiedCodeSequence> filteredCodes = Vary.filterCodes(new ArrayList<>(sortedCodes));
+
+		for (ClassifiedCodeSequence code : filteredCodes) {
 			++count;
 			final String codeString = Utils.standard(code, count);
 			System.out.println(codeString);
 		}
+
 		executor.shutdown();
 		final long endTime = System.currentTimeMillis();
+		System.out.printf("// Found %d codes, %d codes after filtering\n", allCodes.size(), count);
 		System.out.println("// Time: " + (endTime - startTime));
 		System.out.println("// Time: " + Utils.timeConvert(endTime - startTime) + "\n");
 
@@ -80,86 +84,4 @@ public final class Vary3Cmd {
 	private static String checked(boolean b){
 		return b ? "y" : "n";
 	}
-
-    public static MutableSet<ClassifiedCodeSequence> findCodes3(
-        final double xCoord, final double yCoord, final int min, final int max, final double shots,
-        final boolean[] types, final ExecutorService executor) {
-
-        final double xRad = FastMath.toRadians(xCoord);
-        final double yRad = FastMath.toRadians(yCoord);
-
-        final double base = Math.sin(xRad + yRad);
-
-        final MutableSet<ClassifiedCodeSequence> codeSeqs = new UnifiedSet<>();
-
-        final MutableList<ClassifiedCodeSequence> futures = new FastList<>();
-        final MutableList<Future<MutableList<ClassifiedCodeSequence>>> futures2 = new FastList<>();
-
-        final double increment = base / (shots + 1);
-
-        StringBuilder selectedTypes = new StringBuilder();
-
-        //transfer this to backend checking if right type
-        if (types[0] ) selectedTypes.append("OSO ");
-        if (types[1] ) selectedTypes.append("CS ");
-        if (types[2] ) selectedTypes.append("CNS ");
-        if (types[3] ) selectedTypes.append("ONS ");
-        if (types[4] ) selectedTypes.append("OSNO ");
-
-        String reqTypes = selectedTypes.toString().trim();
-        //run the CS-specific code
-        if (types[1]) {
-        	double xAngle = Double.valueOf(xRad);
-        	double yAngle = Double.valueOf(yRad);
-
-        	for (int i = 0; i < 3; i++) {
-
-        		final Double finX = xAngle;
-        		final Double finY = yAngle;
-
-                final Future<MutableList<ClassifiedCodeSequence>> future =
-	                executor.submit(() -> VaryCS.fireAway(min, max, finX, finY,reqTypes));
-	            // final Future<MutableList<ClassifiedCodeSequence>> future =
-	            //     executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
-
-
-                try {
-                    MutableList<ClassifiedCodeSequence> result = future.get();
-                    futures.addAll(result);
-                } catch (InterruptedException | ExecutionException e) {
-                    throw new RuntimeException(e);  // or handle it however you need
-                }
-
-	            double zAngle = Double.valueOf(Math.PI - xAngle - yAngle);
-	            xAngle = Double.valueOf(yAngle);
-	        	yAngle = Double.valueOf(zAngle);
-	        }
-        }
-        //run the non-CS-specific code
-        if(types[0] || types[2] || types[3] || types[4]) {
-
-	        for (int count = 1; count <= shots; ++count) {
-
-	            final double pos = count * increment;
-
-	            final Future<MutableList<ClassifiedCodeSequence>> future =
-	            		executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos,reqTypes));
-                        //executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
-
-                futures2.add(future);
-	        }
-            for (Future<MutableList<ClassifiedCodeSequence>> future : futures2) {
-                try {
-                    MutableList<ClassifiedCodeSequence> partial = future.get(); // get the actual list
-                    futures.addAll(partial); // now addAll on MutableList, not Future
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace(); // handle exceptions as needed
-                }
-            }
-        }
-
-        codeSeqs.addAll(futures);
-
-        return codeSeqs;
-    }
 }

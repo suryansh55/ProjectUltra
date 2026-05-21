@@ -3,6 +3,7 @@ package billiards.viewer;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import billiards.vary.Vary;
 import billiards.codeseq.ClassifiedCodeSequence;
 
 /**
@@ -36,14 +37,12 @@ class Vary4Cmd {
 		final long startTime = System.currentTimeMillis();// george june 12,2019 added && !CS2cb.isSelected() &&
 															// !CNS2cb.isSelected() && !ONS2cb.isSelected() &&
 															// !OSNO2cb.isSelected() && !OSO2cb.isSelected()
-		final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 		int count = 0;
-		for (ClassifiedCodeSequence code : BoyanMenu.findCodes4(x, y, min, max, 0, types)) {
+		for (ClassifiedCodeSequence code : Vary.findCodes4(x, y, min, max, 0, types)) {
 			++count;
 			final String codeString = Utils.standard(code, count);
 			System.out.println(codeString);
 		}
-		executor.shutdown();
 		final long endTime = System.currentTimeMillis();
 		System.out.println("// Time: " + (endTime - startTime));
 		System.out.println("// Time: " + Utils.timeConvert(endTime - startTime) + "\n");
