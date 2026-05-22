@@ -18,13 +18,13 @@ public class AutoVary {
     final int movesMin;
     final int movesMax;
     final int shots;
-    final boolean[] types;
+    final CodeTypeSet types;
     final int maxDepth;
     final ConvexPolygon polygon;
     final ConnectionPool pool;
     final ExecutorService executor;
 
-    public AutoVary(final int min, final int max, final int numShots, boolean[] type, final int depth,
+    public AutoVary(final int min, final int max, final int numShots, CodeTypeSet type, final int depth,
             final ConvexPolygon poly, final ConnectionPool cPool, final ExecutorService exe) {
         movesMin = min;
         movesMax = max;

@@ -19,6 +19,7 @@ import org.eclipse.collections.impl.set.mutable.UnifiedSet;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeType;
+import billiards.geometry.Vector2;
 import billiards.viewer.Utils;
 
 public class Vary {
@@ -32,7 +33,7 @@ public class Vary {
 	 */
 	public static MutableSet<ClassifiedCodeSequence> findCodes3(
 			final double xCoord, final double yCoord, final int min, final int max, final double shots,
-			final boolean[] types, final ExecutorService executor) {
+			final CodeTypeSet types, final ExecutorService executor) {
 
 		final double xRad = FastMath.toRadians(xCoord);
 		final double yRad = FastMath.toRadians(yCoord);
@@ -46,23 +47,8 @@ public class Vary {
 
 		final double increment = base / (shots + 1);
 
-		StringBuilder selectedTypes = new StringBuilder();
-
-		// transfer this to backend checking if right type
-		if (types[0])
-			selectedTypes.append("OSO ");
-		if (types[1])
-			selectedTypes.append("CS ");
-		if (types[2])
-			selectedTypes.append("CNS ");
-		if (types[3])
-			selectedTypes.append("ONS ");
-		if (types[4])
-			selectedTypes.append("OSNO ");
-
-		String reqTypes = selectedTypes.toString().trim();
 		// run the CS-specific code
-		if (types[1]) {
+		if (types.CS) {
 			double xAngle = Double.valueOf(xRad);
 			double yAngle = Double.valueOf(yRad);
 
@@ -72,7 +58,7 @@ public class Vary {
 				final Double finY = yAngle;
 
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> VaryCS.fireAway(min, max, finX, finY, reqTypes));
+						.submit(() -> VaryCS.fireAway(min, max, finX, finY, types.toString()));
 				// final Future<MutableList<ClassifiedCodeSequence>> future =
 				// executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
 
@@ -89,14 +75,14 @@ public class Vary {
 			}
 		}
 		// run the non-CS-specific code
-		if (types[0] || types[2] || types[3] || types[4]) {
+		if (types.OSO || types.ONS || types.CNS || types.OSNO) {
 
 			for (int count = 1; count <= shots; ++count) {
 
 				final double pos = count * increment;
 
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos, reqTypes));
+						.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos, types.toString()));
 				// executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
 
 				futures2.add(future);
@@ -119,31 +105,15 @@ public class Vary {
 	// boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
 	public static MutableSet<ClassifiedCodeSequence> findCodes4(
 			final double xCoord, final double yCoord, final int min, final int max, final double shots,
-			final boolean[] types) {
+			final CodeTypeSet types) {
 
 		final double xRad = FastMath.toRadians(xCoord);
 		final double yRad = FastMath.toRadians(yCoord);
 
 		final MutableSet<ClassifiedCodeSequence> codeSeqs = new UnifiedSet<>();
 
-		StringBuilder selectedTypes = new StringBuilder();
-
-		// transfer this to backend checking if right type
-		if (types[0])
-			selectedTypes.append("OSO ");
-		if (types[1])
-			selectedTypes.append("CS ");
-		if (types[2])
-			selectedTypes.append("CNS ");
-		if (types[3])
-			selectedTypes.append("ONS ");
-		if (types[4])
-			selectedTypes.append("OSNO ");
-
-		String reqTypes = selectedTypes.toString().trim();
-
 		final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-		if (types[1] && !types[0] && !types[2] && !types[0] && !types[4]) {
+		if (types.isCSOnly()) {
 			// run the CS-specific code
 
 			double xAngle = Double.valueOf(xRad);
@@ -155,7 +125,7 @@ public class Vary {
 				final Double finY = yAngle;
 
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> VaryCS.fireAway(min, max, finX, finY, reqTypes));
+						.submit(() -> VaryCS.fireAway(min, max, finX, finY, types.toString()));
 				// final Future<MutableList<ClassifiedCodeSequence>> future =
 				// executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
 
@@ -173,8 +143,7 @@ public class Vary {
 			}
 
 		} else {
-
-			final MutableList<ClassifiedCodeSequence> future = Vary4.fireAway(min, max, xRad, yRad, reqTypes);
+			final MutableList<ClassifiedCodeSequence> future = Vary4.fireAway(min, max, xRad, yRad, types.toString());
 			codeSeqs.addAll(future);
 		}
 
@@ -185,7 +154,7 @@ public class Vary {
 	// boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
 	public static MutableSet<ClassifiedCodeSequence> findCodes2(
 			final double xCoord, final double yCoord, final int min, final int max, final double shots,
-			final boolean[] types, final ExecutorService executor) {
+			final CodeTypeSet types, final ExecutorService executor) {
 
 		final double xRad = FastMath.toRadians(xCoord);
 		final double yRad = FastMath.toRadians(yCoord);
@@ -198,7 +167,7 @@ public class Vary {
 
 		final double increment = base / (shots + 1);
 
-		if (types[1] && !types[0] && !types[2] && !types[0] && !types[4]) {
+		if (types.isCSOnly()) {
 			// run the CS-specific code
 
 			double xAngle = Double.valueOf(xRad);
@@ -244,12 +213,7 @@ public class Vary {
 					 * (types[4] && type.equals(CodeType.OSNO))) {
 					 */ // george june12,2019 this is the original
 
-					if ((types[0] && type.equals(CodeType.OSO)) ||
-							(types[1] && type.equals(CodeType.CS)) ||
-							(types[2] && type.equals(CodeType.CNS)) ||
-							(types[3] && type.equals(CodeType.ONS)) ||
-							(types[4] && type.equals(CodeType.OSNO))) {
-
+					if (types.hasEnabled(type)) {
 						if (codeSeq.codeSum >= min) {
 							codeSeqs.add(codeSeq);
 						}
@@ -339,4 +303,5 @@ public class Vary {
 		if (processedCodesLength.get(oddEvenPattern) >= 3)
 			organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
 	}
+
 }

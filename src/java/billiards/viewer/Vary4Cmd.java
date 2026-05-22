@@ -4,6 +4,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import billiards.vary.Vary;
+import billiards.vary.CodeTypeSet;
 import billiards.codeseq.ClassifiedCodeSequence;
 
 /**
@@ -32,8 +33,8 @@ class Vary4Cmd {
 	}
 	// boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO, CS2
 	private static void callV4(final double x, final double y, final int min, final int max) {
-		//					OSO	  CS	CNS	   ONS    OSNO	CS2
-		boolean[] types = { true, true, false, false, true, false };
+		//					OSO	  CS	CNS	   ONS    OSNO	
+		final CodeTypeSet types = CodeTypeSet.getDefault();
 		final long startTime = System.currentTimeMillis();// george june 12,2019 added && !CS2cb.isSelected() &&
 															// !CNS2cb.isSelected() && !ONS2cb.isSelected() &&
 															// !OSNO2cb.isSelected() && !OSO2cb.isSelected()

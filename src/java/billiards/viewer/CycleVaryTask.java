@@ -8,6 +8,7 @@ import billiards.geometry.Location;
 import billiards.geometry.Vector2;
 import billiards.utils.PrintMid;
 import billiards.vary.Vary;
+import billiards.vary.CodeTypeSet;
 import billiards.wrapper.ConnectionPool;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -390,9 +391,8 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         int CSstep = 0;
         int OSmin = 0;
         int OSstep = 0;
-        final boolean[] noCS = {OSOmaxSS > 0, false, false, false, OSNOmaxSS > 0};
-
-        final boolean[] onlyCS = {false, CSmaxSS > 0, false, false, false};
+		final CodeTypeSet noCS = CodeTypeSet.builder().setOSO(OSOmaxSS > 0).setOSNO(OSNOmaxSS > 0).build();
+		final CodeTypeSet onlyCS = CodeTypeSet.builder().setCS(CSmaxSS > 0).build();
 
         final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
         final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();

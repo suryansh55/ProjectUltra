@@ -68,6 +68,9 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
     private final int end;
     private final int codesFound;
 
+	// TODO: Refactor with builder pattern
+	// TODO: Decouple from Boyan Menu
+
     // Constructor takes a list of points to vary at
     public VaryLTask(
         final Array<Vector2> points, List<String> coverCodes, final BoyanMenu boyan,
