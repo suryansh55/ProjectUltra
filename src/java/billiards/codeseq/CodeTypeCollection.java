@@ -28,7 +28,9 @@ public class CodeTypeCollection<T> {
 	 * <b>Jeff Khuu</b><br>
 	 * <b>May 25, 2026</b>
 	 * <p>
-	 * <code>get</code> returns the value for a given code type.
+	 * <code>get</code> returns the value for a given code type, this is NOT
+	 * O(1)/random-access, getting a code type using the CodeType enum is O(n) where
+	 * n is the number of possible code types
 	 * </p>
 	 */
 	public T get(CodeType type) {
@@ -42,7 +44,8 @@ public class CodeTypeCollection<T> {
 				|| type == CodeType.OSNO
 				: "An unknown CodeType was given. Cannot be matched to a value";
 
-		switch (type) {
+		// NOTE: Perhaps there is a better way to get values from the CodeType enum so that we keep random access
+		switch (type) { 
 			case OSO:
 				return OSO;
 			case CS:

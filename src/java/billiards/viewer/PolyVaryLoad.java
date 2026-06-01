@@ -1,11 +1,9 @@
 package billiards.viewer;
 
+import billiards.codeseq.CodeTypeCollection;
 import billiards.geometry.ConvexPolygon;
 import billiards.geometry.Rectangle;
-import billiards.geometry.Vector2;
 
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.list.mutable.FastList;
 
 import java.util.Optional;
 
@@ -26,6 +24,7 @@ import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
 import javaslang.Tuple;
+import javaslang.Tuple3;
 import javaslang.Tuple7;
 
 import static billiards.utils.Polygon.cleanPolygon;
@@ -78,7 +77,7 @@ public final class PolyVaryLoad {
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
 
-    private Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> result;
+    private Optional<Tuple3<ConvexPolygon, CodeTypeCollection<Integer>, Optional<CodeTypeCollection<Integer>>>> result;
 
     public PolyVaryLoad(final String windowTitle, final String buttonText, final String polyFileName,
                     final String boundsFileName, final Rectangle fullScreen) {
@@ -205,14 +204,12 @@ public final class PolyVaryLoad {
                 return;
             }
             polygonString = text.getText();
-            if (polygonString.isEmpty()) {
-                this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
-
-            } else {
-                final String lines = cleanPolygon(polygonString);
-                final ConvexPolygon poly = createConvexPolygon(lines);
-                this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
-            }
+			ConvexPolygon poly = polygonString.isEmpty() ? fullScreen.toConvexPolygon() : createConvexPolygon(cleanPolygon(polygonString));
+            this.result = Optional.of(
+				Tuple.of( poly, new CodeTypeCollection<Integer>(BoundOSOMax, BoundCSMax, 0, 0, BoundOSNOMax), Override 
+					? Optional.of(new CodeTypeCollection<Integer>(BoundOSOMax, BoundCSMax, 0, 0, BoundOSNOMax)) 
+					: Optional.empty()
+			));
             //Utils.writeToFile(polyFileName, polygonString);
         	Utils.writeToFile(boundsFileName, String.format("%d %d %d %d %d %d", BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             stage.close();
@@ -236,7 +233,7 @@ public final class PolyVaryLoad {
 
     }
 
-    public Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> getPolyVaryLoad() {
+    public Optional<Tuple3<ConvexPolygon, CodeTypeCollection<Integer>, Optional<CodeTypeCollection<Integer>>>> getPolyVaryLoad() {
         stage.showAndWait();
         return this.result;
     }

@@ -3,6 +3,7 @@ package billiards.viewer;
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeSequence;
 import billiards.codeseq.CodeType;
+import billiards.codeseq.CodeTypeCollection;
 import billiards.geometry.Vector2;
 import billiards.vary.Vary;
 import billiards.vary.Vary3;
@@ -676,8 +677,16 @@ public class BoyanMenu {
 		return codesFound;
 	}
 
+	/**
+	 * <code>autoVary</code> runs the autoVary algorithm, essentially vary3 repeated
+	 * for a number of iterations, incrementing the maximum side sum each iteration
+	 *
+	 * @param point Point to run autoVary on
+	 * @param exe   ExecutorService to run the algorithm on
+	 */
 	public MutableSortedSet<ClassifiedCodeSequence> autoVary(
 			final Vector2 point, final ExecutorService exe) {
+		// Grab necessary variables from global state
 		int max = Integer.parseInt(maxMovesText.getText());
 		int min = Integer.parseInt(minMovesText.getText());
 		final int iterate = Integer.parseInt(autoIterText.getText());
@@ -709,9 +718,18 @@ public class BoyanMenu {
 		return new TreeSortedSet<>();
 	}
 
-	// Overloading of autoVary for seperate maximums during overrideSS
+	// Overloading of autoVary for seperate maximum side sums when given override
+	/**
+	 * <code>autoVary</code> runs the autoVary algorithm filtering the results by
+	 * the given separated maximum side sums.
+	 * @see #autoVary(Vector2, ExecutorService)
+	 *
+	 * @param point      Point to run autoVary on
+	 * @param maxSideSum Maximum side sums for each code type
+	 * @param exe        ExecutorService to run the algorithm on
+	 */
 	public MutableSortedSet<ClassifiedCodeSequence> autoVary(
-			final Vector2 point, final int CSmaxSS, final int OSOmaxSS, final int OSNOmaxSS,
+			final Vector2 point, final CodeTypeCollection<Integer> maxSideSum,
 			final ExecutorService exe) {
 		int CSmin = Integer.parseInt(minMovesText.getText());
 		int CSstep = 0;
@@ -722,39 +740,33 @@ public class BoyanMenu {
 		final int shots = Integer.parseInt(shotsText.getText());
 
 		final CodeTypeSet noCS = CodeTypeSet.builder()
-				.setOSO(OSOmaxSS > 0)
+				.setOSO(maxSideSum.OSO > 0)
 				.setCNS(CNScb.isSelected())
 				.setONS(ONScb.isSelected())
-				.setOSNO(OSNOmaxSS > 0)
+				.setOSNO(maxSideSum.OSNO > 0)
 				.build();
 		final CodeTypeSet onlyCS = CodeTypeSet.builder().setCS(true).build();
 
 		for (int i = 0; i < iterate + 1; i++) {
-			final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
 			final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
-			if (CSmaxSS > 0) {
-				unfilteredCodesFound
-						.addAll(Vary.findCodes3(point.x, point.y, CSmin, CSmaxSS + CSstep, shots, onlyCS, exe));
+			// Handle CS separately from other code types
+			if (maxSideSum.CS > 0) {
+				codesFound.addAll(Vary.findCodes3(point.x, point.y, CSmin, maxSideSum.CS + CSstep, shots, onlyCS, exe));
 			}
-			unfilteredCodesFound.addAll(
-					Vary.findCodes3(point.x, point.y, OSmin, Math.max(OSOmaxSS, OSNOmaxSS) + OSstep, shots, noCS, exe));
+			codesFound.addAll(
+					Vary.findCodes3(point.x, point.y, OSmin, Math.max(maxSideSum.OSO, maxSideSum.OSNO) + OSstep, shots,
+							noCS, exe));
 
-			for (final ClassifiedCodeSequence code : unfilteredCodesFound) { // Filter out overly large OSO/OSNO
-				final CodeType type = code.codeType;
-				if (type.equals(CodeType.OSO) && code.codeSum >= OSOmaxSS) {
-					continue;
-				}
-				if (type.equals(CodeType.OSNO) && code.codeSum >= OSNOmaxSS) {
-					continue;
-				}
-				codesFound.add(code);
-			}
+			// Filter codes if their maxSideSum is non-zero
+			codesFound.removeIf(code -> {
+				int max = maxSideSum.get(code.codeType);
+				return max != 0 && code.codeSum >= max });
 			printCodes(codesFound, "garbage.txt", printAll, true, Integer.parseInt(maxPrinting.getText()));
 
 			if (codesFound.isEmpty()) {
-				CSmin = CSmaxSS;
+				CSmin = maxSideSum.CS;
 				CSstep += step;
-				OSmin = Math.max(OSOmaxSS, OSNOmaxSS);
+				OSmin = Math.max(maxSideSum.OSO, maxSideSum.OSNO);
 				OSstep += OSstep;
 			} else {
 				return codesFound;
