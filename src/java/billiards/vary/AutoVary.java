@@ -6,10 +6,10 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
 import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeTypeSet;
 import billiards.geometry.ConvexPolygon;
 import billiards.geometry.Location;
 import billiards.math.CoverSquare;
-import billiards.vary.Vary;
 import billiards.wrapper.ConnectionPool;
 import billiards.wrapper.Wrapper;
 

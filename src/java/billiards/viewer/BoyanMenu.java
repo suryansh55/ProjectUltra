@@ -8,8 +8,8 @@ import billiards.vary.Vary;
 import billiards.vary.Vary3;
 import billiards.vary.Vary4;
 import billiards.vary.VaryCS;
-import billiards.vary.CodeTypeSet;
-import billiards.vary.CodeTypeSet.CodeTypeSetBuilder;
+import billiards.codeseq.CodeTypeSet;
+import billiards.codeseq.CodeTypeSet.CodeTypeSetBuilder;
 import billiards.database.Database;
 
 import org.apache.commons.math3.util.FastMath;
@@ -651,11 +651,11 @@ public class BoyanMenu {
 		final double shots = Integer.parseInt(shotsText.getText());
 
 		final CodeTypeSet noCS = CodeTypeSet.builder()
-			.setOSO(OSOmaxSS > 0)
-			.setCNS(CNScb.isSelected())
-			.setONS(ONScb.isSelected())
-			.setOSNO(OSNOmaxSS > 0)
-			.build();
+				.setOSO(OSOmaxSS > 0)
+				.setCNS(CNScb.isSelected())
+				.setONS(ONScb.isSelected())
+				.setOSNO(OSNOmaxSS > 0)
+				.build();
 		final CodeTypeSet onlyCS = CodeTypeSet.builder().setCS(true).build();
 
 		final MutableSortedSet<ClassifiedCodeSequence> unfilteredCodesFound = new TreeSortedSet<>();
@@ -684,12 +684,12 @@ public class BoyanMenu {
 		final int step = Integer.parseInt(autoStepText.getText());
 		final int shots = Integer.parseInt(shotsText.getText());
 		final CodeTypeSet types = CodeTypeSet.builder()
-			.setOSO(OSOcb.isSelected())
-			.setCS(CScb.isSelected())
-			.setCNS(CNScb.isSelected())
-			.setONS(ONScb.isSelected())
-			.setOSNO(OSNOcb.isSelected())
-			.build();
+				.setOSO(OSOcb.isSelected())
+				.setCS(CScb.isSelected())
+				.setCNS(CNScb.isSelected())
+				.setONS(ONScb.isSelected())
+				.setOSNO(OSNOcb.isSelected())
+				.build();
 		// george june 12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
 		// CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()
 
@@ -722,11 +722,11 @@ public class BoyanMenu {
 		final int shots = Integer.parseInt(shotsText.getText());
 
 		final CodeTypeSet noCS = CodeTypeSet.builder()
-			.setOSO(OSOmaxSS > 0)
-			.setCNS(CNScb.isSelected())
-			.setONS(ONScb.isSelected())
-			.setOSNO(OSNOmaxSS > 0)
-			.build();
+				.setOSO(OSOmaxSS > 0)
+				.setCNS(CNScb.isSelected())
+				.setONS(ONScb.isSelected())
+				.setOSNO(OSNOmaxSS > 0)
+				.build();
 		final CodeTypeSet onlyCS = CodeTypeSet.builder().setCS(true).build();
 
 		for (int i = 0; i < iterate + 1; i++) {
@@ -764,41 +764,41 @@ public class BoyanMenu {
 	}
 
 	private MutableSortedSet<ClassifiedCodeSequence> findCodes(
-    		final double xCoord, final double yCoord, final int version, final ExecutorService exe) {
-        final MutableSortedSet<ClassifiedCodeSequence> out = new TreeSortedSet<>();
-        final int max = Integer.parseInt(maxMovesText.getText());
-        final int min = Integer.parseInt(minMovesText.getText());
-        final double shots = Integer.parseInt(shotsText.getText());
+			final double xCoord, final double yCoord, final int version, final ExecutorService exe) {
+		final MutableSortedSet<ClassifiedCodeSequence> out = new TreeSortedSet<>();
+		final int max = Integer.parseInt(maxMovesText.getText());
+		final int min = Integer.parseInt(minMovesText.getText());
+		final double shots = Integer.parseInt(shotsText.getText());
 
 		final CodeTypeSet types = CodeTypeSet.builder()
-			.setOSO(OSOcb.isSelected())
-			.setCS(CScb.isSelected())
-			.setCNS(CNScb.isSelected())
-			.setONS(ONScb.isSelected())
-			.setOSNO(OSNOcb.isSelected())
-			.build();
+				.setOSO(OSOcb.isSelected())
+				.setCS(CScb.isSelected())
+				.setCNS(CNScb.isSelected())
+				.setONS(ONScb.isSelected())
+				.setOSNO(OSNOcb.isSelected())
+				.build();
 
 		final CodeTypeSet types2 = CodeTypeSet.builder()
-			.setOSO(OSO2cb.isSelected())
-			.setCS(CS2cb.isSelected())
-			.setCNS(CNS2cb.isSelected())
-			.setONS(ONS2cb.isSelected())
-			.setOSNO(OSNO2cb.isSelected())
-			.build();
-        
-        //george june12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
-        //CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()
-        if (version == 4) {
-        	out.addAll(Vary.findCodes4(xCoord, yCoord, min, max, shots, types));
-        } else if (version == 3) {
-        	out.addAll(Vary.findCodes3(xCoord, yCoord, min, max, shots, types, exe));
-        } else if (version == 2) {
-        	out.addAll(Vary.findCodes2(xCoord, yCoord, min, max, shots, types2, exe));
-        } else {
-        	throw new RuntimeException("Version for varyTriangles must be 3 or 4");
-        }
-        return out;
-    }
+				.setOSO(OSO2cb.isSelected())
+				.setCS(CS2cb.isSelected())
+				.setCNS(CNS2cb.isSelected())
+				.setONS(ONS2cb.isSelected())
+				.setOSNO(OSNO2cb.isSelected())
+				.build();
+
+		// george june12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
+		// CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()
+		if (version == 4) {
+			out.addAll(Vary.findCodes4(xCoord, yCoord, min, max, shots, types));
+		} else if (version == 3) {
+			out.addAll(Vary.findCodes3(xCoord, yCoord, min, max, shots, types, exe));
+		} else if (version == 2) {
+			out.addAll(Vary.findCodes2(xCoord, yCoord, min, max, shots, types2, exe));
+		} else {
+			throw new RuntimeException("Version for varyTriangles must be 3 or 4");
+		}
+		return out;
+	}
 
 	// Objects for comparison functionality
 	static ArrayList<ArrayList<String>> cList = new ArrayList<>();

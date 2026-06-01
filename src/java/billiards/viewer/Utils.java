@@ -51,7 +51,8 @@ import javaslang.control.Either;
 // add option to draw picture when searching
 
 public final class Utils {
-	// AllianceCan HPC Clusters use the environment variable SLURM_CPUS_PER_TASK to find the number of threads
+	// AllianceCan HPC Clusters use the environment variable SLURM_CPUS_PER_TASK to
+	// find the number of threads
 	private static final Optional<String> slurmThreads = Optional.ofNullable(System.getenv("SLURM_CPUS_PER_TASK"));
 	// TODO find the best value for this
 	public static final int numThreads = slurmThreads.isPresent() ? Integer.parseInt(slurmThreads.get())
@@ -222,6 +223,15 @@ public final class Utils {
 		writeToFile(path, contents);
 	}
 
+	/**
+	 * <p>
+	 * Read the contents of a file using a given string used as the path. Creates
+	 * the file at the given path if it does not already exist.
+	 * </p>
+	 * 
+	 * @param string Path (relative if not starting with a "/", absolute
+	 *               otherwise)
+	 */
 	public static String readFromFile(final String string) {
 
 		try {

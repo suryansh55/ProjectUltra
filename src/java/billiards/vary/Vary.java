@@ -1,10 +1,9 @@
 package billiards.vary;
 
-import java.io.PrintStream;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -16,14 +15,16 @@ import org.eclipse.collections.api.set.MutableSet;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.set.mutable.UnifiedSet;
+import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeType;
+import billiards.codeseq.CodeTypeSet;
+import billiards.codeseq.CodeTypeCollection;
 import billiards.geometry.Vector2;
 import billiards.viewer.Utils;
 
 public class Vary {
-	// boolean[] types should be in the order OSO, CS, CNS, ONS, OSNO
 	/*
 	 * Jul,31 Marco Mai
 	 * 1. the excuator will run each loop one by one
@@ -179,7 +180,7 @@ public class Vary {
 				final Double finY = yAngle;
 
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> VaryCS.fireAway(min, max, finX, finY));
+						.submit(() -> VaryCS.fireAway(min, max, finX, finY, types.toString()));
 
 				futures.add(future);
 
@@ -194,7 +195,7 @@ public class Vary {
 				final double pos = count * increment;
 
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
+						.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos, types.toString()));
 
 				futures.add(future);
 			}
@@ -288,7 +289,6 @@ public class Vary {
 		return organizedCodes;
 	}
 
-
 	private static void addFirstMidLast(
 			ArrayList<ClassifiedCodeSequence> organizedCodes,
 			Map<String, ArrayList<ClassifiedCodeSequence>> processedCodes,
@@ -304,4 +304,40 @@ public class Vary {
 			organizedCodes.add(processedCodes.get(oddEvenPattern).get(processedCodesLength.get(oddEvenPattern) - 1));
 	}
 
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>May 22, 2026</b>
+	 * <p>
+	 * <code>varyTrianglesL</code> is a wrapper around findCodes3 which separates
+	 * finding codes between CS and non-CS code types with filtering for OSO and
+	 * OSNO code types based on side sum and code length.
+	 * </p>
+	 * 
+	 * @param point    Point representing the triangle to perform varyL on
+	 * @param min      Minimum code length to consider
+	 * @param max      Maximum side sum for each code type
+	 * @param shots    Number of shots to perform
+	 * @param executor ExecutorService to run computations on
+	 */
+	public static MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(final Vector2 point, final int min,
+			final CodeTypeCollection<Integer> max, final int shots, final CodeTypeSet types, final ExecutorService executor) {
+		// Split types into two CodeTypeSets
+		final CodeTypeSet noCS = CodeTypeSet.builder()
+				.setOSO(types.OSO)
+				.setCNS(types.CNS)
+				.setONS(types.ONS)
+				.setOSNO(types.OSNO)
+				.build();
+		final CodeTypeSet onlyCS = CodeTypeSet.builder().setCS(types.CS).build();
+
+		final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
+		codesFound
+				.addAll(Vary.findCodes3(point.x, point.y, min, max.CS, shots, onlyCS, executor));
+		codesFound
+				.addAll(Vary.findCodes3(point.x, point.y, min,
+						Math.max(max.OSO, max.OSNO), shots, noCS, executor));
+		codesFound.removeIf(code -> code.codeSum > max.get(code.codeType));
+		return codesFound;
+
+	}
 }

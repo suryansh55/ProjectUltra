@@ -1,13 +1,12 @@
-package billiards.vary;
-
-import billiards.codeseq.CodeType;
+package billiards.codeseq;
 
 /**
  * <b>Jeff Khuu</b><br>
  * <b>May 22, 2026</b>
  * <p>
- * <code>CodeTypeSet</code> encodes the selected CodeTypes when performing Vary
- * calculations.
+ * <code>CodeTypeSet</code> encodes a set containing at most the five possible
+ * code types. When a code type is a member of the set its member field will be
+ * true. Useful for encoding the types performed on by Vary algorithms.
  * Once a CodeTypeSet is constructed its member fields guaranteed to be final.
  * </p>
  */
@@ -109,7 +108,8 @@ public class CodeTypeSet {
 	 * <b>Jeff Khuu</b><br>
 	 * <b>May 22, 2026</b>
 	 * <p>
-	 * <code>isEnabled</code> returns true if and only if the given CodeType is true within this CodeTypeSet
+	 * <code>isEnabled</code> returns true if and only if the given CodeType is true
+	 * within this CodeTypeSet
 	 * </p>
 	 */
 	public boolean hasEnabled(CodeType type) {

@@ -9,7 +9,7 @@ import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 
 import billiards.vary.Vary;
-import billiards.vary.CodeTypeSet;
+import billiards.codeseq.CodeTypeSet;
 import billiards.codeseq.ClassifiedCodeSequence;
 
 public final class Vary3Cmd {

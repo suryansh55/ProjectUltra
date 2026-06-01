@@ -8,7 +8,7 @@ import billiards.geometry.Location;
 import billiards.geometry.Vector2;
 import billiards.utils.PrintMid;
 import billiards.vary.Vary;
-import billiards.vary.CodeTypeSet;
+import billiards.codeseq.CodeTypeSet;
 import billiards.wrapper.ConnectionPool;
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectProperty;

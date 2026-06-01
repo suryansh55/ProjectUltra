@@ -240,6 +240,20 @@ tasks.register('vary3Jar', com.github.jengelman.gradle.plugins.shadow.tasks.Shad
     exclude 'META-INF/*.RSA'
 }
 
+tasks.register('varyLJar', com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar) {
+	archiveFileName = 'varyLcmd.jar'
+
+    manifest {
+        attributes 'Main-Class': 'billiards.viewer.VaryLCmd'
+    }
+
+    from sourceSets.main.output
+    configurations = [project.configurations.runtimeClasspath]
+	exclude 'META-INF/*.SF'
+    exclude 'META-INF/*.DSA'
+    exclude 'META-INF/*.RSA'
+}
+
 
 model {
     // Zhao Yu Li, Aug 15, 2025.
