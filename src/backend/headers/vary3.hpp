@@ -50,7 +50,8 @@ void iterateFireAway3(
 
 std::vector<std::vector<int32_t>> fireAway3(const int32_t movesMin, const int32_t movesMax,const float64_t xAngle, const float64_t yAngle,const float64_t pos, const std::string reqType);
 
-
+std::vector<std::vector<int32_t>> fireAway3Parallel(const int32_t movesMin, const int32_t movesMax,
+        const float64_t xAngle, const float64_t yAngle,const float64_t pos,const std::string reqType);
 
 #endif // VARY3_HPP
 

@@ -8,6 +8,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadPoolExecutor;
 
 import org.apache.commons.math3.util.FastMath;
 import org.eclipse.collections.api.list.MutableList;
@@ -48,6 +49,7 @@ public class Vary {
 
 		final double increment = base / (shots + 1);
 
+		final long csStartTime = System.currentTimeMillis();
 		// run the CS-specific code
 		if (types.CS) {
 			double xAngle = Double.valueOf(xRad);
@@ -75,13 +77,17 @@ public class Vary {
 				yAngle = Double.valueOf(zAngle);
 			}
 		}
+		final long csFinalTime = System.currentTimeMillis();
+
+		System.out.println("// CS codes found in: " + Utils.timeConvert(csFinalTime - csStartTime) + "\n");
+
+		final long otherCodesStartTime = System.currentTimeMillis();
+
 		// run the non-CS-specific code
 		if (types.OSO || types.ONS || types.CNS || types.OSNO) {
 
 			for (int count = 1; count <= shots; ++count) {
-
 				final double pos = count * increment;
-
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
 						.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos, types.toString()));
 				// executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
@@ -97,6 +103,89 @@ public class Vary {
 				}
 			}
 		}
+		final long otherCodesFinalTime = System.currentTimeMillis();
+		System.out.println(
+				"// Other codes found in: " + Utils.timeConvert(otherCodesFinalTime - otherCodesStartTime) + "\n");
+
+		codeSeqs.addAll(futures);
+
+		return codeSeqs;
+	}
+
+
+	public static MutableSet<ClassifiedCodeSequence> findCodes3Parallel(
+			final double xCoord, final double yCoord, final int min, final int max, final double shots,
+			final CodeTypeSet types, final ExecutorService executor) {
+
+		final double xRad = FastMath.toRadians(xCoord);
+		final double yRad = FastMath.toRadians(yCoord);
+
+		final double base = Math.sin(xRad + yRad);
+
+		final MutableSet<ClassifiedCodeSequence> codeSeqs = new UnifiedSet<>();
+
+		final MutableList<ClassifiedCodeSequence> futures = new FastList<>();
+		final MutableList<Future<MutableList<ClassifiedCodeSequence>>> futures2 = new FastList<>();
+
+		final double increment = base / (shots + 1);
+
+		final long csStartTime = System.currentTimeMillis();
+		// run the CS-specific code
+		if (types.CS) {
+			double xAngle = Double.valueOf(xRad);
+			double yAngle = Double.valueOf(yRad);
+
+			for (int i = 0; i < 3; i++) {
+
+				final Double finX = xAngle;
+				final Double finY = yAngle;
+
+				final Future<MutableList<ClassifiedCodeSequence>> future = executor
+						.submit(() -> VaryCS.fireAwayParallel(min, max, finX, finY, types.toString()));
+				// final Future<MutableList<ClassifiedCodeSequence>> future =
+				// executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
+
+				try {
+					MutableList<ClassifiedCodeSequence> result = future.get();
+					futures.addAll(result);
+				} catch (InterruptedException | ExecutionException e) {
+					throw new RuntimeException(e); // or handle it however you need
+				}
+
+				double zAngle = Double.valueOf(Math.PI - xAngle - yAngle);
+				xAngle = Double.valueOf(yAngle);
+				yAngle = Double.valueOf(zAngle);
+			}
+		}
+		final long csFinalTime = System.currentTimeMillis();
+
+		System.out.println("// CS codes found in: " + Utils.timeConvert(csFinalTime - csStartTime) + "\n");
+
+		final long otherCodesStartTime = System.currentTimeMillis();
+
+		// run the non-CS-specific code
+		if (types.OSO || types.ONS || types.CNS || types.OSNO) {
+
+			for (int count = 1; count <= shots; ++count) {
+				final double pos = count * increment;
+				final Future<MutableList<ClassifiedCodeSequence>> future = executor
+						.submit(() -> Vary3.fireAwayParallel(min, max, xRad, yRad, pos, types.toString()));
+				// executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
+
+				futures2.add(future);
+			}
+			for (Future<MutableList<ClassifiedCodeSequence>> future : futures2) {
+				try {
+					MutableList<ClassifiedCodeSequence> partial = future.get(); // get the actual list
+					futures.addAll(partial); // now addAll on MutableList, not Future
+				} catch (InterruptedException | ExecutionException e) {
+					e.printStackTrace(); // handle exceptions as needed
+				}
+			}
+		}
+		final long otherCodesFinalTime = System.currentTimeMillis();
+		System.out.println(
+				"// Other codes found in: " + Utils.timeConvert(otherCodesFinalTime - otherCodesStartTime) + "\n");
 
 		codeSeqs.addAll(futures);
 
@@ -320,7 +409,8 @@ public class Vary {
 	 * @param executor ExecutorService to run computations on
 	 */
 	public static MutableSortedSet<ClassifiedCodeSequence> varyTrianglesL(final Vector2 point, final int min,
-			final CodeTypeCollection<Integer> max, final int shots, final CodeTypeSet types, final ExecutorService executor) {
+			final CodeTypeCollection<Integer> max, final int shots, final CodeTypeSet types,
+			final ExecutorService executor) {
 		// Split types into two CodeTypeSets
 		final CodeTypeSet noCS = CodeTypeSet.builder()
 				.setOSO(types.OSO)

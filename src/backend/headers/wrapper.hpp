@@ -130,7 +130,11 @@ const char* small_cover_wrapper(const char* poly_str,
 
 int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result,const char* const reqTypes);
 
+int vary_cs_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result,const char* const reqTypes);
+
 int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_initPosition, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result, const char* const);
+
+int vary_3_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_initPosition, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result, const char* const);
 
 int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle,CString* const result,const char* const reqTypes);
 

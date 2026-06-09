@@ -10,9 +10,8 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "cmath"
 #include "database.hpp"
 #include "database/admin.hpp"
-#include "database/serialize.hpp"
 #include "database/deserialize.hpp"
-#include "database.hpp"
+#include "database/serialize.hpp"
 #include "diff.hpp"
 
 #include "equations.hpp"
@@ -24,11 +23,11 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "sqlite.hpp"
 #include "trig_identities.hpp"
 #include "trim.hpp"
-#include "verify.hpp"
-#include "wrapper.hpp"
-#include "vary_cs.hpp"
 #include "vary3.hpp"
 #include "vary4.hpp"
+#include "vary_cs.hpp"
+#include "verify.hpp"
+#include "wrapper.hpp"
 #include <boost/optional/optional_io.hpp>
 
 // Java <-> C++
@@ -101,7 +100,7 @@ sqlite::ConnectionPool* create_connection_pool(const char* const db_path, const 
 }
 
 void destroy_connection_pool(const sqlite::ConnectionPool* const pool) {
-    std::cout << "Started with "<< pool->start_size() << " DB connections\n";
+    std::cout << "Started with " << pool->start_size() << " DB connections\n";
     std::cout << "Ending with " << pool->curr_size() << " DB connections" << std::endl;
     delete pool;
 }
@@ -110,9 +109,9 @@ void destroy_connection_pool(const sqlite::ConnectionPool* const pool) {
 // 0 on not a cover
 // 1 means a cover
 const char* cover_wrapper(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool) {
+                          const char* const codes_str, const char* const unstables_str,
+                          const int32_t digits, const int32_t subdivide, const int32_t empty,
+                          const int32_t mrr, sqlite::ConnectionPool* const pool) {
 
     try {
 
@@ -134,9 +133,9 @@ const char* cover_wrapper(const char* const poly_str,
 // 0 on not a cover
 // 1 means a cover
 const char* small_cover_wrapper(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool, const bool printInfo) {
+                                const char* const codes_str, const char* const unstables_str,
+                                const int32_t digits, const int32_t subdivide, const int32_t empty,
+                                const int32_t mrr, sqlite::ConnectionPool* const pool, const bool printInfo) {
 
     try {
 
@@ -155,9 +154,9 @@ const char* small_cover_wrapper(const char* const poly_str,
 }
 
 const char* getNotFilledCoordinates(const char* const poly_str,
-    const char* const codes_str, const char* const unstables_str,
-    const int32_t digits, const int32_t subdivide, const int32_t empty,
-    const int32_t mrr, sqlite::ConnectionPool* const pool, const bool is_last_cycle) {
+                                    const char* const codes_str, const char* const unstables_str,
+                                    const int32_t digits, const int32_t subdivide, const int32_t empty,
+                                    const int32_t mrr, sqlite::ConnectionPool* const pool, const bool is_last_cycle) {
 
     try {
 
@@ -167,7 +166,6 @@ const char* getNotFilledCoordinates(const char* const poly_str,
 
         return getEmpties(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, *pool, is_last_cycle);
 
-
     } catch (const std::runtime_error& except) {
         std::cerr << "calculation of cover failed with error:\n"
                   << except.what() << std::endl;
@@ -176,9 +174,9 @@ const char* getNotFilledCoordinates(const char* const poly_str,
 }
 
 int32_t cover_wrapper_duplicate_stables(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool, const bool show) {
+                                        const char* const codes_str, const char* const unstables_str,
+                                        const int32_t digits, const int32_t subdivide, const int32_t empty,
+                                        const int32_t mrr, sqlite::ConnectionPool* const pool, const bool show) {
 
     // Zhao Yu Li, Jul 16, 2025.
     // Removed printing because this line is printed too many times.
@@ -200,9 +198,9 @@ int32_t cover_wrapper_duplicate_stables(const char* const poly_str,
 }
 
 int32_t cover_wrapper_half_duplicate_stables(const char* const poly_str,
-                      const char* const codes_str, const char* const unstables_str,
-                      const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool) {
+                                             const char* const codes_str, const char* const unstables_str,
+                                             const int32_t digits, const int32_t subdivide, const int32_t empty,
+                                             const int32_t mrr, sqlite::ConnectionPool* const pool) {
     try {
 
         const std::string poly{poly_str};
@@ -213,7 +211,7 @@ int32_t cover_wrapper_half_duplicate_stables(const char* const poly_str,
         std::set<std::pair<CodeSequence, std::string>> sequence_points{};
 
         const auto covered = check_cover_half_duplicate_stables(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, sequence_equations, *pool);
-        if(covered){
+        if (covered) {
             return 1;
         } else {
             return 0;
@@ -265,7 +263,6 @@ static bool save_to_database(const CodeSequence& code_sequence, const CodeType& 
             //Label 4 uncomment the line below to see the unstable
             //std::cout<< unstable<<std::endl;
 
-
             // This doesn't check if it is unstable. It checks if we returned an empty optional
             if (!unstable) {
                 return false;
@@ -277,7 +274,6 @@ static bool save_to_database(const CodeSequence& code_sequence, const CodeType& 
 
     return true;
 }
-
 
 // true for saved and nonempty, false for empty
 static bool save_to_database(const CodeSequence& base_code_sequence, const std::vector<LeftRight>& left_rights, const CodeSequence& code_sequence, const CodeType& code_type, sqlite::Database& db) {
@@ -294,7 +290,7 @@ static bool save_to_database(const CodeSequence& base_code_sequence, const std::
 
             //if (left_rights != stable->left_rights) {
             //    throw std::runtime_error(" left_rights mismatch before save and after calculation ");
-                //return false;
+            //return false;
             //}
 
             if (!stable) { // This doesn't check if it is unstable. It checks if we returned an empty optional
@@ -310,8 +306,7 @@ static bool save_to_database(const CodeSequence& base_code_sequence, const std::
             //Label 2 uncomment the line below to print the unstable
             //std::cout<< unstable<<std::endl;
 
-
-            if (!unstable) {// This doesn't check if it is unstable. It checks if we returned an empty optional
+            if (!unstable) { // This doesn't check if it is unstable. It checks if we returned an empty optional
                 return false;
             }
 
@@ -326,7 +321,7 @@ static bool save_to_database(const CodeSequence& base_code_sequence, const std::
             //}
             //else
             //{
-                       //std::cout << code_sequence << std::endl;
+            //std::cout << code_sequence << std::endl;
             database::save(base_code_sequence, code_sequence, code_type, *unstable, db);
             //}
         }
@@ -373,16 +368,15 @@ static bool delete_from_database(const CodeSequence& code_sequence, const CodeTy
     if (database::in(code_sequence, code_type, db)) {
         database::delete_from_db(code_sequence, code_type, db);
         return true;
-    }
-    else {
+    } else {
         //throw std::runtime_error("This code sequence does not exist in the database");
         return false;
     }
 }
 
 int32_t delete_from_database(const int32_t* const code_numbers_ptr,
-                         const int32_t code_numbers_len,
-                         sqlite::ConnectionPool* const pool) {
+                             const int32_t code_numbers_len,
+                             sqlite::ConnectionPool* const pool) {
 
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
 
@@ -402,8 +396,8 @@ int32_t delete_from_database(const int32_t* const code_numbers_ptr,
         std::cerr << "Deleting " << code_numbers << " failed with error:\n"
                   << except.what() << std::endl;
         return -1;
-    }}
-
+    }
+}
 
 // true for saved and nonempty, false for empty
 static bool save_to_database(const std::vector<LeftRight>& left_rights, const CodeSequence& code_sequence, const CodeType& code_type, sqlite::Database& db) {
@@ -416,12 +410,10 @@ static bool save_to_database(const std::vector<LeftRight>& left_rights, const Co
             if (!stable) {
                 return false;
             }
-            if (stable->left_rights != left_rights)
-            {
+            if (stable->left_rights != left_rights) {
                 throw std::runtime_error("The pattern changed do it in the slow way!");
-            }
-            else{
-            // DEBUG
+            } else {
+                // DEBUG
                 //std::cout << "save_to_database that prints something" << std::endl;
                 //std::cout << code_sequence << std::endl;
                 database::save(code_sequence, code_type, *stable, db);
@@ -436,20 +428,17 @@ static bool save_to_database(const std::vector<LeftRight>& left_rights, const Co
                 return false;
             }
             std::vector<LeftRight> vector;
-            for (const auto& lr : unstable->left_rights){
+            for (const auto& lr : unstable->left_rights) {
                 vector.push_back(lr);
             }
 
-            if ( vector != left_rights)
-                 {
-                            throw std::runtime_error("The pattern changed do it in the slow way!");
-                            return false;
-                        }
-                        else
-                        {
-                            //std::cout << code_sequence << std::endl;
-                            database::save(code_sequence, code_type, *unstable, db);
-                        }
+            if (vector != left_rights) {
+                throw std::runtime_error("The pattern changed do it in the slow way!");
+                return false;
+            } else {
+                //std::cout << code_sequence << std::endl;
+                database::save(code_sequence, code_type, *unstable, db);
+            }
         }
     }
     return true;
@@ -490,7 +479,6 @@ int32_t load_picture(const int32_t* const code_numbers_ptr,
         if (in) {
             const auto picture = database::load_picture(code_sequence, code_type, conn.db);
             copy_to_cpicture(picture, cpicture);
-
         };
 
         return in;
@@ -510,7 +498,7 @@ void cleanup_cpicture(const CPicture* const cpicture) {
 }
 
 int32_t load_picture_lr_expando(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
-                        CPicture* const cpicture, sqlite::ConnectionPool* const pool, const char* const lr) {
+                                CPicture* const cpicture, sqlite::ConnectionPool* const pool, const char* const lr) {
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
 
     // We throw runtime_errors to indicate problems with the program. When this happens,
@@ -533,34 +521,32 @@ int32_t load_picture_lr_expando(const int32_t* const code_numbers_ptr, const int
         //const CodeSequence code= new CodeSequence(c);
         const std::string lr_string{lr};
 
+        std::vector<LeftRight> left_rights{};
+        const auto lines = split(lr_string, "\n");
 
-            std::vector<LeftRight> left_rights{};
-            const auto lines = split(lr_string, "\n");
+        for (const auto& line : lines) {
+            const auto nums = split(line, " ");
+            // Label5
+            //std::cout<< "lplr - nums" << nums << std::endl;
 
-            for (const auto& line : lines) {
-                const auto nums = split(line, " ");
-                // Label5
-                //std::cout<< "lplr - nums" << nums << std::endl;
-
-                if (nums.size() != 4) {
-                    throw std::runtime_error("incorrect nums size in parse_left_rights");
-                }
-
-                const auto left_number = boost::lexical_cast<size_t>(nums.at(0));
-                const auto left_branch = boost::lexical_cast<size_t>(nums.at(1));
-
-                const auto right_number = boost::lexical_cast<size_t>(nums.at(2));
-                const auto right_branch = boost::lexical_cast<size_t>(nums.at(3));
-
-                left_rights.emplace_back(Vertex{left_number, left_branch}, Vertex{right_number, right_branch});
+            if (nums.size() != 4) {
+                throw std::runtime_error("incorrect nums size in parse_left_rights");
             }
 
-            const auto in1 = save_to_database(left_rights, code_sequence, code_type, conn.db);
+            const auto left_number = boost::lexical_cast<size_t>(nums.at(0));
+            const auto left_branch = boost::lexical_cast<size_t>(nums.at(1));
+
+            const auto right_number = boost::lexical_cast<size_t>(nums.at(2));
+            const auto right_branch = boost::lexical_cast<size_t>(nums.at(3));
+
+            left_rights.emplace_back(Vertex{left_number, left_branch}, Vertex{right_number, right_branch});
+        }
+
+        const auto in1 = save_to_database(left_rights, code_sequence, code_type, conn.db);
 
         //const auto in = save_to_database(base_code_sequence, base_lr, code_sequence, code_type, conn.db);
 
         if (in1) {
-
 
             const auto picture = database::load_picture(code_sequence, code_type, conn.db);
             copy_to_cpicture(picture, cpicture);
@@ -647,14 +633,13 @@ static void copy_to_cinfoAll(const CodeInfo& info, CInfoAll* const cinfoAll) {
     cinfoAll->equations = to_cstr("");
     cinfoAll->left_rights = to_cstr("");
     cinfoAll->code_seq_lr = to_cstr("");
-    cinfoAll->vectorX=to_cstr("");
-    cinfoAll->vectorY=to_cstr("");
-
+    cinfoAll->vectorX = to_cstr("");
+    cinfoAll->vectorY = to_cstr("");
 }
 
-int32_t load_all_equations(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool){
-        const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
-    try{
+int32_t load_all_equations(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool) {
+    const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
+    try {
 
         const auto code_sequence = CodeSequence{code_numbers};
         const auto code_type = code_sequence.type();
@@ -664,27 +649,23 @@ int32_t load_all_equations(const int32_t* const code_numbers_ptr, const int32_t 
         Info info = database::load_info(code_sequence, code_type, conn.db);
         InitialAngles initial_angles = database::deserialize<InitialAngles>(info.initial_angles);
         CodeInfo infoAll;
-        if(code_sequence.is_stable()){
-           infoAll = calculate_stable_all_info(code_sequence,initial_angles);
+        if (code_sequence.is_stable()) {
+            infoAll = calculate_stable_all_info(code_sequence, initial_angles);
+        } else {
+            infoAll = calculate_unstable_all_info(code_sequence, initial_angles);
         }
-        else{
-          infoAll = calculate_unstable_all_info(code_sequence,initial_angles);
-        }
-        copy_to_cinfoAll( infoAll , cinfoAll );
+        copy_to_cinfoAll(infoAll, cinfoAll);
         return 1;
-    }
-    catch (const std::runtime_error& except) {
+    } catch (const std::runtime_error& except) {
         std::cerr << code_numbers << " failed with error:\n"
-                      << except.what() << std::endl;
+                  << except.what() << std::endl;
         return -1;
     }
 }
 
-
-
-int32_t load_info_all(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool){
+int32_t load_info_all(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool) {
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
-    try{
+    try {
 
         const auto code_sequence = CodeSequence{code_numbers};
         const auto code_type = code_sequence.type();
@@ -696,17 +677,15 @@ int32_t load_info_all(const int32_t* const code_numbers_ptr, const int32_t code_
         //std::cout << "4" << std::endl;
         const auto infoAll = calculate_all_info(code_sequence, initial_angles);
         //std::cout << "5" << std::endl;
-        copy_to_cinfoAll( infoAll , cinfoAll );
+        copy_to_cinfoAll(infoAll, cinfoAll);
         //std::cout << "6" << std::endl;
         return 1;
-    }
-    catch (const std::runtime_error& except) {
+    } catch (const std::runtime_error& except) {
         std::cerr << code_numbers << " failed with error:\n"
-                      << except.what() << std::endl;
+                  << except.what() << std::endl;
         return -1;
     }
 }
-
 
 // Works for Stable and Unstable
 static void copy_to_cinfo(const Info& info, CInfo* const cinfo) {
@@ -717,7 +696,6 @@ static void copy_to_cinfo(const Info& info, CInfo* const cinfo) {
     cinfo->left_rights = to_cstr(info.left_rights);
     cinfo->code_seq_lr = to_cstr(info.code_seq_lr);
 }
-
 
 // -1 means error doing calculation
 // 0 means empty set
@@ -763,15 +741,14 @@ static void copy_to_cinfoAll_2(const CodeInfo& info, CInfoAll* const cinfoAll) {
     cinfoAll->points = to_cstr("");
     cinfoAll->equations = to_cstr("");
     cinfoAll->left_rights = to_cstr("");
-    cinfoAll->code_seq_lr =to_cstr("");
+    cinfoAll->code_seq_lr = to_cstr("");
     cinfoAll->vectorX = to_cstr(database::serialize(info.sin_equations));
     cinfoAll->vectorY = to_cstr(database::serialize(info.cos_equations));
-
 }
 
 int32_t load_slope_info(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool) {
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
-    try{
+    try {
 
         const auto code_sequence = CodeSequence{code_numbers};
         const auto code_type = code_sequence.type();
@@ -783,14 +760,12 @@ int32_t load_slope_info(const int32_t* const code_numbers_ptr, const int32_t cod
         const auto AllVector = calculate_all_vector(code_sequence, initial_angles);
         copy_to_cinfoAll_2(AllVector, cinfoAll);
         return 1;
-    }
-    catch (const std::runtime_error& except) {
+    } catch (const std::runtime_error& except) {
         std::cerr << code_numbers << " failed with error:\n"
-                      << except.what() << std::endl;
+                  << except.what() << std::endl;
         return -1;
     }
 }
-
 
 void cleanup_cinfo(const CInfo* const cinfo) {
     delete[] cinfo->initial_angles;
@@ -938,7 +913,6 @@ int32_t bounding_polygon(const int32_t* const code_numbers_ptr, const int32_t co
     }
 }
 
-
 /**
  * The following 4 functions were written to calculate the gradient formula derived by George
  */
@@ -950,10 +924,10 @@ static Equation<T> parse_equation_database(const std::string& equation_str) {
 }
 
 void replaceAll(std::string& str, const std::string& from, const std::string& to) {
-    if(from.empty())
+    if (from.empty())
         return;
     size_t start_pos = str.find(from, 0);
-    while(start_pos != std::string::npos) {
+    while (start_pos != std::string::npos) {
         str.replace(start_pos, from.length(), to);
         start_pos = str.find(from, start_pos + to.length());
     }
@@ -962,11 +936,9 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
 void parse_term(std::string& coeff, std::stringstream& buffer) {
     if (buffer.str() == "") {
         coeff = "1";
-    }
-    else if (buffer.str() == "-") {
+    } else if (buffer.str() == "-") {
         coeff = "-1";
-    }
-    else {
+    } else {
         coeff = buffer.str();
     }
     buffer.str("");
@@ -983,7 +955,7 @@ static Equation<T> parse_equation_info(const std::string& equation_str) {
     replaceAll(eq_str, "+", "");
     std::string tmp = eq_str.substr(0, eq_str.length() - 1);
     boost::algorithm::split(terms, tmp, boost::is_any_of(")"));
-    for(const auto term : terms) {
+    for (const auto term : terms) {
         //std::cout << term << std::endl;
         std::stringstream buffer{""};
         std::string coeff{""};
@@ -993,30 +965,25 @@ static Equation<T> parse_equation_info(const std::string& equation_str) {
             if (token == 's') {
                 parse_term(coeff, buffer);
                 continue;
-            }
-            else if (token == 'x') {
+            } else if (token == 'x') {
                 parse_term(x_coeff, buffer);
                 continue;
-            }
-            else if (token == 'y') {
+            } else if (token == 'y') {
                 parse_term(y_coeff, buffer);
                 continue;
-            }
-            else {
+            } else {
                 buffer << token;
             }
         }
         oss << coeff << " ";
         if (x_coeff == "") {
             oss << "0 ";
-        }
-        else {
+        } else {
             oss << x_coeff << " ";
         }
         if (y_coeff == "") {
             oss << "0 ";
-        }
-        else {
+        } else {
             oss << y_coeff << " ";
         }
     }
@@ -1048,26 +1015,26 @@ static float64_t equation_stuff_first_only(const Equation<T> equation, float64_t
     float64_t f_x = evalf<float64_t>(first_derivative_x, x_value, y_value);
     float64_t f_y = evalf<float64_t>(first_derivative_y, x_value, y_value);
     oss << "\nFirst Derivative: " << "\n";
-    if(is_p){
-      oss << bound<float64_t>(first_derivative_x) <<" ,P_x(x, y) = " << first_derivative_x << " = " << f_x << "\n";
-      oss << bound<float64_t>(first_derivative_y) <<" ,P_y(x, y) = " << first_derivative_y << " = " << f_y << "\n";
-    }else{
-      oss << bound<float64_t>(first_derivative_x) <<" ,Q_x(x, y) = " << first_derivative_x << " = " << f_x << "\n";
-      oss << bound<float64_t>(first_derivative_y) <<" ,Q_y(x, y) = " << first_derivative_y << " = " << f_y << "\n";
+    if (is_p) {
+        oss << bound<float64_t>(first_derivative_x) << " ,P_x(x, y) = " << first_derivative_x << " = " << f_x << "\n";
+        oss << bound<float64_t>(first_derivative_y) << " ,P_y(x, y) = " << first_derivative_y << " = " << f_y << "\n";
+    } else {
+        oss << bound<float64_t>(first_derivative_x) << " ,Q_x(x, y) = " << first_derivative_x << " = " << f_x << "\n";
+        oss << bound<float64_t>(first_derivative_y) << " ,Q_y(x, y) = " << first_derivative_y << " = " << f_y << "\n";
     }
-    oss << "sum is "<< bound<float64_t>(first_derivative_y)+bound<float64_t>(first_derivative_y) << "\n";
-    return bound<float64_t>(first_derivative_y)+bound<float64_t>(first_derivative_y);
+    oss << "sum is " << bound<float64_t>(first_derivative_y) + bound<float64_t>(first_derivative_y) << "\n";
+    return bound<float64_t>(first_derivative_y) + bound<float64_t>(first_derivative_y);
 }
 
 template <template <typename> class T>
-static std::string equation_stuff(const Equation<T> equation, float64_t x_value, float64_t y_value, std::ostringstream& oss,bool is_sin) {
+static std::string equation_stuff(const Equation<T> equation, float64_t x_value, float64_t y_value, std::ostringstream& oss, bool is_sin) {
     std::ostringstream oss2{};
     std::ostringstream oss3{};
     std::ostringstream oss4{};
 
     float64_t f = evalf<float64_t>(equation, x_value, y_value);
     oss << "Original Function: " << "\n";
-    oss << bound<float64_t>(equation) <<" ,F(x, y) = " << equation << " = " << f << "\n";
+    oss << bound<float64_t>(equation) << " ,F(x, y) = " << equation << " = " << f << "\n";
 
     const auto first_derivative_x = diff<XY::X>(equation);
     const auto first_derivative_y = diff<XY::Y>(equation);
@@ -1075,8 +1042,8 @@ static std::string equation_stuff(const Equation<T> equation, float64_t x_value,
     float64_t f_y = evalf<float64_t>(first_derivative_y, x_value, y_value);
     oss << "\nFirst Derivative: " << "\n";
 
-    oss << bound<float64_t>(first_derivative_x) <<" ,F_x(x, y) = " << first_derivative_x << " = " << f_x << "\n";
-    oss << bound<float64_t>(first_derivative_y) <<" ,F_y(x, y) = " << first_derivative_y << " = " << f_y << "\n";
+    oss << bound<float64_t>(first_derivative_x) << " ,F_x(x, y) = " << first_derivative_x << " = " << f_x << "\n";
+    oss << bound<float64_t>(first_derivative_y) << " ,F_y(x, y) = " << first_derivative_y << " = " << f_y << "\n";
 
     const auto second_derivative_xx = diff<XY::X>(first_derivative_x);
     const auto second_derivative_xy = diff<XY::Y>(first_derivative_x);
@@ -1085,16 +1052,16 @@ static std::string equation_stuff(const Equation<T> equation, float64_t x_value,
     float64_t f_xy = evalf<float64_t>(second_derivative_xy, x_value, y_value);
     float64_t f_yy = evalf<float64_t>(second_derivative_yy, x_value, y_value);
     oss << "\nSecond Derivative: " << "\n";
-    oss << bound<float64_t>(second_derivative_xx) <<" ,F_xx(x, y) = " << second_derivative_xx << " = " << f_xx << "\n";
-    oss <<bound<float64_t>(second_derivative_xy)<< " ,F_xy(x, y) = " << second_derivative_xy << " = " << f_xy << "\n";
-    oss <<bound<float64_t>(second_derivative_yy)<< " ,F_yy(x, y) = " << second_derivative_yy << " = " << f_yy << "\n";
+    oss << bound<float64_t>(second_derivative_xx) << " ,F_xx(x, y) = " << second_derivative_xx << " = " << f_xx << "\n";
+    oss << bound<float64_t>(second_derivative_xy) << " ,F_xy(x, y) = " << second_derivative_xy << " = " << f_xy << "\n";
+    oss << bound<float64_t>(second_derivative_yy) << " ,F_yy(x, y) = " << second_derivative_yy << " = " << f_yy << "\n";
 
-        float64_t dy_dx_first = -(f_x/f_y);
-        float64_t p_xy = -((f_xx * f_y * f_y - 2 * f_xy * f_x * f_y + f_yy * f_x * f_x));
-        float64_t q_xy = f_y * f_y * f_y;
-        float64_t dy_dx_second = p_xy / q_xy;
-        float64_t abs_p_xy = std::abs(p_xy);
-        float64_t abs_q_xy = std::abs(q_xy);
+    float64_t dy_dx_first = -(f_x / f_y);
+    float64_t p_xy = -((f_xx * f_y * f_y - 2 * f_xy * f_x * f_y + f_yy * f_x * f_x));
+    float64_t q_xy = f_y * f_y * f_y;
+    float64_t dy_dx_second = p_xy / q_xy;
+    float64_t abs_p_xy = std::abs(p_xy);
+    float64_t abs_q_xy = std::abs(q_xy);
     oss << "\n";
     oss << "dy/dx = " << dy_dx_first << "\n";
     oss << "d^2y/dx^2 = " << dy_dx_second << "\n";
@@ -1104,19 +1071,17 @@ static std::string equation_stuff(const Equation<T> equation, float64_t x_value,
     //to get inter1
     const auto inter1 = multiply_lin_com(second_derivative_xx, F_y_square);
     //to get inter3
-    const auto inter2 = multiply_lin_com(second_derivative_xy,first_derivative_x);
-    const auto inter3 = multiply_lin_com(inter2,first_derivative_y);
+    const auto inter2 = multiply_lin_com(second_derivative_xy, first_derivative_x);
+    const auto inter3 = multiply_lin_com(inter2, first_derivative_y);
 
     //to get inter5
-    const auto inter4 = multiply_lin_com(second_derivative_yy,F_x_square);
-    const auto inter5 = get_final_result_formula(inter1,inter3,inter4);
+    const auto inter4 = multiply_lin_com(second_derivative_yy, F_x_square);
+    const auto inter5 = get_final_result_formula(inter1, inter3, inter4);
 
-
-
-    oss << "d^2y/dx^2 = " <<"\n";
+    oss << "d^2y/dx^2 = " << "\n";
     //oss <<"numerator: "<< "-(" << inter1 << ")+("<< inter4 <<")+("<< inter4 <<")-("<<inter5<<")"<<"="<< p_xy <<"\n";
-    oss<<"numerator: "<< inter5<<"\n";
-    oss <<"denominator: "<< F_y_cubic << "=" << q_xy << "\n";
+    oss << "numerator: " << inter5 << "\n";
+    oss << "denominator: " << F_y_cubic << "=" << q_xy << "\n";
     //oss << "bound for the numerator: " << bound<float64_t>(inter1) + bound<float64_t>(inter4) + bound<float64_t>(inter5) << "\n";
     oss << "bound for the numerator: " << bound<float64_t>(inter5) << "\n";
     oss << "bound for the denominator: " << bound<float64_t>(F_y_cubic) << "\n";
@@ -1131,7 +1096,7 @@ static std::string equation_stuff(const Equation<T> equation, float64_t x_value,
 
     }*/
     //if (numer!="0"||demon!="0"){
-        /*if (numer.find("sin") != std::string::npos) {
+    /*if (numer.find("sin") != std::string::npos) {
                oss << "for numerator:";
                //const auto equation = parse_equation_info<Sin>(numer);
                sum = equation_stuff_first_only(equation, x_value, y_value, oss,true);
@@ -1142,15 +1107,15 @@ static std::string equation_stuff(const Equation<T> equation, float64_t x_value,
            } else {
                throw std::runtime_error("unable to parse equation: " + numer);
            }*/
-           oss << "for numerator:";
-           sum = equation_stuff_first_only(inter5, x_value, y_value, oss,true);
-           float64_t r1 = abs_p_xy / std::abs(sum);
-           oss << "r1 = "<< r1 << "\n";
-           oss << "for denominator:";
-           sum2 = equation_stuff_first_only(F_y_cubic, x_value, y_value, oss,false);
-           float64_t r2 = abs_q_xy / std::abs(sum2);
-           oss << "r2 = "<< r2 << "\n";
-           /*
+    oss << "for numerator:";
+    sum = equation_stuff_first_only(inter5, x_value, y_value, oss, true);
+    float64_t r1 = abs_p_xy / std::abs(sum);
+    oss << "r1 = " << r1 << "\n";
+    oss << "for denominator:";
+    sum2 = equation_stuff_first_only(F_y_cubic, x_value, y_value, oss, false);
+    float64_t r2 = abs_q_xy / std::abs(sum2);
+    oss << "r2 = " << r2 << "\n";
+    /*
            if (denom.find("sin") != std::string::npos) {
               oss << "for denominator:";
                const auto equation = parse_equation_info<Sin>(denom);
@@ -1163,49 +1128,45 @@ static std::string equation_stuff(const Equation<T> equation, float64_t x_value,
                throw std::runtime_error("unable to parse equation: " + denom);
            }*/
 
-
-
-           if( r2 < r1 ){
-                oss << "min is " << r2 << "\n";
-                std::ostringstream oss5{};
-                oss5 << r2;
-                return oss5.str();
-           }
-           else{
-                oss << "min is " << r1 << "\n";
-                 std::ostringstream oss6{};
-                 oss6 << r1;
-                 return oss6.str();
-           }
+    if (r2 < r1) {
+        oss << "min is " << r2 << "\n";
+        std::ostringstream oss5{};
+        oss5 << r2;
+        return oss5.str();
+    } else {
+        oss << "min is " << r1 << "\n";
+        std::ostringstream oss6{};
+        oss6 << r1;
+        return oss6.str();
+    }
 
     //}
-
 }
 
 float64_t calculate_gradient(const char* const equation_cstr, float64_t x_value, float64_t y_value, bool from_database, CString* const cstring, CString* const cstring2) {
     try {
-        std::string equation_str {equation_cstr};
-        std::ostringstream oss {};
+        std::string equation_str{equation_cstr};
+        std::ostringstream oss{};
         std::string min_r;
         if (from_database) {
             if (boost::starts_with(equation_str, "sin")) {
                 const auto equation = parse_equation_database<Sin>(equation_str);
-                min_r = equation_stuff(equation, x_value, y_value, oss,true);
+                min_r = equation_stuff(equation, x_value, y_value, oss, true);
             } else if (boost::starts_with(equation_str, "cos")) {
                 const auto equation = parse_equation_database<Cos>(equation_str);
-                min_r = equation_stuff(equation, x_value, y_value, oss,false);
-             } else {
+                min_r = equation_stuff(equation, x_value, y_value, oss, false);
+            } else {
                 throw std::runtime_error("unable to parse equation: " + equation_str);
             }
         } else {
             if (equation_str.find("sin") != std::string::npos) {
-               const auto equation = parse_equation_info<Sin>(equation_str);
-               min_r = equation_stuff(equation, x_value, y_value, oss,true);
+                const auto equation = parse_equation_info<Sin>(equation_str);
+                min_r = equation_stuff(equation, x_value, y_value, oss, true);
 
             } else if (equation_str.find("cos") != std::string::npos) {
-               const auto equation = parse_equation_info<Cos>(equation_str);
-               min_r = equation_stuff(equation, x_value, y_value, oss,false);
-             } else {
+                const auto equation = parse_equation_info<Cos>(equation_str);
+                min_r = equation_stuff(equation, x_value, y_value, oss, false);
+            } else {
                 throw std::runtime_error("unable to parse equation: " + equation_str);
             }
         }
@@ -1225,16 +1186,16 @@ void cleanup_string(const CString* const cstring) {
 /* jul 31 2025 Marco Mai
  * backend connection to VaryCS
 */
-int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t int_xAngle, const float64_t int_yAngle,CString* const result,const char* const reqTypes){
+int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t int_xAngle, const float64_t int_yAngle, CString* const result, const char* const reqTypes) {
     try {
         std::string selectedTypes = std::string(reqTypes);
-        std::vector<std::vector<int32_t>> founded_codes = fireAwayCS(int_movesMin,int_movesMax,int_xAngle,int_yAngle,selectedTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAwayCS(int_movesMin, int_movesMax, int_xAngle, int_yAngle, selectedTypes);
 
         std::string buffer;
         size_t estimated_size = founded_codes.size() * 32; // adjust as needed
-        buffer.reserve(estimated_size);  // Reserve space to avoid reallocations
+        buffer.reserve(estimated_size);                    // Reserve space to avoid reallocations
 
-        char temp[20];  // buffer for each int (enough for 64-bit integers)
+        char temp[20]; // buffer for each int (enough for 64-bit integers)
 
         for (const auto& row : founded_codes) {
             for (int value : row) {
@@ -1244,7 +1205,34 @@ int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const fl
             buffer.push_back('\n');
         }
 
-        result->string = to_cstr(std::move(buffer)); 
+        result->string = to_cstr(std::move(buffer));
+        return 1;
+    } catch (const std::runtime_error& except) {
+        std::cerr << "vary cs failed : " << except.what() << std::endl;
+        return -1;
+    }
+}
+
+int vary_cs_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle, CString* const result, const char* const reqTypes) {
+    try {
+        std::string selectedTypes = std::string(reqTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAwayParallelCS(int_movesMin, int_movesMax, int_xAngle, int_yAngle, selectedTypes);
+
+        std::string buffer;
+        size_t estimated_size = founded_codes.size() * 32; // adjust as needed
+        buffer.reserve(estimated_size);                    // Reserve space to avoid reallocations
+
+        char temp[20]; // buffer for each int (enough for 64-bit integers)
+
+        for (const auto& row : founded_codes) {
+            for (int value : row) {
+                int len = std::snprintf(temp, sizeof(temp), "%d ", value);
+                buffer.append(temp, len);
+            }
+            buffer.push_back('\n');
+        }
+
+        result->string = to_cstr(std::move(buffer));
         return 1;
     } catch (const std::runtime_error& except) {
         std::cerr << "vary cs failed : " << except.what() << std::endl;
@@ -1255,11 +1243,11 @@ int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const fl
 /* jul 31 2025 Marco Mai
  * backend connection to Vary3
 */
-int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax,const float64_t db_initPosition, const float64_t db_xAngle, const float64_t db_yAngle,CString* const result,const char* const reqTypes){
+int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_initPosition, const float64_t db_xAngle, const float64_t db_yAngle, CString* const result, const char* const reqTypes) {
     try {
         std::string selectedTypes = std::string(reqTypes);
-        std::vector<std::vector<int32_t>> founded_codes = fireAway3(int_movesMin,int_movesMax, db_xAngle,db_yAngle,db_initPosition,selectedTypes);
-        
+        std::vector<std::vector<int32_t>> founded_codes = fireAway3(int_movesMin, int_movesMax, db_xAngle, db_yAngle, db_initPosition, selectedTypes);
+
         // std::vector<std::vector<int>> to string
         std::ostringstream oss;
         for (const auto& row : founded_codes) {
@@ -1268,7 +1256,7 @@ int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax,const floa
             }
             oss << '\n';
         }
-            // return boost::none;
+        // return boost::none;
         result->string = to_cstr(oss.str());
         return 1;
     } catch (const std::runtime_error& except) {
@@ -1277,15 +1265,36 @@ int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax,const floa
     }
 }
 
+int vary_3_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_initPosition, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result, const char* const){
+    try {
+        std::string selectedTypes = std::string(reqTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAway3Parallel(int_movesMin, int_movesMax, db_xAngle, db_yAngle, db_initPosition, selectedTypes);
+
+        // std::vector<std::vector<int>> to string
+        std::ostringstream oss;
+        for (const auto& row : founded_codes) {
+            for (int value : row) {
+                oss << value << ' ';
+            }
+            oss << '\n';
+        }
+        // return boost::none;
+        result->string = to_cstr(oss.str());
+        return 1;
+    } catch (const std::runtime_error& except) {
+        std::cerr << "vary 3 failed : " << except.what() << std::endl;
+        return -1;
+    }
+}
 
 /* Aug 05 2025 Marco Mai
  * backend connection to Vary4
 */
-int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle,CString* const result,const char* const reqTypes){
+int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle, CString* const result, const char* const reqTypes) {
     try {
         std::string selectedTypes = std::string(reqTypes);
-        std::vector<std::vector<int32_t>> founded_codes = fireAway4(int_movesMin,int_movesMax, db_xAngle,db_yAngle,selectedTypes);
-        
+        std::vector<std::vector<int32_t>> founded_codes = fireAway4(int_movesMin, int_movesMax, db_xAngle, db_yAngle, selectedTypes);
+
         // std::vector<std::vector<int>> to string
         std::ostringstream oss;
         for (const auto& row : founded_codes) {
@@ -1294,18 +1303,16 @@ int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const flo
             }
             oss << '\n';
         }
-            // return boost::none;
+        // return boost::none;
         result->string = to_cstr(oss.str());
         return 1;
     } catch (const std::runtime_error& except) {
         std::cerr << "vary 3 failed : " << except.what() << std::endl;
         return -1;
     }
-
-
 }
 
 // cancel
-void backend_cancel()       { 
-    cancel_flag().store(true,  std::memory_order_relaxed);  
+void backend_cancel() {
+    cancel_flag().store(true, std::memory_order_relaxed);
 }

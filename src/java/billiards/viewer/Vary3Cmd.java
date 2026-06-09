@@ -63,11 +63,17 @@ public final class Vary3Cmd {
 		int count = 0;
 		System.out.printf("// Found %d threads\n", Utils.numThreads);
 		final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-		MutableSet<ClassifiedCodeSequence> allCodes = Vary.findCodes3(x, y, min, max, shots, types, executor);
+
+		MutableSet<ClassifiedCodeSequence> allCodes = Vary.findCodes3Parallel(x, y, min, max, shots, types, executor);
 		MutableSortedSet<ClassifiedCodeSequence> sortedCodes = new TreeSortedSet<>();
 		sortedCodes.addAll(allCodes);
+		final long codesFoundTime = System.currentTimeMillis();
+		System.out.println("// All codes found at time: " + Utils.timeConvert(codesFoundTime - startTime) + "\n");
 		ArrayList<ClassifiedCodeSequence> filteredCodes = Vary.filterCodes(new ArrayList<>(sortedCodes));
 
+
+		final long codesFilteredTime = System.currentTimeMillis();
+		System.out.println("// Codes filtered at time: " + Utils.timeConvert(codesFilteredTime - startTime) + "\n");
 		for (ClassifiedCodeSequence code : filteredCodes) {
 			++count;
 			final String codeString = Utils.standard(code, count);

@@ -44,8 +44,9 @@ public class CodeTypeCollection<T> {
 				|| type == CodeType.OSNO
 				: "An unknown CodeType was given. Cannot be matched to a value";
 
-		// NOTE: Perhaps there is a better way to get values from the CodeType enum so that we keep random access
-		switch (type) { 
+		// NOTE: Perhaps there is a better way to get values from the CodeType enum so
+		// that we keep random access, perhaps with a HashMap?
+		switch (type) {
 			case OSO:
 				return OSO;
 			case CS:

@@ -327,6 +327,22 @@ public final class TetraBar {
 	}
 
 	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>June 09, 2026</b>
+	 * <p>
+	 * <code>setCoordinatesText</code> sets the <code>text</code> box to the given
+	 * list of strings, coordinates is expected to be a list of strings of
+	 * space-separated integers representing coordinates however this expectation is
+	 * not enforced by this function.
+	 *
+	 * Each entry in the given list will be placed on a separate line of text
+	 * </p>
+	 */
+	public void setCoordinatesText(String content){
+		coordsTextArea.setText(content);
+	}
+
+	/**
 	 * <b>Zhao Yu Li</b><br>
 	 * <b>Jul 2, 2025</b>
 	 * <p>

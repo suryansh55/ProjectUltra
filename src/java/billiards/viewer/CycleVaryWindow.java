@@ -1107,7 +1107,7 @@ public class CycleVaryWindow {
         if (numGroupToPrint == null) return;
 
         if (pointsFiltered.isEmpty()) {
-            System.out.println("// Cannot find an initial list of empty pixels.");
+            System.out.println("// DONE Cannot find an initial list of empty pixels.");
         }
 
         // Create the task

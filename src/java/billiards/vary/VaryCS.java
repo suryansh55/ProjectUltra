@@ -59,9 +59,27 @@ public final class VaryCS {
 			MutableList<ClassifiedCodeSequence> codes = values.get();
 			return codes;
 		}
-		
-
-
     }
 	
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>June 09, 2026</b>
+	 * <p>
+	 * <code>fireAwayParallel</code> calls a parallelized-version of VaryCS, this
+	 * version parallelizes the search AND verification of code sequences.
+	 * @see src/backend/cpp/vary_cs.cpp
+	 * </p>
+	 */
+    public static MutableList<ClassifiedCodeSequence> fireAwayParallel(final int movesMin, final int movesMax,
+            final double xAngle, final double yAngle,final String reqTypes) {
+		
+		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.varyCSCppParallel( movesMin, movesMax,xAngle,yAngle,reqTypes);
+		if(!values.isPresent()){
+			final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
+			return codes;
+		} else {
+			MutableList<ClassifiedCodeSequence> codes = values.get();
+			return codes;
+		}
+    }
 }

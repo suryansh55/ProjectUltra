@@ -1790,6 +1790,9 @@ public final class Viewer {
 				tetraBar = new TetraBar(mainWindow, this);
 			}
 
+			if (!fileCodeSequences.isEmpty())
+				tetraBar.setCoordinatesText(coordinatesToString(fileCodeSequences));
+
 			if (tetraBar.isShowing()) {
 				tetraBar.toFront();
 				return;
@@ -1963,6 +1966,11 @@ public final class Viewer {
 				final String x = textXLockField.getText();
 				final String y = textYLockField.getText();
 
+				// If OBO file (or code sequences) is nonempty, overwrite the middleVary text
+				// box with these contents
+				if (!fileCodeSequences.isEmpty())
+					varyWindow.setCoordinatesText(coordinatesToString(fileCodeSequences));
+
 				if (varyWindow.stage.isShowing()) {
 					varyWindow.stage.toFront();
 					if (!boyanMenu.varyOnePoint.isSelected()) {
@@ -2058,6 +2066,11 @@ public final class Viewer {
 
 				final String x = textXLockField.getText();
 				final String y = textYLockField.getText();
+
+				// If OBO file (or code sequences) is nonempty, overwrite the middleVary text
+				// box with these contents
+				if (!fileCodeSequences.isEmpty())
+					middleVaryWindow.setCoordinatesText(coordinatesToString(fileCodeSequences));
 
 				if (middleVaryWindow.stage.isShowing()) {
 					middleVaryWindow.stage.toFront();
@@ -7324,7 +7337,7 @@ public final class Viewer {
 			onScreenCodes.add(storage.classCodeSeq);
 		});
 		// Create the task
-		final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, max, sideSumOverride, pool, 
+		final PolyVaryTask task = new PolyVaryTask(points, onScreenCodes, boyanMenu, max, sideSumOverride, pool,
 				storageExecutor, shotExecutor, regionsImageView, map, 0, 0);
 		// final ObservableList<Storage> partials = task.getPartialProperty().get();
 		final ProgressWithStatus progress = new ProgressWithStatus(task, "%d / %d", 0);
@@ -7538,12 +7551,7 @@ public final class Viewer {
 		// the previous coordinate. If yes, then we don't need to run Vary for this
 		// coordinate because a code from the
 		// last coordinate fills the square.
-		ArrayList<Storage> previousCodesLocal;
-
-		if (isSuper)
-			previousCodesLocal = superPolyVaryWindow.previousCodes;
-		else
-			previousCodesLocal = previousCodes;
+		ArrayList<Storage> previousCodesLocal = isSuper ? superPolyVaryWindow.previousCodes : previousCodes;
 
 		for (Storage storage : previousCodesLocal) {
 			if (storage.classCodeSeq.stable) {
@@ -7611,29 +7619,10 @@ public final class Viewer {
 		}
 
 		// Find Potential Points
-		final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
-		final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
-		final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
-		final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
+		final MutableList<Double> pointsFiltered = findPoints(area, maxSubdivisions);
 
-		final MutableList<Double> points = new FastList<>();
-		final MutableList<Double> pointsFiltered = new FastList<>();
-
-		autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
-		final Image image = regionsImageView.getImage();
-		final PixelReader reader = image.getPixelReader();
-		// Filter out filled pixels
-		for (int i = 0; i < points.size(); i += 2) {
-			final int midX = (int) map.pixelX(points.get(i));
-			final int midY = (int) map.pixelY(points.get(i + 1));
-			int color = reader.getArgb(midX, midY);
-			if (color == 0) {
-				pointsFiltered.add(points.get(i));
-				pointsFiltered.add(points.get(i + 1));
-			}
-		}
 		if (pointsFiltered.isEmpty()) {
-			System.out.println("// Cannot find an initial list of empty pixels.");
+			System.out.println("// DONE Cannot find an initial list of empty pixels.");
 		}
 
 		// We want to filter the codes to avoid recalculating any codes that are already
@@ -7891,6 +7880,66 @@ public final class Viewer {
 		});
 		drawExecutor.execute(task);
 		return 0;
+	}
+
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>May 09, 2026</b>
+	 * <p>
+	 * <code>coordinatesToString></code> converts a list of space-separated numbers
+	 * representing coordinates to a single string with each coordinate separated
+	 * with the system's line separator (\n or \n\r)
+	 *
+	 * <code>coords</code> is expected to be in the format of coordinates but this
+	 * expectation is not enforced by this function.
+	 * </p>
+	 * 
+	 * @param coords List of strings. Strings are expected to be in the form "x y"
+	 *               where x and y are real numbers
+	 * @example
+	 *          <p>
+	 *          <i>Assuming a unix-based operating system</i><br>
+	 *          coordinatesToString(["1 1", "2.3 4.5", "6 7"]) -> "1 1\n2.3 4.5\n6
+	 *          7\n"
+	 *          </p>
+	 */
+	private String coordinatesToString(ArrayList<String> coords) {
+		return coords.stream().reduce("", (accumulator, str) -> accumulator + str + System.lineSeparator());
+	}
+
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>June 01, 2026</b>
+	 * <p>
+	 * <code>findPoints</code> finds missing unfilled points the given area
+	 * </p>
+	 * 
+	 * @param area Area to search for points
+	 */
+	private MutableList<Double> findPoints(ConvexPolygon area, int maxSubdivisions) {
+		final MutableList<Double> points = new FastList<>();
+		final MutableList<Double> pointsFiltered = new FastList<>();
+		final double xMin = Math.max(area.projectX().min, map.getViewRectangle().intervalX.min);
+		final double xMax = Math.min(area.projectX().max, map.getViewRectangle().intervalX.max);
+		final double yMin = Math.max(area.projectY().min, map.getViewRectangle().intervalY.min);
+		final double yMax = Math.min(area.projectY().max, map.getViewRectangle().intervalY.max);
+
+		autoRecurse(xMin, xMax, yMin, yMax, 0, maxSubdivisions, area, points);
+
+		final Image image = regionsImageView.getImage();
+		final PixelReader reader = image.getPixelReader();
+
+		for (int i = 0; i < points.size(); i += 2) {
+			final int midX = (int) map.pixelX(points.get(i));
+			final int midY = (int) map.pixelY(points.get(i + 1));
+			int color = reader.getArgb(midX, midY);
+			if (color == 0) {
+				pointsFiltered.add(points.get(i));
+				pointsFiltered.add(points.get(i + 1));
+			}
+		}
+
+		return points;
 	}
 
 	// Calculate 4^max vary locations which are distributed across the entire query

@@ -139,7 +139,7 @@ public class BoyanMenu {
 		maxMovesText.setPrefWidth(60);
 		maxMovesText.setTooltip(Utils.toolTip("The maximum side sum to search for"));
 		maxMovesText.setText("200");
-		minMovesText.setPrefWidth(50);
+		minMovesText.setPrefWidth(60);
 		minMovesText.setTooltip(Utils.toolTip("The minimum side sum to search for"));
 		minMovesText.setText("0");
 		shotsText.setPrefWidth(35);// george set 40 instead of 60
@@ -760,7 +760,7 @@ public class BoyanMenu {
 			// Filter codes if their maxSideSum is non-zero
 			codesFound.removeIf(code -> {
 				int max = maxSideSum.get(code.codeType);
-				return max != 0 && code.codeSum >= max });
+				return max != 0 && code.codeSum >= max; });
 			printCodes(codesFound, "garbage.txt", printAll, true, Integer.parseInt(maxPrinting.getText()));
 
 			if (codesFound.isEmpty()) {

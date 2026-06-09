@@ -580,6 +580,8 @@ public final class Wrapper {
 
         private static native int vary_cs_cpp(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
             CString result, String reqTypes);
+    private static native int vary_cs_cpp_parallel(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
+            CString result, String reqTypes);
 
     public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCpp(int movesMin, int movesMax, double xAngle,
             double yAngle, String reqTypes) {
@@ -615,13 +617,80 @@ public final class Wrapper {
         }
     }
 
+    public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCppParallel(int movesMin, int movesMax, double xAngle,
+            double yAngle, String reqTypes) {
+        final CString result = new CString();
+        final int rval = vary_cs_cpp_parallel(movesMin, movesMax, xAngle, yAngle, result, reqTypes);
+        if (rval > 0) {
+            String strseq = result.string.getString(0);
+
+            // Estimate number of lines
+            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+            List<ClassifiedCodeSequence> tmp = Collections.synchronizedList(new ArrayList<>(estimatedLines));
+
+            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+                                .mapToInt(Integer::parseInt)
+                                .toArray();
+                        IntList list = IntArrayList.newListWith(dirty);
+                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+                        codeSeq.ifPresent(tmp::add); // now thread-safe
+                    } catch (Exception ignored) {
+                        // skip malformed
+                    }
+                }
+            });
+
+            return Optional.of(Lists.mutable.ofAll(tmp));
+
+        } else {
+            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
+        }
+    }
+
     private static native int vary_3_cpp(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
+            double db_yAngle, CString result, String reqTypes);
+    private static native int vary_3_cpp_parallel(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
             double db_yAngle, CString result, String reqTypes);
 
     public static Optional<MutableList<ClassifiedCodeSequence>> vary3Cpp(int movesMin, int movesMax,
             double initPosition, double xAngle, double yAngle, String reqTypes) {
         final CString result = new CString();
         final int rval = vary_3_cpp(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
+        if (rval > 0) {
+            String strseq = result.string.getString(0);
+
+            // Estimate number of lines
+            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+            List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
+
+            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+                                .mapToInt(Integer::parseInt)
+                                .toArray();
+                        IntList list = IntArrayList.newListWith(dirty);
+                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+                        codeSeq.ifPresent(tmp::add); // thread safety issue here, see below
+                    } catch (Exception ignored) {
+                        // skip malformed
+                    }
+                }
+            });
+            return Optional.of(Lists.mutable.ofAll(tmp));
+        } else {
+            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
+        }
+    }
+    public static Optional<MutableList<ClassifiedCodeSequence>> vary3CppParallel(int movesMin, int movesMax,
+            double initPosition, double xAngle, double yAngle, String reqTypes) {
+        final CString result = new CString();
+        final int rval = vary_3_cpp_parallel(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
         if (rval > 0) {
             String strseq = result.string.getString(0);
 
