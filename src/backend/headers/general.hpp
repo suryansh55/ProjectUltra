@@ -8,7 +8,11 @@
 #include <set>
 #include <sstream>
 
-#ifndef COMPUTE_CANADA
+#ifdef COMPUTE_CANADA
+// On AllianceCan Servers, Eigen header files are not under an eigen3 directory (atleast on Rorqual and Nibi)
+#include <Eigen/Dense>
+#else
+
 #include <eigen3/Eigen/Dense>
 #endif
 

@@ -1216,7 +1216,7 @@ int vary_cs_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const fl
 int vary_cs_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle, CString* const result, const char* const reqTypes) {
     try {
         std::string selectedTypes = std::string(reqTypes);
-        std::vector<std::vector<int32_t>> founded_codes = fireAwayParallelCS(int_movesMin, int_movesMax, int_xAngle, int_yAngle, selectedTypes);
+        std::vector<std::vector<int32_t>> founded_codes = fireAwayParallelCS(int_movesMin, int_movesMax, db_xAngle, db_yAngle);
 
         std::string buffer;
         size_t estimated_size = founded_codes.size() * 32; // adjust as needed
@@ -1265,7 +1265,7 @@ int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const flo
     }
 }
 
-int vary_3_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_initPosition, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result, const char* const){
+int vary_3_cpp_parallel(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t  db_initPosition, const float64_t  db_xAngle, const float64_t  db_yAngle, CString* const result, const char* const reqTypes){
     try {
         std::string selectedTypes = std::string(reqTypes);
         std::vector<std::vector<int32_t>> founded_codes = fireAway3Parallel(int_movesMin, int_movesMax, db_xAngle, db_yAngle, db_initPosition, selectedTypes);
