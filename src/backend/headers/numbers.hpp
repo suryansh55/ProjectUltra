@@ -2,9 +2,7 @@
 
 #include <boost/cstdfloat.hpp>
 #include <boost/multiprecision/gmp.hpp>
-#ifndef COMPUTE_CANADA
 #include <boost/multiprecision/mpfi.hpp>
-#endif
 #include <boost/multiprecision/mpfr.hpp>
 
 // This is almost certainly just a typedef of double, but it is good to be safe.
@@ -39,9 +37,7 @@ using Rational = boost::multiprecision::mpq_rational;
 
 using Real = boost::multiprecision::mpfr_float_50;
 
-#ifndef COMPUTE_CANADA
 using Interval = boost::multiprecision::mpfi_float_50;
-#endif
 
 // NOTE: Because boost uses the number backend to optimize mathematical expressions,
 // you must explicitly write the type of number you expect. Eg
