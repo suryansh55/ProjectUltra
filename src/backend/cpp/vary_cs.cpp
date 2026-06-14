@@ -57,7 +57,6 @@ void iterateFireAwayCS2(
     std::vector<int32_t>& code,
     std::vector<std::vector<int32_t>>& codesFound, std::string reqType)
 {
-    cancel_flag().store(false,  std::memory_order_relaxed); 
     // store data in each level
     struct Frame {
         float64_t specMin;
@@ -78,15 +77,9 @@ void iterateFireAwayCS2(
 
     // parallel code verify
     std::atomic<int> inflight{0};
-    // setting limit for submition to the memory
-    float usage = 0.4;
-    if (max >30000){usage = 0.04;}
-    else if (max >25000){usage=0.08;}
-    else if (max >15000){usage=0.1;}
-    else if (max >10000){usage=0.2;}
-    else if (max >6000){usage = 0.3;};
-    const int MAX_INFLIGHT = compute_max_inflight(usage, 16384);  // tune based on memory
     unsigned int cores = std::thread::hardware_concurrency();
+    // code2 is 2*depth ints; cap at cores*8 to prevent OOM from queued lambda closures.
+    const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
     std::mutex codesFoundMutex;
 
     try{
@@ -123,7 +116,8 @@ void iterateFireAwayCS2(
 
                             // detect if hitting limit, if yes wait
                             while (inflight >= MAX_INFLIGHT) {
-                                std::this_thread::sleep_for(std::chrono::microseconds(100));  // or use condition_variable
+                                if (cancel_flag().load(std::memory_order_relaxed)) break;
+                                std::this_thread::sleep_for(std::chrono::milliseconds(1));
                             }
                             inflight.fetch_add(1, std::memory_order_relaxed);
                             // type check

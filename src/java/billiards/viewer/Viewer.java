@@ -1266,7 +1266,8 @@ public final class Viewer {
                     throw new RuntimeException(task.getException());
                 });
 
-                Utils.runAndWait(task);
+                Utils.runAndWait(task); //thread error
+                //executor.execute(task);
             }
 
 
@@ -4292,7 +4293,9 @@ public final class Viewer {
             throw new RuntimeException(task.getException());
         });
 
-        Utils.runAndWait(task);
+        Utils.runAndWait(task); //cause thread error
+
+       // new Thread(task, "draw-picture").start();
 
         //test for correctness with the no left rights as the standard
        /*for (ClassifiedCodeSequence code : classCodeSeqs){
@@ -7335,6 +7338,15 @@ public final class Viewer {
                         // Increment for superPoly
                         step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
                     }
+                    // This coordinate is already covered by a code from the previous
+                    // coordinate, so the cancel / next-hole / finish handling above is
+                    // all that is needed. Without this return, execution falls through
+                    // and ALSO launches a PolyVaryTask for this same coordinate, whose
+                    // onSucceeded advances the loop a second time. Each skipped hole
+                    // then spawns two advancing chains, so the same holes get
+                    // reprocessed indefinitely instead of progressing.
+                    // (Return value is unused by callers; 0 matches the normal exit.)
+                    return 0;
                 }
             }
         }

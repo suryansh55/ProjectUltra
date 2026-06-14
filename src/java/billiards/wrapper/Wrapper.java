@@ -66,6 +66,12 @@ public final class Wrapper {
 
     public static native void backend_cancel();
 
+    // Clears the backend cancel flag. Call once before launching a new vary run.
+    public static native void backend_reset_cancel();
+
+    // Peak process resident set size in bytes (JVM + native heap). For benchmarking.
+    public static native long backend_peak_rss_bytes();
+
     private static native String cover_wrapper(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
                                             boolean mrr, Pointer pool);

@@ -25,6 +25,23 @@
 #include "numbers.hpp"
 #include "vertex_left_right.hpp"
 
+#include <chrono>
+#include <iostream>
+#include <string>
+
+struct ScopedTimer {
+    std::string name;
+    std::chrono::high_resolution_clock::time_point start;
+    
+    ScopedTimer(std::string n) : name(std::move(n)), start(std::chrono::high_resolution_clock::now()) {}
+    
+    ~ScopedTimer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = end - start;
+        std::cout << "[Profiler] " << name << " took: " << diff.count() << " seconds\n";
+    }
+};
+
 // These are the only geometry types we use in the program, and we explicitly instantiate
 // them in the cpp file. Using the extern suppresses instantiation here and in any file
 // that includes this header.

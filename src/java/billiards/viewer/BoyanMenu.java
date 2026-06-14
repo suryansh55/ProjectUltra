@@ -1007,13 +1007,16 @@ public class BoyanMenu {
         }
 
         if (erase) {
-        	PrintWriter pw;
-			try {
-				pw = new PrintWriter(file);
-			} catch (FileNotFoundException e) {
-				throw new RuntimeException("Couldn't erase the file");
-			}
-        	pw.close();
+            // Truncate the file by opening it in non-append mode. This is a scratch
+            // dump file, so a failure here (e.g. the process is temporarily out of
+            // file descriptors) must not abort the whole computation - log the real
+            // cause and carry on.
+            try {
+                // opening in non-append mode truncates the file
+                new PrintWriter(file).close();
+            } catch (final FileNotFoundException e) {
+                System.err.println("//Warning: couldn't truncate " + file + ": " + e.getMessage());
+            }
         }
 
         final ArrayList<ClassifiedCodeSequence> splitCodes;
@@ -1091,21 +1094,32 @@ public class BoyanMenu {
 
         int count = 0;
         ArrayList<String> codes = new ArrayList<>();
-        for (final ClassifiedCodeSequence code : organizedCodes) {
-        	count += 1;
-    		final String codeString = Utils.standard(code, count);
-        	if (count <= Number && print) {
-        		System.out.println(codeString);
-                //codes.add(codeString.substring(5));
-                codes.add(codeString.substring(codeString.indexOf("-") + 2));
-        	}
-            try {
-                final PrintStream output = new PrintStream(new FileOutputStream(file, true));
-                output.println(codeString + " " + CodeSequence.evenOddSequence(code.codeSequence.codeNumbers));
-                output.close();
-            } catch (final FileNotFoundException e) {
-                throw new RuntimeException(e);
+        // Open the dump file once (append mode) instead of reopening it for every
+        // code, which churns file descriptors. Writing here is best-effort: the
+        // codes are also returned via the in-memory structures (varySeq) below, so
+        // if the file can't be opened (e.g. low on file descriptors) we log the
+        // real cause and skip the dump rather than aborting the computation.
+        PrintStream output = null;
+        try {
+            output = new PrintStream(new FileOutputStream(file, true));
+        } catch (final FileNotFoundException e) {
+            System.err.println("//Warning: couldn't open " + file + " for writing: " + e.getMessage());
+        }
+        try {
+            for (final ClassifiedCodeSequence code : organizedCodes) {
+                count += 1;
+                final String codeString = Utils.standard(code, count);
+                if (count <= Number && print) {
+                    System.out.println(codeString);
+                    //codes.add(codeString.substring(5));
+                    codes.add(codeString.substring(codeString.indexOf("-") + 2));
+                }
+                if (output != null) {
+                    output.println(codeString + " " + CodeSequence.evenOddSequence(code.codeSequence.codeNumbers));
+                }
             }
+        } finally {
+            if (output != null) output.close();
         }
         varySeq.clear();
         varySeq.addAll(codes);

@@ -22,7 +22,6 @@ void iterateFireAway4(
     std::vector<int32_t>& code,
     std::vector<std::vector<int32_t>>& codesFound, std::string reqType)
 {
-    cancel_flag().store(false,  std::memory_order_relaxed); 
     // store data in each level
     struct Frame {
         int32_t swapValue;
@@ -221,9 +220,19 @@ std::vector<std::vector<int32_t>> fireAway4(const int32_t movesMin, const int32_
     const int MAX_INFLIGHT = cores;
 
     for (const auto& T : sortStarts) {
+        if (cancel_flag().load(std::memory_order_relaxed)) {
+            pool.stop();
+            pool.join();
+            return allCodes;
+        }
         // Wait if too many inflight
         while (inflight >= MAX_INFLIGHT) {
-            std::this_thread::sleep_for(std::chrono::microseconds(100));
+            if (cancel_flag().load(std::memory_order_relaxed)) {
+                pool.stop();
+                pool.join();
+                return allCodes;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         inflight.fetch_add(1, std::memory_order_relaxed);

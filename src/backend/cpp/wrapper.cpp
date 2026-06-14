@@ -30,6 +30,7 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "vary3.hpp"
 #include "vary4.hpp"
 #include <boost/optional/optional_io.hpp>
+#include <sys/resource.h>
 
 // Java <-> C++
 // byte     int8_t
@@ -1306,6 +1307,29 @@ int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const flo
 }
 
 // cancel
-void backend_cancel()       { 
-    cancel_flag().store(true,  std::memory_order_relaxed);  
+void backend_cancel()       {
+    cancel_flag().store(true,  std::memory_order_relaxed);
+}
+
+// Reset the cancel flag. Must be called once from Java before a new vary run
+// begins. Do NOT reset inside the iterate* functions: many vary calls run
+// concurrently, and a late starter resetting the shared flag would silently
+// clear a cancel that a sibling call has not yet observed.
+void backend_reset_cancel() {
+    cancel_flag().store(false, std::memory_order_relaxed);
+}
+
+// Peak resident set size of the whole process (JVM + native heap), in bytes.
+// Used for benchmarking memory usage. getrusage's ru_maxrss is reported in
+// bytes on macOS but in kilobytes on Linux, so normalize to bytes.
+int64_t backend_peak_rss_bytes() {
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) != 0) {
+        return -1;
+    }
+#if defined(__APPLE__) || defined(__MACH__)
+    return static_cast<int64_t>(usage.ru_maxrss);
+#else
+    return static_cast<int64_t>(usage.ru_maxrss) * 1024;
+#endif
 }

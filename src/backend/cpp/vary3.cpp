@@ -23,7 +23,6 @@ void iterateFireAway3(
     std::vector<int32_t>& code,
     std::vector<std::vector<int32_t>>& codesFound, std::string reqType)
 {
-	cancel_flag().store(false,  std::memory_order_relaxed); 
     // store data in each level
     struct Frame {
         float64_t specMin;
@@ -45,15 +44,10 @@ void iterateFireAway3(
 	// parallel code verify limit
 	std::atomic<int> inflight{0};
 
-	// setting limit for submition to the memory
-	float usage = 0.5;
-	if (max >30000){usage = 0.05;}
-	else if (max >25000){usage=0.1;}
-	else if (max >15000){usage=0.2;}
-	else if (max >10000){usage=0.3;}
-	else if (max >6000){usage = 0.4;};
-	const int MAX_INFLIGHT = compute_max_inflight(usage, 16384);  
 	unsigned int cores = std::thread::hardware_concurrency();
+	// Each queued task captures a code vector copy (max * 4 bytes).
+	// Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
+	const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
     std::mutex codesFoundMutex;
 
 	try{
@@ -98,7 +92,8 @@ void iterateFireAway3(
 									std::vector<int32_t> code2 = code;
 
 									while (inflight >= MAX_INFLIGHT) {
-										std::this_thread::sleep_for(std::chrono::microseconds(100));
+										if (cancel_flag().load(std::memory_order_relaxed)) break;
+										std::this_thread::sleep_for(std::chrono::milliseconds(1));
 									}
 									// type check if its is the right candidate, add it in the code
 									inflight.fetch_add(1, std::memory_order_relaxed);

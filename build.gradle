@@ -95,8 +95,8 @@ sourceSets {
     }
 }
 
-applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend/shared/', '-Xss1000m']
-
+//applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend/shared/', '-Xss1000m']
+applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend/shared/', '-Xss8m', '-Xmx4G']
 sourceCompatibility = 1.17
 targetCompatibility = 1.17
 
@@ -115,7 +115,14 @@ model {
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (currentOs.isMacOsX()){
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-headerpad_max_install_names', '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
+                   // May, 27 2026, Suryansh Ankur
+                   // Upgrading to Apple GPU
+                    //cppCompiler.args "-I${projectDir}/metal-cpp", '-I/opt/homebrew/include'
+                    // boost_system is header-only since Boost 1.69 and no longer ships as a library, so it is not linked.
+                    linker.args '-headerpad_max_install_names', '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread'
+                    // <-- NEW FOR METAL: Added the Apple Framework linker flags
+                    //linker.args '-headerpad_max_install_names', '-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-framework', 'Metal', '-framework', 'Foundation', '-framework', 'QuartzCore','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread', '-lboost_system'
+                
                 } else {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread', '-lboost_system'
                 }
@@ -125,13 +132,13 @@ model {
                                      '-Wno-padded', '-Wno-comma',
                                      '-Wno-exit-time-destructors', '-Wno-global-constructors',
                                      '-Wno-c++98-compat', '-Wno-c++98-compat-pedantic',
-                                     '-std=c++14'
+                                     '-std=c++17'
                 }
 
                 if (toolChain in Gcc) {
                     cppCompiler.args '-Wextra', '-Wpedantic', '-Werror',
                                      '-Wno-c++11-compat', '-Wno-c++14-compat',
-                                     '-std=c++14'
+                                     '-std=c++17'
                 }
 
                 checkedBy $.tasks.testBackend
@@ -152,7 +159,13 @@ model {
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (currentOs.isMacOsX()){
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-headerpad_max_install_names','-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lboost_unit_test_framework','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
+                    // May, 27 2026 , Suryansh Ankur
+                   // Upgrading to Apple GPU
+                    //cppCompiler.args "-I${projectDir}/metal-cpp", '-I/opt/homebrew/include'
+                    // boost_system is header-only since Boost 1.69 and no longer ships as a library, so it is not linked.
+                    linker.args '-headerpad_max_install_names','-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lboost_unit_test_framework','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread'
+                    // <-- NEW FOR METAL: Added the Apple Framework linker flags
+                    //linker.args '-headerpad_max_install_names','-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-framework', 'Metal', '-framework', 'Foundation', '-framework', 'QuartzCore','-lboost_unit_test_framework','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
                 } else {
                     linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread','-lboost_system'
                 }
@@ -162,13 +175,13 @@ model {
                                      '-Wno-padded', '-Wno-comma',
                                      '-Wno-disabled-macro-expansion', '-Wno-global-constructors',
                                      '-Wno-c++98-compat', '-Wno-c++98-compat-pedantic',
-                                     '-std=c++14'
+                                     '-std=c++17'
                 }
 
                 if (toolChain in Gcc) {
                     cppCompiler.args '-Wall', '-Wextra', '-Wpedantic', '-Werror',
                                      '-Wno-c++11-compat', '-Wno-c++14-compat',
-                                     '-std=c++14'
+                                     '-std=c++17'
                 }
             }
         }

@@ -3,6 +3,10 @@
 #include "division.hpp"
 #include "trig_identities.hpp"
 
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <tbb/enumerable_thread_specific.h>
+
 static std::vector<Vertex> find_path(const Vertex& start, const Vertex& end) {
 
     std::vector<Vertex> path{};
@@ -350,6 +354,7 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
     // detect number of thread in computer
     // if large set, small blocksize to allow time for memory swap
     unsigned int concurrency = std::thread::hardware_concurrency() ;
+    if (concurrency == 0) concurrency = 4;
     std::size_t block_size;
     std::size_t task_num;
     if (shooting_vector_x.size()<200){
@@ -492,30 +497,27 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     size_t left_n = left_vertices.size() - 1;
     size_t right_n = right_vertices.size() - 1;
 
-    // detect number of thread in computer
-    // if large set, small blocksize to allow time for memory swap
-    unsigned int concurrency = std::thread::hardware_concurrency();
-    if (concurrency == 0) concurrency = 4;
+    // Parallelize over left vertices with TBB.
+    //
+    // We previously used a per-call boost::asio::thread_pool here, which spawned a
+    // fresh set of OS threads on every call. Nested under the storageExecutor's
+    // worker threads that oversubscribed the CPU and destabilized the native heap
+    // (SIGSEGV). TBB instead shares one global, bounded worker pool with
+    // work-stealing, so concurrent calls compose without oversubscription. The
+    // memory gate in PolyVaryTask still limits how many large region calculations
+    // run at once, bounding peak memory.
+    //
+    // enumerable_thread_specific gives each *worker thread* (not each chunk) its
+    // own CurvesLR accumulator, so peak memory is ~num_threads copies rather than
+    // num_chunks copies. The per-thread results are concatenated and sorted at the
+    // end; since each key's vector is sorted, the final CurvesLR is independent of
+    // execution order (matching the old parallel behaviour).
+    tbb::enumerable_thread_specific<CurvesLR> tls_curves;
 
-    std::size_t block_size;
-    std::size_t task_num;
-    if (shooting_vector_x.size()<200){
-        block_size = (left_n + concurrency - 1) / concurrency;
-        task_num = concurrency;
-    }else{
-        block_size = 1; 
-        task_num = (left_n + block_size - 1) / block_size;
-    }
-
-    std::vector<CurvesLR> thread_curves(task_num);
-    boost::asio::thread_pool pool(concurrency);
-
-    for (unsigned int t = 0; t < task_num; ++t) {
-        size_t begin = t * block_size;
-        size_t end = std::min(begin + block_size, left_n);
-
-        boost::asio::post(pool, [this, begin, end, right_n, &shooting_vector_x, &shooting_vector_y, &thread_curves, t]() {
-            for (size_t i = begin; i < end; ++i) {
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, left_n),
+        [&](const tbb::blocked_range<size_t>& range) {
+            CurvesLR& local = tls_curves.local();
+            for (size_t i = range.begin(); i < range.end(); ++i) {
                 Vertex left_vertex = left_vertices.at(i);
                 for (size_t j = 0; j < right_n; ++j) {
                     Vertex right_vertex = right_vertices.at(j);
@@ -531,24 +533,19 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
                     first.divide_content();
 
                     LeftRight left_right{left_vertex, right_vertex};
-                    divide_out_lines_lr(first, thread_curves[t], left_right);
+                    divide_out_lines_lr(first, local, left_right);
                 }
             }
         });
-    }
 
-    pool.join();
-//std::cout<< "comb" << std::endl;
-    // Merge thread_curves into the final curves
+    // Combine the per-thread accumulators into the final result.
     CurvesLR curves;
-    for (auto& tc : thread_curves) {
-        // Merge .first
-        for (auto& kv : tc.first) {
+    for (auto& local : tls_curves) {
+        for (auto& kv : local.first) {
             auto& vec = curves.first[kv.first];
             vec.insert(vec.end(), kv.second.begin(), kv.second.end());
         }
-        // Merge .second
-        for (auto& kv : tc.second) {
+        for (auto& kv : local.second) {
             auto& vec = curves.second[kv.first];
             vec.insert(vec.end(), kv.second.begin(), kv.second.end());
         }

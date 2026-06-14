@@ -3,8 +3,12 @@
 
 #include "bounding_inequalities.hpp"
 
-static std::vector<LinComArrZ<XYEtaPhi>> calculate_angles(const std::vector<std::pair<CodeNumber, XYZ>>& code_nums_angles) {
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <tbb/enumerable_thread_specific.h>
 
+static std::vector<LinComArrZ<XYEtaPhi>> calculate_angles(const std::vector<std::pair<CodeNumber, XYZ>>& code_nums_angles) {
+    ScopedTimer timer("calculate_angles");
     std::vector<LinComArrZ<XYEtaPhi>> angles{};
 
     // phi = shooting_angle
@@ -124,75 +128,37 @@ static LinComArrZ<XYEta> remove_phi(const LinComArrZ<XYEtaPhi>& equation) {
    * This function is updated to calcualte new code parallel at the same time
    */
 static std::set<LinComArrZ<XYEta>> eliminate_phi(const std::set<LinComArrZ<XYEtaPhi>>& positive_phi, const std::set<LinComArrZ<XYEtaPhi>>& negative_phi) {
-    unsigned int concurrency = std::thread::hardware_concurrency();
-    if (concurrency == 0) concurrency = 4;
-
-    // Convert positive_phi to vector for indexing/chunking
+    ScopedTimer timer("eliminate_phi");
+    // 0 < equation for each equation in the inequalities, so add the ones with
+    // negative theta to the ones with positive theta.
+    //
+    // Parallelize over the positive equations with TBB (a shared, bounded,
+    // work-stealing pool) instead of the old per-call boost::asio::thread_pool,
+    // which oversubscribed the CPU when nested under the storageExecutor and
+    // corrupted the native heap (SIGSEGV). enumerable_thread_specific gives one
+    // accumulator set per worker thread, so peak memory scales with the thread
+    // count rather than the chunk count. The result is a std::set, so the order
+    // in which threads contribute does not affect it.
     std::vector<LinComArrZ<XYEtaPhi>> pos_vec(positive_phi.begin(), positive_phi.end());
-    std::size_t n = pos_vec.size();
+    tbb::enumerable_thread_specific<std::set<LinComArrZ<XYEta>>> tls_zero_phi;
 
-    // detect number of thread in computer
-    std::size_t block_size;
-    std::size_t task_num;
-    if (n < 200) {
-        block_size = (n + concurrency - 1) / concurrency;
-        task_num = concurrency;
-    } else {
-        block_size = 1; 
-        task_num = (n / block_size) + 1;
-    }
-
-    // Each thread accumulates in a chunked vector instead of a set to save RAM
-    std::vector<std::vector<LinComArrZ<XYEta>>> thread_zero_phi(task_num);
-    boost::asio::thread_pool pool(task_num);
-
-    // Memory budget: ~24MB per thread
-    const size_t MAX_BUFFER_SIZE = 1000000;
-
-    for (unsigned int t = 0; t < task_num; ++t) {
-        std::size_t begin = t * block_size;
-        std::size_t end = std::min(begin + block_size, n);
-
-        boost::asio::post(pool, [begin, end, t, &pos_vec, &negative_phi, &thread_zero_phi, MAX_BUFFER_SIZE] {
-            
-            std::vector<LinComArrZ<XYEta>> local_buffer;
-            local_buffer.reserve(MAX_BUFFER_SIZE);
-
-            for (std::size_t i = begin; i < end; ++i) {
-                auto& positive_equation = pos_vec[i];
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, pos_vec.size()),
+        [&](const tbb::blocked_range<std::size_t>& range) {
+            std::set<LinComArrZ<XYEta>>& local = tls_zero_phi.local();
+            for (std::size_t i = range.begin(); i < range.end(); ++i) {
+                const auto& positive_equation = pos_vec[i];
                 for (const auto& negative_equation : negative_phi) {
-                    
-                    // Original math logic completely intact
                     auto zero_equation = LinComArrZ<XYEtaPhi>::add(positive_equation, negative_equation);
                     auto no_phi = remove_phi(zero_equation);
                     no_phi.divide_content();
-                    
-                    local_buffer.push_back(no_phi);
-
-                    // Safety valve: clean up buffer when it gets too large
-                    if (local_buffer.size() >= MAX_BUFFER_SIZE) {
-                        std::sort(local_buffer.begin(), local_buffer.end());
-                        auto last = std::unique(local_buffer.begin(), local_buffer.end());
-                        local_buffer.erase(last, local_buffer.end());
-                    }
+                    local.insert(no_phi);
                 }
             }
-
-            // Final clean up of remaining items in the buffer
-            std::sort(local_buffer.begin(), local_buffer.end());
-            auto last = std::unique(local_buffer.begin(), local_buffer.end());
-            local_buffer.erase(last, local_buffer.end());
-
-            thread_zero_phi[t] = std::move(local_buffer);
         });
-    }
 
-    pool.join();
-
-    // Merge flat vectors back into the expected std::set return type
     std::set<LinComArrZ<XYEta>> zero_phi;
-    for (unsigned int t = 0; t < task_num; ++t) {
-        zero_phi.insert(thread_zero_phi[t].begin(), thread_zero_phi[t].end());
+    for (auto& local : tls_zero_phi) {
+        zero_phi.insert(local.begin(), local.end());
     }
 
     return zero_phi;
@@ -202,40 +168,30 @@ static std::set<LinComArrZ<XYEta>> eliminate_phi(const std::set<LinComArrZ<XYEta
    * This function is updated to calcualte new code parallel at the same time
    */
 static std::set<LinComArrZ<XYEta>> first_inequalities(const std::vector<std::pair<CodeNumber, XYZ>>& code_nums_angles) {
-
+    ScopedTimer timer("first_inequalities");
     auto theta_angles = calculate_angles(code_nums_angles);
 
     // assign max compuatation thread according to computer performence
     // if large set, small blocksize to allow time for memory swap
-    unsigned int concurrency = std::thread::hardware_concurrency();
-    if (concurrency == 0) concurrency = 4;
     std::size_t n = code_nums_angles.size();
-    std::size_t block_size;
-    std::size_t tasks_num;
-    if (n<200){
-        block_size = (n + concurrency - 1) / concurrency;
-        tasks_num = concurrency;
-    }else{
-        block_size = 1; 
-        tasks_num = (n/block_size)+1;
-    }
-    // use block size to serpate the word.
-    
 
-    boost::asio::thread_pool pool(concurrency);
+    // Parallelize over the code numbers/angles with TBB (shared, bounded,
+    // work-stealing pool) instead of the old per-call boost::asio::thread_pool
+    // that oversubscribed the CPU under the storageExecutor and destabilized the
+    // native heap. Each worker thread accumulates into its own pair of sets
+    // (enumerable_thread_specific), so peak memory scales with the thread count
+    // rather than the chunk count. The results are std::sets, so the order in
+    // which threads contribute does not affect them.
+    struct PhiSets {
+        std::set<LinComArrZ<XYEtaPhi>> positive;
+        std::set<LinComArrZ<XYEtaPhi>> negative;
+    };
+    tbb::enumerable_thread_specific<PhiSets> tls;
 
-    // We need this to be a set, since some of the equations can be duplicates
-    std::vector<std::set<LinComArrZ<XYEtaPhi>>> thread_positive_phi(tasks_num);
-    std::vector<std::set<LinComArrZ<XYEtaPhi>>> thread_negative_phi(tasks_num);
-
-    // unfortunately, C++ doesn't have a zip feature, so
-    // we have to just iterate
-    for (unsigned int t = 0; t < tasks_num; ++t) {
-        std::size_t begin = t * block_size;
-        std::size_t end = std::min(begin + block_size, n);
-
-        boost::asio::post(pool, [begin, end, t, &code_nums_angles, &theta_angles, &thread_positive_phi, &thread_negative_phi] {
-            for (std::size_t i = begin; i < end; ++i) {
+    tbb::parallel_for(tbb::blocked_range<std::size_t>(0, n),
+        [&](const tbb::blocked_range<std::size_t>& range) {
+            PhiSets& local = tls.local();
+            for (std::size_t i = range.begin(); i < range.end(); ++i) {
                 auto code_number = code_nums_angles.at(i).first;
                 auto code_angle = code_nums_angles.at(i).second;
                 auto& theta = theta_angles.at(i);
@@ -250,9 +206,9 @@ static std::set<LinComArrZ<XYEta>> first_inequalities(const std::vector<std::pai
                 for (auto& equation : equations) {
                     auto phi_coeff = equation.coeff<XYEtaPhi::Phi>();
                     if (phi_coeff == 1) {
-                        thread_positive_phi[t].insert(equation);
+                        local.positive.insert(equation);
                     } else if (phi_coeff == -1) {
-                        thread_negative_phi[t].insert(equation);
+                        local.negative.insert(equation);
                     } else {
                         std::ostringstream err{};
                         err << "phi_coeff " << phi_coeff << " is not 1 or -1";
@@ -261,15 +217,11 @@ static std::set<LinComArrZ<XYEta>> first_inequalities(const std::vector<std::pai
                 }
             }
         });
-    }
 
-    pool.join();
-
-    // Merge all thread sets into global sets
     std::set<LinComArrZ<XYEtaPhi>> positive_phi, negative_phi;
-    for (unsigned int t = 0; t < tasks_num; ++t) {
-        positive_phi.insert(thread_positive_phi[t].begin(), thread_positive_phi[t].end());
-        negative_phi.insert(thread_negative_phi[t].begin(), thread_negative_phi[t].end());
+    for (auto& local : tls) {
+        positive_phi.insert(local.positive.begin(), local.positive.end());
+        negative_phi.insert(local.negative.begin(), local.negative.end());
     }
 
     auto no_phi_inequalities = eliminate_phi(positive_phi, negative_phi);

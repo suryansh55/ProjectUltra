@@ -135,6 +135,8 @@ int vary_3_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const flo
 int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const float64_t db_xAngle, const float64_t db_yAngle,CString* const result,const char* const reqTypes);
 
 void backend_cancel();        // set flag = true
+void backend_reset_cancel();  // set flag = false; call once before a new run
+int64_t backend_peak_rss_bytes();  // peak process RSS in bytes (benchmarking)
 }
 
 

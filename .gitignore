@@ -4,6 +4,24 @@ build/
 bin/
 obj/
 
+# Gradle caches/metadata
+.gradle/
+
+# macOS / OS cruft
+.DS_Store
+**/.DS_Store
+
+# JVM crash logs
+hs_err_pid*.log
+replay_pid*.log
+
+# Scratch / generated dumps
+all_code.txt
+result.txt
+
+# Local Claude Code project instructions (keep out of remote)
+CLAUDE.md
+
 # Ignore specific large extensions
 *.dmg
 *.zip
