@@ -71,7 +71,6 @@ public class BoyanMenu {
 
 	final Button vary4Btn = new Button();
 	final Button autoVaryBtn = new Button();
-
 	final Label sideSpacingLbl = new Label();
 	final Label movesLbl = new Label();
 
@@ -126,7 +125,7 @@ public class BoyanMenu {
 	public BoyanMenu(final Button cycleVaryButton, final Button middleVaryLButton, final Button polyAutoBtn,
 			final Button varyLBtn,
 			final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField,
-			final TextField lineEndField,
+			final TextField lineEndField, final Button findPointsBtn,
 			final Button superPolyVaryBtn, final CheckBox superAutoCb, final double TipOpenDelay,
 			final double TipCloseDelay) {
 
@@ -424,7 +423,7 @@ public class BoyanMenu {
 		// sideSpacingLbl);
 		// varyInfoHBox.setPadding(new Insets(0, 10, 10, 0));
 		// varyInfoHBox.setAlignment(Pos.CENTER);
-		final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField);
+		final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, findPointsBtn);
 		autoPolyVaryHBox.setPadding(new Insets(0, 10, 10, 0));
 		autoPolyVaryHBox.setAlignment(Pos.CENTER);
 
@@ -692,6 +691,7 @@ public class BoyanMenu {
 		final int iterate = Integer.parseInt(autoIterText.getText());
 		final int step = Integer.parseInt(autoStepText.getText());
 		final int shots = Integer.parseInt(shotsText.getText());
+		// TODO: Abstract autoVary to different
 		final CodeTypeSet types = CodeTypeSet.builder()
 				.setOSO(OSOcb.isSelected())
 				.setCS(CScb.isSelected())
@@ -701,6 +701,7 @@ public class BoyanMenu {
 				.build();
 		// george june 12,2019 added , OSO2cb.isSelected(), CS2cb.isSelected(),
 		// CNS2cb.isSelected(), ONS2cb.isSelected(), OSNO2cb.isSelected()
+
 
 		for (int i = 0; i < iterate + 1; i++) {
 			final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();

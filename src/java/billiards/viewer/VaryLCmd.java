@@ -63,12 +63,12 @@ public final class VaryLCmd {
 			return;
 		} catch (NumberFormatException e) {
 			System.err.println(e);
-			System.err.printf(
+			System.err.print(
 					"Something went wrong when parsing coordinates. Seems like one of the values is not an integer.");
 			return;
 		} catch (IllegalArgumentException e) {
 			System.err.println(e);
-			System.err.printf(
+			System.err.print(
 					"Something went wrong when parsing a set of coordinates. Seems like one of the pairs is malformed");
 			return;
 		}
@@ -250,9 +250,8 @@ public final class VaryLCmd {
 	 * @param s A string
 	 * @return Vector2
 	 * @throw IllegalArgumentException
-	 * @throw NumberFormatException
 	 */
-	private static Vector2 parseCoordinate(String s) throws IllegalArgumentException, NumberFormatException {
+	private static Vector2 parseCoordinate(String s) throws IllegalArgumentException {
 		String[] split = s.split("\\s");
 		if (split.length != 2) {
 			String msg = String

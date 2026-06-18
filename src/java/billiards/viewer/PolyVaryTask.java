@@ -119,10 +119,9 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 		// the previous coordinate. If yes, then we don't need to run Vary for this
 		// coordinate because a code from the
 		// last coordinate fills the square.
+		COORD_LOOP:
 		for (Vector2 coord : this.coordList) {
 			this.updateProgress(progress.incrementAndGet(), todo);
-
-			boolean skip = false;
 
 			for (Storage storage : storages) {
 				Storage.Stable stable = (Storage.Stable) storage;
@@ -133,13 +132,8 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 					// covers this coordinate.");
 					// System.out.println(Utils.standard(storage.classCodeSeq, 1));
 
-					skip = true;
-					break;
+					continue COORD_LOOP;
 				}
-			}
-
-			if (skip) {
-				continue;
 			}
 
 			storages.clear();
@@ -277,7 +271,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 	}
 
 	// Converts list of points into array of coordinate pairs
-	private Array<Vector2> toCoords(final MutableList<Double> points) {
+	public static Array<Vector2> toCoords(final MutableList<Double> points) {
 		final MutableList<Vector2> out = new FastList<Vector2>();
 		for (int i = 0; i < points.size(); i += 2) {
 			final Vector2 coords = Vector2.create(points.get(i), points.get(i + 1));

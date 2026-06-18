@@ -1,77 +1,120 @@
 package billiards.vary;
 
-import java.util.concurrent.ExecutorService;
 
-import org.eclipse.collections.api.list.MutableList;
-import org.eclipse.collections.impl.list.mutable.FastList;
+import billiards.codeseq.CodeTypeCollection;
+import billiards.geometry.Vector2;
+import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.codeseq.CodeTypeSet;
-import billiards.geometry.ConvexPolygon;
-import billiards.geometry.Location;
-import billiards.math.CoverSquare;
-import billiards.wrapper.ConnectionPool;
-import billiards.wrapper.Wrapper;
+import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 
 public class AutoVary {
 
-    final int movesMin;
-    final int movesMax;
-    final int shots;
-    final CodeTypeSet types;
-    final int maxDepth;
-    final ConvexPolygon polygon;
-    final ConnectionPool pool;
-    final ExecutorService executor;
+    /**
+     * <b>Jeff Khuu</b><br>
+     * <b>Jun 12, 2026</b>
+     * <p>
+     * Runs the <code>autoVary</code> algorithm for max code lengths for each Code Type in types
+     * </p>
+     * @param point Point to run algorithm on
+     * @param min Minimum side sum
+     * @param max Maximum side sum
+     * @param shots Number of shots to perform (same as Vary3)
+     * @param types Code Types to run algorithm on
+     * @param instance Current instance of an AutoPolyVary
+     * @return Set of found code sequences (classified)
+     */
+    public static MutableSortedSet<ClassifiedCodeSequence> autoVary(final Vector2 point, int min, int max, int shots,
+                                                                    CodeTypeSet types, AutoPolyVaryInstance instance){
+        int iterate = 0;
+        int step = 50;
 
-    public AutoVary(final int min, final int max, final int numShots, CodeTypeSet type, final int depth,
-            final ConvexPolygon poly, final ConnectionPool cPool, final ExecutorService exe) {
-        movesMin = min;
-        movesMax = max;
-        shots = numShots;
-        types = type;
-        maxDepth = depth;
-        polygon = poly;
-        pool = cPool;
-        executor = exe;
-    }
+        int CSmin = min;
+        int CSstep = 0;
+        int OSmin = min;
+        int OSstep = 0;
 
-    private boolean recurseFireAway(final int depth, final CoverSquare square,
-                                 MutableList<ClassifiedCodeSequence> codesFound) {
+        CodeTypeSet noCS = CodeTypeSet.builder()
+                .setOSO(types.OSO)
+                .setCS(false)
+                .setCNS(types.CNS)
+                .setONS(types.ONS)
+                .setOSNO(types.OSNO)
+                .build();
+        CodeTypeSet csOnly = CodeTypeSet.builder().setCS(types.CS).build();
 
-        final double[] cnt = square.center();
-        boolean covered = false;
-
-        final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
-        if (polygon.location(cnt[0], cnt[1]).equals(Location.INSIDE)) {
-            for (int i = 0; i < shots; i++) {
-                codes.addAll(Vary.findCodes3(cnt[0], cnt[1], movesMin, movesMax, i, types, executor));
+        for (int i = 0; i < iterate + 1; i++) {
+            final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
+            if(types.CS) {
+                codesFound.addAll(Vary.findCodes3(point.x, point.y, CSmin, max+ CSstep, shots, csOnly, instance.shotExecutor));
             }
 
-            covered = Wrapper.coverWrapper(square.toString(), codes.toString(), "", 0, 1, 0, true, pool).isEmpty();
+            codesFound.addAll(Vary.findCodes3(point.x, point.y, OSmin, max + OSstep, shots, noCS, instance.shotExecutor));
+
+            if (codesFound.isEmpty()) {
+                CSmin = max;
+                CSstep += step;
+                OSmin = max;
+                OSstep += OSstep;
+
+            } else {
+                return codesFound;
+            }
         }
+        return new TreeSortedSet<>();
+    }
 
-        if (!covered) {
-            if (depth < maxDepth) {
-                final boolean[] covs = new boolean[4];
-                final CoverSquare[] squares = square.subdivide();
+    /**
+     * <b>Jeff Khuu</b><br>
+     * <b>Jun 12, 2026</b>
+     * <p>
+     * Runs the <code>autoVary</code> algorithm for a given point with different maximum side sums per code type.
+     * </p>
+     * @param point Point to run algorithm on
+     * @param min Minimum side sum
+     * @param max Maximum side sums differentiated by code type
+     * @param shots Number of shots to perform (same as Vary3)
+     * @param instance Current instance of an AutoPolyVary
+     * @return Set of found code sequences (classified)
+     */
+    public static MutableSortedSet<ClassifiedCodeSequence> autoVary(final Vector2 point, int min, CodeTypeCollection<Integer> max,
+                                                                    int shots, CodeTypeSet types, AutoPolyVaryInstance instance){
+        final int iterate = 0;
+        final int step = 50;
+        int CSmin = min;
+        int CSstep = 0;
+        int OSmin = min;
+        int OSstep = 0;
 
-                for (int i = 0; i < 4; i++) covs[i] = recurseFireAway(depth + 1, squares[i], codesFound);
+        final CodeTypeSet noCS = CodeTypeSet.builder()
+                .setOSO(types.OSO && max.OSO > 0)
+                .setCNS(types.CNS && max.CNS > 0)
+                .setONS(types.ONS && max.ONS > 0)
+                .setOSNO(types.OSNO && max.OSNO > 0)
+                .build();
+        final CodeTypeSet onlyCS = CodeTypeSet.builder().setCS(types.CS && max.CS > 0).build();
 
-                if (covs[0] && covs[1] && covs[2] && covs[3]) covered = true;
+        for (int i = 0; i < iterate + 1; i++) {
+            final MutableSortedSet<ClassifiedCodeSequence> codesFound = new TreeSortedSet<>();
+            codesFound.addAll(Vary.findCodes3(point.x, point.y, CSmin, max.CS + CSstep, shots, onlyCS, instance.shotExecutor));
+            codesFound.addAll(Vary.findCodes3(point.x, point.y, OSmin, Math.max(max.OSO, max.OSNO) + OSstep, shots, noCS, instance.shotExecutor));
+
+            codesFound.removeIf(code -> {
+                int maxVal = max.get(code.codeType);
+                return maxVal != 0 && code.codeSum >= maxVal;
+            });
+
+            if (codesFound.isEmpty()) {
+                CSmin = max.CS;
+                CSstep += step;
+                OSmin = Math.max(max.OSO, max.OSNO);
+                OSstep += OSstep;
+            } else {
+                return codesFound;
             }
         }
 
-        return covered;
-    }
-
-    public MutableList<ClassifiedCodeSequence> fireaway() {
-                //final int depth, final int maxCode, final ConvexPolygon poly) {
-
-        final MutableList<ClassifiedCodeSequence> codesFound = new FastList<>();
-
-        recurseFireAway(0, CoverSquare.initial(), codesFound);
-
-        return codesFound;
+        return new TreeSortedSet<>();
     }
 }

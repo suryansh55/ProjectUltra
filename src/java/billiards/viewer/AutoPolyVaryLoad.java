@@ -4,6 +4,8 @@ import javafx.scene.control.*;
 
 import java.util.Optional;
 
+import org.eclipse.collections.api.list.MutableList;
+
 import billiards.codeseq.CodeTypeCollection;
 import billiards.geometry.ConvexPolygon;
 import javafx.geometry.Insets;
@@ -85,6 +87,13 @@ public class AutoPolyVaryLoad {
 
 	private Optional<Tuple3<ConvexPolygon, CodeTypeCollection<Integer>, Optional<CodeTypeCollection<Integer>>>> result;
 
+	/**
+	Creates a new AutoPolyVary Window.
+	@param windowTitle Title of the window
+	@param buttonText Name of the AutoPolyVary calculate button
+	@param fileName Name of the file to read the initial polygon from
+	@param boundsFileName Name of the file to read initial bounds from
+	*/
 	public AutoPolyVaryLoad(final String windowTitle, final String buttonText, final String fileName,
 			final String boundsFileName) {
 		polygonString = Utils.readFromFile(fileName);

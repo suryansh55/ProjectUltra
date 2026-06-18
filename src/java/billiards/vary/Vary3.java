@@ -41,7 +41,7 @@ public final class Vary3 {
 	public static MutableList<ClassifiedCodeSequence> fireAwayParallel(final int movesMin, final int movesMax,
 			final double xAngle, final double yAngle, final double pos, final String reqTypes) {
 
-		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.vary3CppParallel(movesMin, movesMax, pos, xAngle,
+		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.vary3Cpp(movesMin, movesMax, pos, xAngle,
 				yAngle, reqTypes);
 		if (!values.isPresent()) {
 			final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
