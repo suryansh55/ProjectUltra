@@ -185,6 +185,43 @@ model {
                 }
             }
         }
+
+        // Deterministic compute micro-benchmark (src/bench/cpp/main.cpp).
+        // Mirrors the `test` target but links no Boost test framework. Times
+        // calculate_stable/unstable on fixed codes so backend changes can be
+        // measured without LiLuMaxVary's run-to-run noise. Run: ./gradlew benchBackend
+        bench(NativeExecutableSpec) {
+
+            sources.cpp {
+                lib library: 'backend', linkage: 'static'
+            }
+
+            binaries.all {
+
+                cppCompiler.define "NDEBUG"
+                cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
+                if (currentOs.isMacOsX()){
+                    cppCompiler.args '-I/opt/homebrew/include'
+                    linker.args '-headerpad_max_install_names','-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread'
+                } else {
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread','-lboost_system'
+                }
+
+                if (toolChain in Clang) {
+                    cppCompiler.args  '-Werror',
+                                     '-Wno-padded', '-Wno-comma',
+                                     '-Wno-disabled-macro-expansion', '-Wno-global-constructors',
+                                     '-Wno-c++98-compat', '-Wno-c++98-compat-pedantic',
+                                     '-std=c++17'
+                }
+
+                if (toolChain in Gcc) {
+                    cppCompiler.args '-Wall', '-Wextra', '-Wpedantic', '-Werror',
+                                     '-Wno-c++11-compat', '-Wno-c++14-compat',
+                                     '-std=c++17'
+                }
+            }
+        }
     }
 }
 
@@ -194,6 +231,10 @@ task testBackend(type: Exec, dependsOn: 'testExecutable') {
     // save the results here
     //standardOutput = new FileOutputStream('build/test-results/test.out')
     //errorOutput = new FileOutputStream('build/test-results/test.err')
+}
+
+task benchBackend(type: Exec, dependsOn: 'benchExecutable') {
+    commandLine 'build/exe/bench/bench'
 }
 
 // Make sure the C++ code is up to date when running the Java program

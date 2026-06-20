@@ -55,7 +55,14 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
     // limited number run at once. Tunable: lower the threshold / permit count for
     // less RAM, raise them for more. Static so the limit is global across runs.
     private static final int LARGE_CODE_THRESHOLD = 150;
-    private static final Semaphore LARGE_CALC_GATE = new Semaphore(1);
+    // 2 permits: with the unfolding calc path now fully on TBB (one shared,
+    // bounded work-stealing arena), two concurrent large calcs no longer
+    // oversubscribe the CPU the way nested boost::asio pools did. Overlapping a
+    // second calc fills cores that would otherwise idle during the serial
+    // points_and_stuff / polygon-reduction phases. Verified peak RSS ~2 GB with
+    // 1 permit, so ~2x that still sits well under an 8 GB budget. Lower to 1 if
+    // memory pressure returns; raise further only with headroom to spare.
+    private static final Semaphore LARGE_CALC_GATE = new Semaphore(2);
 
     // Expose task property representing partial results
     private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
