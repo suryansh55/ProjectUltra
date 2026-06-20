@@ -18,6 +18,13 @@ export JAVA_HOME="/Library/Java/JavaVirtualMachines/temurin-17.jdk/Contents/Home
 #export JAVA_HOME=$(/usr/libexec/java_home -v 17)
 echo "[INFO] Detected JAVA_HOME: $JAVA_HOME"
 
+# === Step 0: Rebuild the backend for portable distribution ===
+# Dev builds use -march=native (tuned to this machine), which can crash on a
+# different/older Apple Silicon chip. -Pportable rebuilds the dylib with the
+# Apple Silicon M1 baseline (-mcpu=apple-m1) so the .dmg runs on any arm64 Mac.
+echo "[INFO] Rebuilding backend dylib for portable distribution (-Pportable / -mcpu=apple-m1)..."
+./gradlew backendSharedLibrary -Pportable -q
+
 echo "[INFO] Ensuring main JAR is present..."
 cp -f "$INPUT_DIR/$MAIN_JAR" "$BUILD_DIR/$MAIN_JAR"
 
@@ -40,6 +47,9 @@ find "$INPUT_DIR" -name "javafx-*.jar" | while read -r jar; do
 done
 
 echo "[INFO] Creating custom Java runtime with jlink..."
+# jlink refuses to write into an existing directory, so clear any image from a
+# previous run to keep this script re-runnable.
+rm -rf "$RUNTIME_IMAGE"
 "$JAVA_HOME/bin/jlink" \
   --module-path "$JAVA_HOME/jmods:$(./gradlew -q runtimeClasspathAsPath)" \
   --add-modules java.base,java.logging,java.desktop,javafx.controls,javafx.fxml,javafx.graphics,java.sql,jdk.crypto.ec,java.security.jgss \
@@ -64,30 +74,59 @@ mkdir -p "$NATIVE_DIR"
 echo "[INFO] Copying libbackend.dylib..."
 #cp "$BUILD_DIR/libs/backend/shared/libbackend.dylib" "$NATIVE_DIR/"
 cp "$BUILD_DIR/libbackend.dylib" "$NATIVE_DIR/"
-# 1. Define the Homebrew libraries we depend on
-# NOTE: Using 'readlink' to ensure we get the actual file, not just the symlink
-DEPENDENCIES=(
-    "/opt/homebrew/opt/gmp/lib/libgmp.10.dylib"
-    "/opt/homebrew/opt/mpfr/lib/libmpfr.6.dylib"
-    "/opt/homebrew/opt/mpfi/lib/libmpfi.0.dylib"
-    "/opt/homebrew/opt/tbb/lib/libtbb.12.dylib"
-    "/opt/homebrew/opt/boost/lib/libboost_thread.dylib"
-    "/opt/homebrew/opt/boost/lib/libboost_system.dylib"
-)
+# 1 & 2. Recursively bundle every non-system dynamic dependency.
+# Starting from libbackend.dylib, we walk the dependency graph (otool -L) and
+# copy each Homebrew/relative dependency into the bundle, repeating until no
+# new libraries appear. This replaces the old hand-maintained DEPENDENCIES
+# list, which silently missed transitive deps — e.g. libboost_thread depends
+# on libboost_atomic / libboost_container / libboost_chrono / libboost_date_time
+# (via @loader_path), none of which were in the list, causing dlopen to fail
+# at launch with "Library not loaded: @loader_path/libboost_atomic.dylib".
+HOMEBREW_PREFIX="/opt/homebrew"
+# Search locations for deps referenced by bare name (@loader_path / @rpath).
+SEARCH_DIRS=("$HOMEBREW_PREFIX/lib" "$HOMEBREW_PREFIX"/opt/*/lib)
 
-# 2. Copy dependencies into the app bundle
-echo "[INFO] Bundling dependencies..."
-for dep in "${DEPENDENCIES[@]}"; do
-    if [ -f "$dep" ]; then
-        echo "  -> Bundling $(basename "$dep")"
-        cp "$dep" "$NATIVE_DIR/"
-        # Ensure it's writable so we can patch it
-        chmod 755 "$NATIVE_DIR/$(basename "$dep")"
-    else
-        echo "[ERROR] Could not find dependency: $dep"
-        echo "Please ensure you have installed: brew install gmp mpfr mpfi tbb boost"
-        exit 1
-    fi
+# Resolve a dylib by basename across the Homebrew search dirs.
+find_brew_lib() {
+    local name=$1 d
+    for d in "${SEARCH_DIRS[@]}"; do
+        if [ -f "$d/$name" ]; then echo "$d/$name"; return 0; fi
+    done
+    return 1
+}
+
+echo "[INFO] Recursively bundling native dependencies..."
+while :; do
+    before=$(find "$NATIVE_DIR" -maxdepth 1 -name '*.dylib' | wc -l)
+    for dylib in "$NATIVE_DIR"/*.dylib; do
+        for dep in $(otool -L "$dylib" | tail -n +2 | awk '{print $1}'); do
+            # Skip OS-provided libraries — they must NOT be bundled.
+            case "$dep" in
+                /usr/lib/*|/System/*) continue ;;
+            esac
+            depname=$(basename "$dep")
+            # Skip self-reference (the library's own install-name ID).
+            [ "$depname" = "$(basename "$dylib")" ] && continue
+            # Already bundled?
+            [ -f "$NATIVE_DIR/$depname" ] && continue
+            # Absolute path -> use directly; bare/relative -> resolve by name.
+            if [ "${dep:0:1}" = "/" ]; then
+                src="$dep"
+            else
+                src=$(find_brew_lib "$depname") || src=""
+            fi
+            if [ -n "$src" ] && [ -f "$src" ]; then
+                echo "  -> Bundling $depname"
+                cp "$src" "$NATIVE_DIR/"
+                chmod 755 "$NATIVE_DIR/$depname"
+            else
+                echo "[WARN] Could not resolve dependency '$dep' (referenced by $(basename "$dylib"))"
+            fi
+        done
+    done
+    after=$(find "$NATIVE_DIR" -maxdepth 1 -name '*.dylib' | wc -l)
+    # Fixpoint: stop once a full pass adds no new libraries.
+    [ "$before" -eq "$after" ] && break
 done
 
 # 3. Patching the libraries (The Magic Step)
@@ -131,6 +170,8 @@ chmod +x "$INPUT_DIR/updater.sh"
 cp "updater.bat" "$INPUT_DIR/"
 
 # === Step 6: Package with jpackage ===
+# Remove a previously built installer so jpackage doesn't fail on an existing file.
+rm -f "$DIST_DIR/$APP_NAME"*.dmg
 echo "[INFO] Running jpackage..."
 "$JAVA_HOME/bin/jpackage" \
   --type dmg \
@@ -143,7 +184,7 @@ echo "[INFO] Running jpackage..."
   --icon "$ICON_PATH" \
   --java-options "-Djna.library.path=\$APPDIR/backend/shared" \
   --java-options "--add-modules=javafx.controls,javafx.fxml,java.sql" \
-  --app-version 2.3
+  --app-version 3.0
 
 
 echo "[✅ SUCCESS] Installer created at $DIST_DIR"

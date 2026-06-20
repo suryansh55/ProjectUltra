@@ -100,6 +100,15 @@ applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend
 sourceCompatibility = 1.17
 targetCompatibility = 1.17
 
+// CPU tuning for the native C++ build.
+//   default (dev):       -march=native  — fastest on the build machine, but the
+//                        resulting dylib may use instructions a different/older
+//                        Apple Silicon chip lacks (illegal-instruction crash).
+//   -Pportable (dist):   -mcpu=apple-m1 — Apple Silicon M1 baseline, which every
+//                        newer Apple Silicon Mac supports. Used by package-mac.sh
+//                        so the distributed .dmg runs on any arm64 Mac.
+def cpuTuneFlag = project.hasProperty('portable') ? '-mcpu=apple-m1' : '-march=native'
+
 model {
 
     components {
@@ -110,7 +119,7 @@ model {
             binaries.all {
 
                 cppCompiler.define "NDEBUG"
-                cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
+                cppCompiler.args '-O3', cpuTuneFlag, '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (currentOs.isMacOsX()){
@@ -154,7 +163,7 @@ model {
             binaries.all {
 
                 cppCompiler.define "NDEBUG"
-                cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
+                cppCompiler.args '-O3', cpuTuneFlag, '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (currentOs.isMacOsX()){
@@ -199,7 +208,7 @@ model {
             binaries.all {
 
                 cppCompiler.define "NDEBUG"
-                cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
+                cppCompiler.args '-O3', cpuTuneFlag, '-flto', '-ftrapv'
                 if (currentOs.isMacOsX()){
                     cppCompiler.args '-I/opt/homebrew/include'
                     linker.args '-headerpad_max_install_names','-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread'
