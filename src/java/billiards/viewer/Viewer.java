@@ -1266,6 +1266,7 @@ public final class Viewer {
                     throw new RuntimeException(task.getException());
                 });
 
+                // Suryansh Ankur, 2026
                 Utils.runAndWait(task); //thread error
                 //executor.execute(task);
             }
@@ -4293,6 +4294,7 @@ public final class Viewer {
             throw new RuntimeException(task.getException());
         });
 
+        // Suryansh Ankur, 2026
         Utils.runAndWait(task); //cause thread error
 
        // new Thread(task, "draw-picture").start();
@@ -7338,6 +7340,7 @@ public final class Viewer {
                         // Increment for superPoly
                         step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(integerSimpleObjectProperty.getValue() + 1));
                     }
+                    // Suryansh Ankur, 2026
                     // This coordinate is already covered by a code from the previous
                     // coordinate, so the cancel / next-hole / finish handling above is
                     // all that is needed. Without this return, execution falls through

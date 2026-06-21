@@ -220,6 +220,7 @@ std::vector<std::vector<int32_t>> fireAway4(const int32_t movesMin, const int32_
     const int MAX_INFLIGHT = cores;
 
     for (const auto& T : sortStarts) {
+        // Suryansh Ankur, 2026
         if (cancel_flag().load(std::memory_order_relaxed)) {
             pool.stop();
             pool.join();
@@ -227,6 +228,7 @@ std::vector<std::vector<int32_t>> fireAway4(const int32_t movesMin, const int32_
         }
         // Wait if too many inflight
         while (inflight >= MAX_INFLIGHT) {
+            // Suryansh Ankur, 2026
             if (cancel_flag().load(std::memory_order_relaxed)) {
                 pool.stop();
                 pool.join();

@@ -77,6 +77,7 @@ void iterateFireAwayCS2(
 
     // parallel code verify
     std::atomic<int> inflight{0};
+    // Suryansh Ankur, 2026
     unsigned int cores = std::thread::hardware_concurrency();
     // code2 is 2*depth ints; cap at cores*8 to prevent OOM from queued lambda closures.
     const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
@@ -116,6 +117,7 @@ void iterateFireAwayCS2(
 
                             // detect if hitting limit, if yes wait
                             while (inflight >= MAX_INFLIGHT) {
+                                // Suryansh Ankur, 2026
                                 if (cancel_flag().load(std::memory_order_relaxed)) break;
                                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                             }

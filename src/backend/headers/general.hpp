@@ -29,12 +29,23 @@
 #include <iostream>
 #include <string>
 
+// Suryansh Ankur, 2026
+// Lightweight RAII profiler. Construct one at the top of a scope with a label;
+// it records the time at construction and, when it goes out of scope, prints the
+// elapsed wall-clock seconds to stdout as "[Profiler] <name> took: <seconds>".
+//
+// NOTE: this is a debug-only timer. Its usages (in bounding_inequalities.cpp) are
+// commented out for release/shippable builds so no profiler output is printed.
+// To re-enable profiling on a function/block, uncomment / add:
+//     ScopedTimer timer("some_label");
 struct ScopedTimer {
     std::string name;
     std::chrono::high_resolution_clock::time_point start;
-    
+
+    // Capture the start timestamp as soon as the timer is created.
     ScopedTimer(std::string n) : name(std::move(n)), start(std::chrono::high_resolution_clock::now()) {}
-    
+
+    // On scope exit, compute elapsed time and report it.
     ~ScopedTimer() {
         auto end = std::chrono::high_resolution_clock::now();
         std::chrono::duration<double> diff = end - start;

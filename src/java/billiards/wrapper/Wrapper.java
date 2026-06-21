@@ -66,6 +66,7 @@ public final class Wrapper {
 
     public static native void backend_cancel();
 
+    // Suryansh Ankur, 2026
     // Clears the backend cancel flag. Call once before launching a new vary run.
     public static native void backend_reset_cancel();
 

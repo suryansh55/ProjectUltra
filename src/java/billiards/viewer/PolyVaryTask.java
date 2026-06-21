@@ -8,6 +8,7 @@ import billiards.geometry.Location;
 import billiards.geometry.Vector2;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
+// Suryansh Ankur, 2026
 import billiards.wrapper.Wrapper;
 
 import javaslang.collection.Array;
@@ -21,6 +22,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+// Suryansh Ankur, 2026
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -47,6 +49,7 @@ Both these processes are multithreaded. Because of this, the task does not perfo
 If only the final result is required, you can just call get() on this task after it finishes.
  * */
 public final class PolyVaryTask extends Task<ObservableList<Storage>> {
+    // Suryansh Ankur, 2026
     // A region calculation for a long code sequence allocates a large amount of
     // multiprecision data in the C++ backend. The storageExecutor runs several
     // concurrently, so on memory-constrained machines several big calculations at
@@ -118,6 +121,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
     @Override
     protected ObservableList<Storage> call() {
+        // Suryansh Ankur, 2026
         // Clear any stale cancel from a previous run before launching new backend work.
         // The backend cancel flag is process-wide, so it must be reset exactly once here,
         // at the start of the run, rather than inside the concurrent vary calls themselves.
@@ -247,10 +251,12 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             futures.clear();
         }
 
+        // Suryansh Ankur, 2026
         logBenchmark(benchStartNanos);
         return this.partialResults.get();
     }
 
+    // Suryansh Ankur, 2026
     // Logs wall-clock time and peak process RSS (JVM + native) for the run, for
     // before/after comparison when optimizing the vary threading/memory model.
     private void logBenchmark(final long startNanos) {
@@ -319,19 +325,23 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
     // Runs a fast application thread task which determines the color of the pixel at a point
     private int pixelColor(final Vector2 point) {
-       
+        // Suryansh Ankur, 2026
+
         FutureTask<Integer> task = new FutureTask<Integer>(() -> {
             final Image image = this.screenImage.getImage();
             final PixelReader reader = image.getPixelReader();
             final int midX = (int) this.screenMap.pixelX(point.x);
             final int midY = (int) this.screenMap.pixelY(point.y);
             return reader.getArgb(midX, midY);
+            // Suryansh Ankur, 2026
 
         });
+        // Suryansh Ankur, 2026
 
 
         Platform.runLater(task);
         try {
+            // Suryansh Ankur, 2026
             return task.get(3, TimeUnit.SECONDS);
         } catch(TimeoutException e) {
             // FX thread is overloaded; treat as uncolored and proceed
@@ -357,6 +367,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
             System.out.println("//Cancel detected before loadStorage");
             return Either.left("");
         }
+        // Suryansh Ankur, 2026
         // Gate large calculations so at most LARGE_CALC_GATE permits run at once,
         // bounding peak memory. Small codes are unaffected and keep full parallelism.
         final boolean large = classCodeSeq.length() > LARGE_CODE_THRESHOLD;

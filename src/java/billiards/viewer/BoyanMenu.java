@@ -1007,6 +1007,7 @@ public class BoyanMenu {
         }
 
         if (erase) {
+            // Suryansh Ankur, 2026
             // Truncate the file by opening it in non-append mode. This is a scratch
             // dump file, so a failure here (e.g. the process is temporarily out of
             // file descriptors) must not abort the whole computation - log the real
@@ -1094,6 +1095,7 @@ public class BoyanMenu {
 
         int count = 0;
         ArrayList<String> codes = new ArrayList<>();
+        // Suryansh Ankur, 2026
         // Open the dump file once (append mode) instead of reopening it for every
         // code, which churns file descriptors. Writing here is best-effort: the
         // codes are also returned via the in-memory structures (varySeq) below, so

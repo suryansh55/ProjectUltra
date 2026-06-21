@@ -3,6 +3,7 @@
 #include "division.hpp"
 #include "trig_identities.hpp"
 
+// Suryansh Ankur, 2026
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 #include <tbb/enumerable_thread_specific.h>
@@ -309,6 +310,7 @@ std::set<std::pair<Equation<Sin>, Equation<Cos>>> Unfolding::get_all_vectors() c
 
     std::vector<std::set<std::pair<Equation<Sin>, Equation<Cos>>>> thread_sets(task_num);
 
+    // Suryansh Ankur, 2026
     // TBB parallel_for over the same task decomposition. Previously a per-call
     // boost::asio::thread_pool(hardware_concurrency()) spawned fresh OS threads on
     // every call; nested under the Java executor threads this oversubscribed the
@@ -354,6 +356,7 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
     // detect number of thread in computer
     // if large set, small blocksize to allow time for memory swap
     unsigned int concurrency = std::thread::hardware_concurrency() ;
+    // Suryansh Ankur, 2026
     if (concurrency == 0) concurrency = 4;
     std::size_t block_size;
     std::size_t task_num;
@@ -366,6 +369,7 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
     }
     // Each thread will fill its own Curves
     std::vector<Curves> thread_curves(task_num);
+    // Suryansh Ankur, 2026
     // TBB parallel_for over the same task decomposition (see get_all_vectors for
     // the rationale: composes when nested, no oversubscription, identical result).
     tbb::parallel_for(tbb::blocked_range<unsigned int>(0, task_num),
@@ -439,6 +443,7 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
         thread_inserters.emplace_back(center, rx, ry);
     }
 
+    // Suryansh Ankur, 2026
     // TBB parallel_for over the same task decomposition (see get_all_vectors for
     // the rationale: composes when nested, no oversubscription, identical result).
     tbb::parallel_for(tbb::blocked_range<unsigned int>(0, task_num),
@@ -490,6 +495,7 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     size_t left_n = left_vertices.size() - 1;
     size_t right_n = right_vertices.size() - 1;
 
+    // Suryansh Ankur, 2026
     // Parallelize over left vertices with TBB.
     //
     // We previously used a per-call boost::asio::thread_pool here, which spawned a
@@ -526,11 +532,13 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
                     first.divide_content();
 
                     LeftRight left_right{left_vertex, right_vertex};
+                    // Suryansh Ankur, 2026
                     divide_out_lines_lr(first, local, left_right);
                 }
             }
         });
 
+    // Suryansh Ankur, 2026
     // Combine the per-thread accumulators into the final result.
     CurvesLR curves;
     for (auto& local : tls_curves) {
@@ -585,6 +593,7 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     std::vector<CurvesLR> thread_curves(task_num);
 
 
+    // Suryansh Ankur, 2026
     // TBB parallel_for over the SAME task decomposition (composes when nested, no
     // oversubscription). Each task t writes only to thread_curves[t], and the merge
     // below stays index-ordered with map range-insert (keep-first on key

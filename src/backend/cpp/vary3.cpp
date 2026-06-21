@@ -44,6 +44,7 @@ void iterateFireAway3(
 	// parallel code verify limit
 	std::atomic<int> inflight{0};
 
+	// Suryansh Ankur, 2026
 	unsigned int cores = std::thread::hardware_concurrency();
 	// Each queued task captures a code vector copy (max * 4 bytes).
 	// Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
@@ -92,6 +93,7 @@ void iterateFireAway3(
 									std::vector<int32_t> code2 = code;
 
 									while (inflight >= MAX_INFLIGHT) {
+										// Suryansh Ankur, 2026
 										if (cancel_flag().load(std::memory_order_relaxed)) break;
 										std::this_thread::sleep_for(std::chrono::milliseconds(1));
 									}

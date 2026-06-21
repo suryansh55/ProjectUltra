@@ -187,3 +187,5 @@ http://reu.dimacs.rutgers.edu/~eskrj/research.html
 http://sites.millersville.edu/rumble/seminar.html
 http://slideplayer.com/slide/4598283/
 https://www.quantamagazine.org/new-shapes-solve-infinite-pool-table-problem-20170808/
+
+Code developed with help from Claude Code (Anthropic's Claude Opus 4.8 model).

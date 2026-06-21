@@ -18,7 +18,8 @@ public final class Main extends Application {
     private final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
     private ConnectionPool pool = null;
 
-    private final String versionNumber = "10.0.14";
+    // Suryansh Ankur, 2026
+    private final String versionNumber = "10.0.16";
 
     // Order is constructor, init, start, stop
     // It would be a lot simpler if these methods didn't exist, and I just did

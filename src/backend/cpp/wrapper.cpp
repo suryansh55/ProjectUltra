@@ -30,6 +30,7 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "vary3.hpp"
 #include "vary4.hpp"
 #include <boost/optional/optional_io.hpp>
+// Suryansh Ankur, 2026
 #include <sys/resource.h>
 
 // Java <-> C++
@@ -1307,6 +1308,7 @@ int vary_4_cpp(const int32_t int_movesMin, const int32_t int_movesMax, const flo
 }
 
 // cancel
+// Suryansh Ankur, 2026
 void backend_cancel()       {
     cancel_flag().store(true,  std::memory_order_relaxed);
 }

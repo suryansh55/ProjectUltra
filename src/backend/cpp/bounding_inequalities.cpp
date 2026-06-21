@@ -3,12 +3,14 @@
 
 #include "bounding_inequalities.hpp"
 
+// Suryansh Ankur, 2026
 #include <tbb/parallel_for.h>
 #include <tbb/blocked_range.h>
 #include <tbb/enumerable_thread_specific.h>
 
 static std::vector<LinComArrZ<XYEtaPhi>> calculate_angles(const std::vector<std::pair<CodeNumber, XYZ>>& code_nums_angles) {
-    ScopedTimer timer("calculate_angles");
+    // Suryansh Ankur, 2026
+    // ScopedTimer timer("calculate_angles");  // profiler disabled for release builds
     std::vector<LinComArrZ<XYEtaPhi>> angles{};
 
     // phi = shooting_angle
@@ -128,7 +130,8 @@ static LinComArrZ<XYEta> remove_phi(const LinComArrZ<XYEtaPhi>& equation) {
    * This function is updated to calcualte new code parallel at the same time
    */
 static std::set<LinComArrZ<XYEta>> eliminate_phi(const std::set<LinComArrZ<XYEtaPhi>>& positive_phi, const std::set<LinComArrZ<XYEtaPhi>>& negative_phi) {
-    ScopedTimer timer("eliminate_phi");
+    // Suryansh Ankur, 2026
+    // ScopedTimer timer("eliminate_phi");  // profiler disabled for release builds
     // 0 < equation for each equation in the inequalities, so add the ones with
     // negative theta to the ones with positive theta.
     //
@@ -168,13 +171,15 @@ static std::set<LinComArrZ<XYEta>> eliminate_phi(const std::set<LinComArrZ<XYEta
    * This function is updated to calcualte new code parallel at the same time
    */
 static std::set<LinComArrZ<XYEta>> first_inequalities(const std::vector<std::pair<CodeNumber, XYZ>>& code_nums_angles) {
-    ScopedTimer timer("first_inequalities");
+    // Suryansh Ankur, 2026
+    // ScopedTimer timer("first_inequalities");  // profiler disabled for release builds
     auto theta_angles = calculate_angles(code_nums_angles);
 
     // assign max compuatation thread according to computer performence
     // if large set, small blocksize to allow time for memory swap
     std::size_t n = code_nums_angles.size();
 
+    // Suryansh Ankur, 2026
     // Parallelize over the code numbers/angles with TBB (shared, bounded,
     // work-stealing pool) instead of the old per-call boost::asio::thread_pool
     // that oversubscribed the CPU under the storageExecutor and destabilized the

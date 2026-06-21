@@ -13,6 +13,7 @@
 #include "parse.hpp"
 #include "verify.hpp"
 
+// Suryansh Ankur, 2026
 //using DecReal = boost::multiprecision::cpp_dec_float_50;
 using DecReal = double;
 // TODO should we use the MRR polygon instead of the bounding polygon?
@@ -234,6 +235,7 @@ static std::vector<size_t> trim_single_indices(const ClosedRectangleQ& square, c
 
     std::vector<size_t> trimmed{};
 
+    // Suryansh Ankur, 2026
     trimmed.reserve(single_indices.size());
 
     // really just a filter
@@ -254,6 +256,7 @@ static std::vector<size_t> trim_triple_indices(const ClosedRectangleQ& square, c
 
     std::vector<size_t> trimmed{};
 
+    // Suryansh Ankur, 2026
     trimmed.reserve(triple_indices.size());
 
     // really just a filter
@@ -274,6 +277,7 @@ static std::vector<size_t> trim_half_triple_indices(const ClosedRectangleQ& squa
 
     std::vector<size_t> trimmed{};
 
+    // Suryansh Ankur, 2026
     //trimmed.reserve(triple_indices.size());
 
     // really just a filter
@@ -365,6 +369,7 @@ static cover::Cover cover_square(const ClosedRectangleQ& square, const ClosedCon
 
         tbb::parallel_invoke(l0, l1, l2, l3);
 
+        // Suryansh Ankur, 2026
 
         return cover::Divide{std::move(cover0), std::move(cover1), std::move(cover2), std::move(cover3)};
     }

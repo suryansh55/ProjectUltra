@@ -1,3 +1,4 @@
+// Suryansh Ankur, 2026
 // Deterministic compute micro-benchmark for the billiards backend.
 //
 // WHY THIS EXISTS: a full LiLuMaxVary / AutoPolyVary run explores a
