@@ -1,4 +1,4 @@
-Accurate as of 2024-05-01
+Accurate as of 2026-06-21
 
 This project has essentially two components: the computational backend that calculates the equations, and the graphical front end that displays the results.
 
