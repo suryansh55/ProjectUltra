@@ -1,26 +1,25 @@
 package billiards.wrapper;
 
-import billiards.codeseq.ClassifiedCodeSequence;
-import billiards.codeseq.CodeType;
-import billiards.database.Info;
-import billiards.database.InfoAll;
-import billiards.database.Picture;
-import billiards.viewer.Utils;
-
-import com.sun.jna.Native;
-import com.sun.jna.Pointer;
-
-import java.sql.Connection;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.IntList;
+import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
+
+import com.sun.jna.Native;
+import com.sun.jna.Pointer;
+
+import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeType;
+import billiards.database.Info;
+import billiards.database.InfoAll;
+import billiards.database.Picture;
+import billiards.viewer.Utils;
 
 // WARNING: The JNA project was abandoned for a while before being
 // resurrected on GitHub. As such, there are many obsolete websites
@@ -65,7 +64,12 @@ public final class Wrapper {
     }
 
     public static native void backend_cancel();
+    // Suryansh Ankur, 2026
+    // Clears the backend cancel flag. Call once before launching a new vary run.
+    public static native void backend_reset_cancel();
 
+    // Peak process resident set size in bytes (JVM + native heap). For benchmarking.
+    public static native long backend_peak_rss_bytes();
     private static native String cover_wrapper(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
                                             boolean mrr, Pointer pool);
@@ -580,8 +584,8 @@ public final class Wrapper {
 
         private static native int vary_cs_cpp(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
             CString result, String reqTypes);
-    private static native int vary_cs_cpp_parallel(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
-            CString result, String reqTypes);
+//    private static native int vary_cs_cpp_parallel(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
+//            CString result, String reqTypes);
 
     public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCpp(int movesMin, int movesMax, double xAngle,
             double yAngle, String reqTypes) {
@@ -617,6 +621,7 @@ public final class Wrapper {
         }
     }
 
+/*
     public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCppParallel(int movesMin, int movesMax, double xAngle,
             double yAngle, String reqTypes) {
         final CString result = new CString();
@@ -650,11 +655,12 @@ public final class Wrapper {
             throw new RuntimeException("unknown return value for calculateGradient: " + rval);
         }
     }
+*/
 
     private static native int vary_3_cpp(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
             double db_yAngle, CString result, String reqTypes);
-    private static native int vary_3_cpp_parallel(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
-            double db_yAngle, CString result, String reqTypes);
+//    private static native int vary_3_cpp_parallel(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
+//            double db_yAngle, CString result, String reqTypes);
 
     public static Optional<MutableList<ClassifiedCodeSequence>> vary3Cpp(int movesMin, int movesMax,
             double initPosition, double xAngle, double yAngle, String reqTypes) {
@@ -687,37 +693,37 @@ public final class Wrapper {
             throw new RuntimeException("unknown return value for calculateGradient: " + rval);
         }
     }
-    public static Optional<MutableList<ClassifiedCodeSequence>> vary3CppParallel(int movesMin, int movesMax,
-            double initPosition, double xAngle, double yAngle, String reqTypes) {
-        final CString result = new CString();
-        final int rval = vary_3_cpp_parallel(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
-        if (rval > 0) {
-            String strseq = result.string.getString(0);
-
-            // Estimate number of lines
-            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
-            List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
-
-            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
-                String trimmed = line.trim();
-                if (!trimmed.isEmpty()) {
-                    try {
-                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
-                                .mapToInt(Integer::parseInt)
-                                .toArray();
-                        IntList list = IntArrayList.newListWith(dirty);
-                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
-                        codeSeq.ifPresent(tmp::add); // thread safety issue here, see below
-                    } catch (Exception ignored) {
-                        // skip malformed
-                    }
-                }
-            });
-            return Optional.of(Lists.mutable.ofAll(tmp));
-        } else {
-            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
-        }
-    }
+//    public static Optional<MutableList<ClassifiedCodeSequence>> vary3CppParallel(int movesMin, int movesMax,
+//            double initPosition, double xAngle, double yAngle, String reqTypes) {
+//        final CString result = new CString();
+//        final int rval = vary_3_cpp_parallel(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
+//        if (rval > 0) {
+//            String strseq = result.string.getString(0);
+//
+//            // Estimate number of lines
+//            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+//            List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
+//
+//            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+//                String trimmed = line.trim();
+//                if (!trimmed.isEmpty()) {
+//                    try {
+//                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+//                                .mapToInt(Integer::parseInt)
+//                                .toArray();
+//                        IntList list = IntArrayList.newListWith(dirty);
+//                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+//                        codeSeq.ifPresent(tmp::add); // thread safety issue here, see below
+//                    } catch (Exception ignored) {
+//                        // skip malformed
+//                    }
+//                }
+//            });
+//            return Optional.of(Lists.mutable.ofAll(tmp));
+//        } else {
+//            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
+//        }
+//    }
 
     private static native int vary_4_cpp(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
             CString result, String reqTypes);

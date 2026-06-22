@@ -45,7 +45,12 @@ public final class Vary3Cmd {
 
 		System.out.println(String.format("// Vary3 at (%s, %s), min = %d, max = %d, shots = %d", args[0], args[1], min,
 				max, shots));
-		Vary3Cmd.callV3(x, y, min, max, shots, types);
+
+		final CodeTypeSet finalTypes = types;
+		final Thread varyThread = new Thread(() -> {
+			Vary3Cmd.callV3(x, y, min, max, shots, finalTypes);
+		});
+		varyThread.start();
 	}
 
 	private static void callV3(final double x, final double y, final int min, final int max, final int shots,
@@ -64,7 +69,7 @@ public final class Vary3Cmd {
 		System.out.printf("// Found %d threads\n", Utils.numThreads);
 		final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
-		MutableSet<ClassifiedCodeSequence> allCodes = Vary.findCodes3Parallel(x, y, min, max, shots, types, executor);
+		MutableSet<ClassifiedCodeSequence> allCodes = Vary.findCodes3(x, y, min, max, shots, types, executor);
 		MutableSortedSet<ClassifiedCodeSequence> sortedCodes = new TreeSortedSet<>();
 		sortedCodes.addAll(allCodes);
 		final long codesFoundTime = System.currentTimeMillis();

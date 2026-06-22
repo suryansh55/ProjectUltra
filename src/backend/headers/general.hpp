@@ -29,6 +29,34 @@
 #include "numbers.hpp"
 #include "vertex_left_right.hpp"
 
+#include <chrono>
+#include <iostream>
+#include <string>
+
+// Suryansh Ankur, 2026
+// Lightweight RAII profiler. Construct one at the top of a scope with a label;
+// it records the time at construction and, when it goes out of scope, prints the
+// elapsed wall-clock seconds to stdout as "[Profiler] <name> took: <seconds>".
+//
+// NOTE: this is a debug-only timer. Its usages (in bounding_inequalities.cpp) are
+// commented out for release/shippable builds so no profiler output is printed.
+// To re-enable profiling on a function/block, uncomment / add:
+//     ScopedTimer timer("some_label");
+struct ScopedTimer {
+    std::string name;
+    std::chrono::high_resolution_clock::time_point start;
+
+    // Capture the start timestamp as soon as the timer is created.
+    ScopedTimer(std::string n) : name(std::move(n)), start(std::chrono::high_resolution_clock::now()) {}
+
+    // On scope exit, compute elapsed time and report it.
+    ~ScopedTimer() {
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = end - start;
+        std::cout << "[Profiler] " << name << " took: " << diff.count() << " seconds\n";
+    }
+};
+
 // These are the only geometry types we use in the program, and we explicitly instantiate
 // them in the cpp file. Using the extern suppresses instantiation here and in any file
 // that includes this header.
@@ -84,10 +112,12 @@ extern template class math::LinComVec<Cos<LinComArrZ<XY>>, Coeff16>;
 // We don't want these types to be vectorized, so don't align them.
 // This can cause some nasty bugs and undefined behaviour.
 // I'm not sure I want to stick with Eigen
+#ifndef COMPUTE_CANADA
 template <typename T>
 using Vector2 = Eigen::Matrix<T, 2, 1, Eigen::DontAlign>;
 template <typename T>
 using Matrix2 = Eigen::Matrix<T, 2, 2, Eigen::DontAlign>;
+#endif
 
 //extern template class Eigen::Matrix<Real, 2, 1, Eigen::DontAlign>;
 //extern template class Eigen::Matrix<Real, 2, 2, Eigen::DontAlign>;
@@ -142,6 +172,7 @@ inline std::ostream& operator<<(std::ostream& os, const Sign sign) {
     throw std::runtime_error(invalid_enum_value("Sign", sign));
 }
 
+#ifndef COMPUTE_CANADA
 template <uint32_t Precision>
 Sign sign(const boost::multiprecision::number<boost::multiprecision::mpfi_float_backend<Precision>>& interval) {
 
@@ -207,6 +238,7 @@ inline Order compare_interval(const Interval& a, const Interval& b) {
 
     throw std::runtime_error("unorderable intervals");
 }
+#endif
 
 // Convert a floating point number in decimal string form to a rational
 // We don't convert to a float first, because that may introduce rounding

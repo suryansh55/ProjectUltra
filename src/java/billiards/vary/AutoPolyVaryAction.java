@@ -124,6 +124,7 @@ public class AutoPolyVaryAction {
 					}
 				}
 			}
+			futures.clear();
 		}
 
 		return storages;
@@ -152,8 +153,14 @@ public class AutoPolyVaryAction {
 		int i = numToPrint;
 		int codeNum = 1;
 		ArrayList<ClassifiedCodeSequence> codesPrinted = new ArrayList<>();
+		System.out.println("// NOTE: Empty code sequences will not be printed");
 		for(ClassifiedCodeSequence code: codes) {
 			if (i <= 0) break;
+
+			// Skip if the code is empty, this is different behavior then regular LiLuMaxVary
+			if(loadStorage(code).isLeft()) {
+				continue;
+			}
 
 			if (currentLength == -1) {
 				currentLength = code.codeLength;
@@ -201,7 +208,7 @@ public class AutoPolyVaryAction {
 				if (i <= 0) break;
 
 				if (!processedCodes.get(codeType).get(oddEvenPattern).isEmpty()) {
-					codeNum = printFirstOfGroup(processedCodes, processedCodesLength, codeNum, codesPrinted, codeType, oddEvenPattern);
+					if(printFirst) codeNum = printFirstOfGroup(processedCodes, processedCodesLength, codeNum, codesPrinted, codeType, oddEvenPattern);
 
 					ClassifiedCodeSequence codeToPrint = processedCodes.get(codeType)
 							.get(oddEvenPattern)
@@ -210,7 +217,7 @@ public class AutoPolyVaryAction {
 					System.out.println(Utils.standard(codeToPrint, codeNum++));
 					codesPrinted.add(codeToPrint);
 
-					codeNum = printLastOfGroup(processedCodes, processedCodesLength, codeNum, codesPrinted, codeType, oddEvenPattern);
+					if(printLast) codeNum = printLastOfGroup(processedCodes, processedCodesLength, codeNum, codesPrinted, codeType, oddEvenPattern);
 				}
 			}
 		}
@@ -312,8 +319,6 @@ public class AutoPolyVaryAction {
 		}
 		if (opt.isPresent()) {
 			final Storage storage = opt.get();
-			// Update partialResults on the application thread in order to enforce thread
-			// safety
 			return Either.right(storage);
 		} else {
 			return Either.left("//empty set " + classCodeSeq);
@@ -324,7 +329,7 @@ public class AutoPolyVaryAction {
 										 MutableList<Future<Either<String, Storage>>> futures,
 										 ArrayList<ClassifiedCodeSequence> printedCodes) {
 		for (ClassifiedCodeSequence classCodeSeq : printedCodes) {
-			boolean skipped = !loadStorageFromDB(classCodeSeq, usedCodes, futures);
+			loadStorageFromDB(classCodeSeq, usedCodes, futures);
 		}
 	}
 }

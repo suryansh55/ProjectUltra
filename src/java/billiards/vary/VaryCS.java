@@ -73,7 +73,7 @@ public final class VaryCS {
     public static MutableList<ClassifiedCodeSequence> fireAwayParallel(final int movesMin, final int movesMax,
             final double xAngle, final double yAngle,final String reqTypes) {
 		
-		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.varyCSCppParallel( movesMin, movesMax,xAngle,yAngle,reqTypes);
+		Optional<MutableList<ClassifiedCodeSequence>> values = Wrapper.varyCSCpp( movesMin, movesMax,xAngle,yAngle,reqTypes);
 		if(!values.isPresent()){
 			final MutableList<ClassifiedCodeSequence> codes = new FastList<>();
 			return codes;

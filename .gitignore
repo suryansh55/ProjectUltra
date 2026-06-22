@@ -21,3 +21,6 @@ bin/
 
 # vscode
 **/.vscode/
+
+# idea
+.idea/*

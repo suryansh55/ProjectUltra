@@ -7667,8 +7667,16 @@ public final class Viewer {
 						step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty
 								.setValue(integerSimpleObjectProperty.getValue() + 1));
 					}
-
-					return 0;
+                    // Suryansh Ankur, 2026
+                    // This coordinate is already covered by a code from the previous
+                    // coordinate, so the cancel / next-hole / finish handling above is
+                    // all that is needed. Without this return, execution falls through
+                    // and ALSO launches a PolyVaryTask for this same coordinate, whose
+                    // onSucceeded advances the loop a second time. Each skipped hole
+                    // then spawns two advancing chains, so the same holes get
+                    // reprocessed indefinitely instead of progressing.
+                    // (Return value is unused by callers; 0 matches the normal exit.)
+					return 0
 				}
 			}
 		}

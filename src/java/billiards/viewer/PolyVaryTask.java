@@ -9,6 +9,8 @@ import billiards.geometry.Location;
 import billiards.geometry.Vector2;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
+// Suryansh Ankur, 2026
+import billiards.wrapper.Wrapper;
 
 import javaslang.collection.Array;
 import javaslang.control.Either;
@@ -21,6 +23,10 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.FutureTask;
+// Suryansh Ankur, 2026
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import javafx.application.Platform;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -46,6 +52,24 @@ Both these processes are multithreaded. Because of this, the task does not perfo
 If only the final result is required, you can just call get() on this task after it finishes.
  * */
 public final class PolyVaryTask extends Task<ObservableList<Storage>> {
+    // Suryansh Ankur, 2026
+    // A region calculation for a long code sequence allocates a large amount of
+    // multiprecision data in the C++ backend. The storageExecutor runs several
+    // concurrently, so on memory-constrained machines several big calculations at
+    // once drove peak memory to ~13 GB on 8 GB of RAM and the process was
+    // OOM-killed. Codes longer than this threshold are gated below so only a
+    // limited number run at once. Tunable: lower the threshold / permit count for
+    // less RAM, raise them for more. Static so the limit is global across runs.
+    private static final int LARGE_CODE_THRESHOLD = 150;
+    // 2 permits: with the unfolding calc path now fully on TBB (one shared,
+    // bounded work-stealing arena), two concurrent large calcs no longer
+    // oversubscribe the CPU the way nested boost::asio pools did. Overlapping a
+    // second calc fills cores that would otherwise idle during the serial
+    // points_and_stuff / polygon-reduction phases. Verified peak RSS ~2 GB with
+    // 1 permit, so ~2x that still sits well under an 8 GB budget. Lower to 1 if
+    // memory pressure returns; raise further only with headroom to spare.
+    private static final Semaphore LARGE_CALC_GATE = new Semaphore(2);
+
 	// Expose task property representing partial results
 	private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults = new ReadOnlyObjectWrapper<>(
 			this,
@@ -90,6 +114,15 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 
 	@Override
 	protected ObservableList<Storage> call() {
+		// Suryansh Ankur, 2026
+        // Clear any stale cancel from a previous run before launching new backend work.
+        // The backend cancel flag is process-wide, so it must be reset exactly once here,
+        // at the start of the run, rather than inside the concurrent vary calls themselves.
+        Wrapper.backend_reset_cancel();
+
+        // Benchmark: wall-clock + peak process RSS for this run (see logBenchmark below).
+        final long benchStartNanos = System.nanoTime();
+
 		// storageExecutor handles the more expensive process of calculating code
 		// regions,
 		// while shotExecutor handles the much faster calculation of finding the codes
@@ -225,8 +258,22 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 			futures.clear();
 		}
 
+        // Suryansh Ankur, 2026
+        logBenchmark(benchStartNanos);
 		return this.partialResults.get();
 	}
+
+    // Suryansh Ankur, 2026
+    // Logs wall-clock time and peak process RSS (JVM + native) for the run, for
+    // before/after comparison when optimizing the vary threading/memory model.
+    private void logBenchmark(final long startNanos) {
+        final double seconds = (System.nanoTime() - startNanos) / 1_000_000_000.0;
+        final long peakBytes = Wrapper.backend_peak_rss_bytes();
+        final String peak = peakBytes < 0
+                ? "unavailable"
+                : String.format("%.1f MB", peakBytes / (1024.0 * 1024.0));
+        System.out.printf("[Benchmark] LiLuMaxVary: %.2f s, peak RSS %s%n", seconds, peak);
+    }
 
 	// Cancel or detect execution errors; This is where we do checking to see if we
 	// were cancelled
@@ -281,30 +328,40 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 		return Array.ofAll(out);
 	}
 
-	// Runs a fast application thread task which determines the color of the pixel
-	// at a point
-	private int pixelColor(final Vector2 point) {
-		FutureTask<Integer> task = new FutureTask<Integer>(() -> {
-			final Image image = this.screenImage.getImage();
-			final PixelReader reader = image.getPixelReader();
-			final int midX = (int) this.screenMap.pixelX(point.x);
-			final int midY = (int) this.screenMap.pixelY(point.y);
-			return reader.getArgb(midX, midY);
-		});
-		Platform.runLater(task);
-		try {
-			// System.err.println("//Found pixel color");
-			return task.get();
-		} catch (InterruptedException e) {
-			System.err.println("//Interruption when finding pixel color");
-			return -1;
-		} catch (ExecutionException e) {
-			System.err.println("//Failed to find pixel color");
-			e.printStackTrace();
-			return -1;
-		}
+	    // Runs a fast application thread task which determines the color of the pixel at a point
+    private int pixelColor(final Vector2 point) {
+        // Suryansh Ankur, 2026
 
-	}
+        FutureTask<Integer> task = new FutureTask<Integer>(() -> {
+            final Image image = this.screenImage.getImage();
+            final PixelReader reader = image.getPixelReader();
+            final int midX = (int) this.screenMap.pixelX(point.x);
+            final int midY = (int) this.screenMap.pixelY(point.y);
+            return reader.getArgb(midX, midY);
+            // Suryansh Ankur, 2026
+
+        });
+        // Suryansh Ankur, 2026
+
+
+        Platform.runLater(task);
+        try {
+            // Suryansh Ankur, 2026
+            return task.get(3, TimeUnit.SECONDS);
+        } catch(TimeoutException e) {
+            // FX thread is overloaded; treat as uncolored and proceed
+            task.cancel(true);
+            return 0;
+        } catch(InterruptedException e) {
+            System.err.println("//Interruption when finding pixel color");
+            return -1;
+        } catch(ExecutionException e) {
+            System.err.println("//Failed to find pixel color");
+            e.printStackTrace();
+            return -1;
+        }
+
+    }
 
 	// Find the storage associated to a codeSequence if it exists. Return the error
 	// if not
@@ -317,24 +374,39 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 			System.out.println("//Cancel detected before loadStorage");
 			return Either.left("");
 		}
-		// Load from database if code already exists. If not, calculate
-		final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
-		// Check to see if cancel was called
-		if (this.isCancelled() || Thread.interrupted()) {
-			Thread.currentThread().interrupt();
-			System.out.println("//Cancel detected after loadStorage");
-			return Either.left("");
-		}
-		if (opt.isPresent()) {
-			final Storage storage = opt.get();
-			// Update partialResults on the application thread in order to enforce thread
-			// safety
-			Platform.runLater(() -> this.partialResults.get().add(storage));
-			return Either.right(storage);
-		} else {
-			return Either.left("//empty set " + classCodeSeq);
-		}
-	}
+	    // Suryansh Ankur, 2026
+        // Gate large calculations so at most LARGE_CALC_GATE permits run at once,
+        // bounding peak memory. Small codes are unaffected and keep full parallelism.
+        final boolean large = classCodeSeq.length() > LARGE_CODE_THRESHOLD;
+        if (large) {
+            try {
+                LARGE_CALC_GATE.acquire();
+            } catch (final InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return Either.left("");
+            }
+        }
+        try {
+            // Load from database if code already exists. If not, calculate
+            final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
+            // Check to see if cancel was called
+            if(this.isCancelled() || Thread.interrupted()) {
+                Thread.currentThread().interrupt();
+                System.out.println("//Cancel detected after loadStorage");
+                return Either.left("");
+            }
+            if (opt.isPresent()) {
+                final Storage storage = opt.get();
+                // Update partialResults on the application thread in order to enforce thread safety
+                Platform.runLater(() -> this.partialResults.get().add(storage));
+                return Either.right(storage);
+            } else {
+                return Either.left("//empty set " + classCodeSeq);
+            }
+        } finally {
+            if (large) LARGE_CALC_GATE.release();
+        }
+    }
 
 	// These expose partialResults to the FX application thread
 	public final ObservableList<Storage> getPartials() {

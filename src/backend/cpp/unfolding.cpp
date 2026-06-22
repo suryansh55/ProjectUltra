@@ -3,6 +3,11 @@
 #include "division.hpp"
 #include "trig_identities.hpp"
 
+// Suryansh Ankur, 2026
+#include <tbb/parallel_for.h>
+#include <tbb/blocked_range.h>
+#include <tbb/enumerable_thread_specific.h>
+
 static std::vector<Vertex> find_path(const Vertex& start, const Vertex& end) {
 
     std::vector<Vertex> path{};
@@ -305,29 +310,30 @@ std::set<std::pair<Equation<Sin>, Equation<Cos>>> Unfolding::get_all_vectors() c
 
     std::vector<std::set<std::pair<Equation<Sin>, Equation<Cos>>>> thread_sets(task_num);
 
-    boost::asio::thread_pool pool(concurrency);
-
-
-
-
-    for (unsigned int t = 0; t < task_num; ++t) {
-        size_t begin = t * block_size;
-        size_t end = std::min(begin + block_size, left_n);
-
-        boost::asio::post(pool, [this, begin, end, right_n, &thread_sets, t]() {
-            for (size_t i = begin; i < end; ++i) {
-                Vertex left_vertex = left_vertices.at(i);
-                for (size_t j = 0; j < right_n; ++j) {
-                    Vertex right_vertex = right_vertices.at(j);
-                    auto path = find_path(left_vertex, right_vertex);
-                    auto path_vec = path_vector(path);
-                    thread_sets[t].insert(path_vec);
+    // Suryansh Ankur, 2026
+    // TBB parallel_for over the same task decomposition. Previously a per-call
+    // boost::asio::thread_pool(hardware_concurrency()) spawned fresh OS threads on
+    // every call; nested under the Java executor threads this oversubscribed the
+    // CPU (~32 threads on 8 cores) and churned thread creation. TBB shares one
+    // global work-stealing arena, so nested calls compose without oversubscription.
+    // The task decomposition and the index-ordered merge below are unchanged, so
+    // the result is byte-identical to the old asio version.
+    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, task_num),
+        [&](const tbb::blocked_range<unsigned int>& range) {
+            for (unsigned int t = range.begin(); t < range.end(); ++t) {
+                size_t begin = t * block_size;
+                size_t end = std::min(begin + block_size, left_n);
+                for (size_t i = begin; i < end; ++i) {
+                    Vertex left_vertex = left_vertices.at(i);
+                    for (size_t j = 0; j < right_n; ++j) {
+                        Vertex right_vertex = right_vertices.at(j);
+                        auto path = find_path(left_vertex, right_vertex);
+                        auto path_vec = path_vector(path);
+                        thread_sets[t].insert(path_vec);
+                    }
                 }
             }
         });
-    }
-
-    pool.join();
 
     // Merge all thread-local sets into the output set
     std::set<std::pair<Equation<Sin>, Equation<Cos>>> vector_set;
@@ -350,6 +356,8 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
     // detect number of thread in computer
     // if large set, small blocksize to allow time for memory swap
     unsigned int concurrency = std::thread::hardware_concurrency() ;
+    // Suryansh Ankur, 2026
+    if (concurrency == 0) concurrency = 4;
     std::size_t block_size;
     std::size_t task_num;
     if (shooting_vector_x.size()<200){
@@ -361,37 +369,34 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
     }
     // Each thread will fill its own Curves
     std::vector<Curves> thread_curves(task_num);
-    boost::asio::thread_pool pool(concurrency);
+    // Suryansh Ankur, 2026
+    // TBB parallel_for over the same task decomposition (see get_all_vectors for
+    // the rationale: composes when nested, no oversubscription, identical result).
+    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, task_num),
+        [&](const tbb::blocked_range<unsigned int>& range) {
+            for (unsigned int t = range.begin(); t < range.end(); ++t) {
+                size_t begin = t * block_size;
+                size_t end = std::min(begin + block_size, left_n);
+                for (size_t i = begin; i < end; ++i) {
+                    Vertex left_vertex = left_vertices.at(i);
+                    for (size_t j = 0; j < right_n; ++j) {
+                        Vertex right_vertex = right_vertices.at(j);
 
+                        auto path = find_path(left_vertex, right_vertex);
+                        auto path_vec = path_vector(path);
 
+                        auto first = multiply_lin_com(shooting_vector_y, path_vec.first);
+                        auto second = multiply_lin_com(path_vec.second, shooting_vector_x);
 
-    for (unsigned int t = 0; t < task_num; ++t) {
-        size_t begin = t * block_size;
-        size_t end = std::min(begin + block_size, left_n);
+                        first.sub(second);
+                        first.divide_content();
 
-        boost::asio::post(pool, [this, begin, end, right_n, &shooting_vector_x, &shooting_vector_y, &initial_angles, &thread_curves, t]() {
-            for (size_t i = begin; i < end; ++i) {
-                Vertex left_vertex = left_vertices.at(i);
-                for (size_t j = 0; j < right_n; ++j) {
-                    Vertex right_vertex = right_vertices.at(j);
-
-                    auto path = find_path(left_vertex, right_vertex);
-                    auto path_vec = path_vector(path);
-
-                    auto first = multiply_lin_com(shooting_vector_y, path_vec.first);
-                    auto second = multiply_lin_com(path_vec.second, shooting_vector_x);
-
-                    first.sub(second);
-                    first.divide_content();
-
-                    // Write to thread-local curves
-                    divide_out_lines(first, thread_curves[t], initial_angles.first, initial_angles.second);
+                        // Write to thread-local curves
+                        divide_out_lines(first, thread_curves[t], initial_angles.first, initial_angles.second);
+                    }
                 }
             }
         });
-    }
-
-    pool.join();
 
     // Merge per-thread curves into final curves
     Curves curves;
@@ -438,36 +443,34 @@ Curves Unfolding::generate_curves(const Equation<T>& shooting_vector_x, const Eq
         thread_inserters.emplace_back(center, rx, ry);
     }
 
-    boost::asio::thread_pool pool(concurrency);
+    // Suryansh Ankur, 2026
+    // TBB parallel_for over the same task decomposition (see get_all_vectors for
+    // the rationale: composes when nested, no oversubscription, identical result).
+    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, task_num),
+        [&](const tbb::blocked_range<unsigned int>& range) {
+            for (unsigned int t = range.begin(); t < range.end(); ++t) {
+                size_t begin = t * block_size;
+                size_t end = std::min(begin + block_size, left_n);
+                auto& insert = thread_inserters[t];
+                for (size_t i = begin; i < end; ++i) {
+                    Vertex left_vertex = left_vertices.at(i);
+                    for (size_t j = 0; j < right_n; ++j) {
+                        Vertex right_vertex = right_vertices.at(j);
 
+                        auto path = find_path(left_vertex, right_vertex);
+                        auto path_vec = path_vector(path);
 
-    for (unsigned int t = 0; t < task_num; ++t) {
-        size_t begin = t * block_size;
-        size_t end = std::min(begin + block_size, left_n);
+                        auto first = multiply_lin_com(shooting_vector_y, path_vec.first);
+                        auto second = multiply_lin_com(path_vec.second, shooting_vector_x);
 
-        boost::asio::post(pool, [this, begin, end, right_n, &shooting_vector_x, &shooting_vector_y, &initial_angles, &thread_inserters, t]() {
-            auto& insert = thread_inserters[t];
-            for (size_t i = begin; i < end; ++i) {
-                Vertex left_vertex = left_vertices.at(i);
-                for (size_t j = 0; j < right_n; ++j) {
-                    Vertex right_vertex = right_vertices.at(j);
+                        first.sub(second);
+                        first.divide_content();
 
-                    auto path = find_path(left_vertex, right_vertex);
-                    auto path_vec = path_vector(path);
-
-                    auto first = multiply_lin_com(shooting_vector_y, path_vec.first);
-                    auto second = multiply_lin_com(path_vec.second, shooting_vector_x);
-
-                    first.sub(second);
-                    first.divide_content();
-
-                    divide_out_lines(first, initial_angles.first, initial_angles.second, insert);
+                        divide_out_lines(first, initial_angles.first, initial_angles.second, insert);
+                    }
                 }
             }
         });
-    }
-
-    pool.join();
 
     // Merge results from all thread_inserters into a final Curves object
     Curves curves;
@@ -492,30 +495,28 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     size_t left_n = left_vertices.size() - 1;
     size_t right_n = right_vertices.size() - 1;
 
-    // detect number of thread in computer
-    // if large set, small blocksize to allow time for memory swap
-    unsigned int concurrency = std::thread::hardware_concurrency();
-    if (concurrency == 0) concurrency = 4;
+    // Suryansh Ankur, 2026
+    // Parallelize over left vertices with TBB.
+    //
+    // We previously used a per-call boost::asio::thread_pool here, which spawned a
+    // fresh set of OS threads on every call. Nested under the storageExecutor's
+    // worker threads that oversubscribed the CPU and destabilized the native heap
+    // (SIGSEGV). TBB instead shares one global, bounded worker pool with
+    // work-stealing, so concurrent calls compose without oversubscription. The
+    // memory gate in PolyVaryTask still limits how many large region calculations
+    // run at once, bounding peak memory.
+    //
+    // enumerable_thread_specific gives each *worker thread* (not each chunk) its
+    // own CurvesLR accumulator, so peak memory is ~num_threads copies rather than
+    // num_chunks copies. The per-thread results are concatenated and sorted at the
+    // end; since each key's vector is sorted, the final CurvesLR is independent of
+    // execution order (matching the old parallel behaviour).
+    tbb::enumerable_thread_specific<CurvesLR> tls_curves;
 
-    std::size_t block_size;
-    std::size_t task_num;
-    if (shooting_vector_x.size()<200){
-        block_size = (left_n + concurrency - 1) / concurrency;
-        task_num = concurrency;
-    }else{
-        block_size = 1; 
-        task_num = (left_n + block_size - 1) / block_size;
-    }
-
-    std::vector<CurvesLR> thread_curves(task_num);
-    boost::asio::thread_pool pool(concurrency);
-
-    for (unsigned int t = 0; t < task_num; ++t) {
-        size_t begin = t * block_size;
-        size_t end = std::min(begin + block_size, left_n);
-
-        boost::asio::post(pool, [this, begin, end, right_n, &shooting_vector_x, &shooting_vector_y, &thread_curves, t]() {
-            for (size_t i = begin; i < end; ++i) {
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, left_n),
+        [&](const tbb::blocked_range<size_t>& range) {
+            CurvesLR& local = tls_curves.local();
+            for (size_t i = range.begin(); i < range.end(); ++i) {
                 Vertex left_vertex = left_vertices.at(i);
                 for (size_t j = 0; j < right_n; ++j) {
                     Vertex right_vertex = right_vertices.at(j);
@@ -531,23 +532,21 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
                     first.divide_content();
 
                     LeftRight left_right{left_vertex, right_vertex};
-                    divide_out_lines_lr(first, thread_curves[t], left_right);
+                    // Suryansh Ankur, 2026
+                    divide_out_lines_lr(first, local, left_right);
                 }
             }
         });
-    }
 
-    pool.join();
-    // Merge thread_curves into the final curves
+    // Suryansh Ankur, 2026
+    // Combine the per-thread accumulators into the final result.
     CurvesLR curves;
-    for (auto& tc : thread_curves) {
-        // Merge .first
-        for (auto& kv : tc.first) {
+    for (auto& local : tls_curves) {
+        for (auto& kv : local.first) {
             auto& vec = curves.first[kv.first];
             vec.insert(vec.end(), kv.second.begin(), kv.second.end());
         }
-        // Merge .second
-        for (auto& kv : tc.second) {
+        for (auto& kv : local.second) {
             auto& vec = curves.second[kv.first];
             vec.insert(vec.end(), kv.second.begin(), kv.second.end());
         }
@@ -581,7 +580,6 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     
     // detect number of thread in computer
     // if large set, small blocksize to allow time for memory swap
-    boost::asio::thread_pool pool(concurrency);
     size_t n = left_rights.size();
     std::size_t block_size;
     std::size_t task_num;
@@ -595,29 +593,37 @@ CurvesLR Unfolding::generate_curves_lr(const Equation<T>& shooting_vector_x, con
     std::vector<CurvesLR> thread_curves(task_num);
 
 
-    for (unsigned int t = 0; t < task_num; ++t) {
-        size_t begin = t * block_size;
-        size_t end = std::min(begin + block_size, n);
+    // Suryansh Ankur, 2026
+    // TBB parallel_for over the SAME task decomposition (composes when nested, no
+    // oversubscription). Each task t writes only to thread_curves[t], and the merge
+    // below stays index-ordered with map range-insert (keep-first on key
+    // collision), so the result is byte-identical to the old asio version. This
+    // determinism matters: the CurvesLR value vectors are consumed downstream by
+    // stable_left_right() in points_and_stuff_stable, so the merge semantics must
+    // not change (do NOT switch to the concat+sort the no-left_rights sibling uses).
+    tbb::parallel_for(tbb::blocked_range<unsigned int>(0, task_num),
+        [&](const tbb::blocked_range<unsigned int>& range) {
+            for (unsigned int t = range.begin(); t < range.end(); ++t) {
+                size_t begin = t * block_size;
+                size_t end = std::min(begin + block_size, n);
+                for (size_t i = begin; i < end; ++i) {
+                    auto& left_right = left_rights[i];
 
-        boost::asio::post(pool, [this, begin, end, &shooting_vector_x, &shooting_vector_y, &left_rights, &thread_curves, t]() {
-            for (size_t i = begin; i < end; ++i) {
-                auto& left_right = left_rights[i];
+                    auto path = find_path(left_right.left, left_right.right);
+                    auto path_vec = path_vector(path);
 
-                auto path = find_path(left_right.left, left_right.right);
-                auto path_vec = path_vector(path);
+                    auto first = multiply_lin_com(shooting_vector_y, path_vec.first);
+                    auto second = multiply_lin_com(path_vec.second, shooting_vector_x);
 
-                auto first = multiply_lin_com(shooting_vector_y, path_vec.first);
-                auto second = multiply_lin_com(path_vec.second, shooting_vector_x);
+                    first.sub(second);
+                    first.divide_content();
 
-                first.sub(second);
-                first.divide_content();
-
-            divide_out_lines_lr(first, thread_curves[t], left_right);
+                    divide_out_lines_lr(first, thread_curves[t], left_right);
+                }
             }
         });
-    }
 
-    pool.join();
+    //std::cout<< "comb" << std::endl;
     // Merge results
     CurvesLR curves;
     for (const auto& tc : thread_curves) {

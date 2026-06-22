@@ -49,7 +49,6 @@ public class Vary {
 
 		final double increment = base / (shots + 1);
 
-		final long csStartTime = System.currentTimeMillis();
 		// run the CS-specific code
 		if (types.CS) {
 			double xAngle = Double.valueOf(xRad);
@@ -77,12 +76,6 @@ public class Vary {
 				yAngle = Double.valueOf(zAngle);
 			}
 		}
-		final long csFinalTime = System.currentTimeMillis();
-
-		System.out.println("// CS codes found in: " + Utils.timeConvert(csFinalTime - csStartTime) + "\n");
-
-		final long otherCodesStartTime = System.currentTimeMillis();
-
 		// run the non-CS-specific code
 		if (types.OSO || types.ONS || types.CNS || types.OSNO) {
 
@@ -103,9 +96,6 @@ public class Vary {
 				}
 			}
 		}
-		final long otherCodesFinalTime = System.currentTimeMillis();
-		System.out.println(
-				"// Other codes found in: " + Utils.timeConvert(otherCodesFinalTime - otherCodesStartTime) + "\n");
 
 		codeSeqs.addAll(futures);
 
@@ -129,7 +119,6 @@ public class Vary {
 
 		final double increment = base / (shots + 1);
 
-		final long csStartTime = System.currentTimeMillis();
 		// run the CS-specific code
 		if (types.CS) {
 			double xAngle = Double.valueOf(xRad);
@@ -141,7 +130,7 @@ public class Vary {
 				final Double finY = yAngle;
 
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> VaryCS.fireAwayParallel(min, max, finX, finY, types.toString()));
+						.submit(() -> VaryCS.fireAway(min, max, finX, finY, types.toString()));
 				// final Future<MutableList<ClassifiedCodeSequence>> future =
 				// executor.submit(() -> VaryCS.fireAway(min, max, finX, finY));
 
@@ -157,11 +146,6 @@ public class Vary {
 				yAngle = Double.valueOf(zAngle);
 			}
 		}
-		final long csFinalTime = System.currentTimeMillis();
-
-		System.out.println("// CS codes found in: " + Utils.timeConvert(csFinalTime - csStartTime) + "\n");
-
-		final long otherCodesStartTime = System.currentTimeMillis();
 
 		// run the non-CS-specific code
 		if (types.OSO || types.ONS || types.CNS || types.OSNO) {
@@ -169,7 +153,7 @@ public class Vary {
 			for (int count = 1; count <= shots; ++count) {
 				final double pos = count * increment;
 				final Future<MutableList<ClassifiedCodeSequence>> future = executor
-						.submit(() -> Vary3.fireAwayParallel(min, max, xRad, yRad, pos, types.toString()));
+						.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos, types.toString()));
 				// executor.submit(() -> Vary3.fireAway(min, max, xRad, yRad, pos));
 
 				futures2.add(future);
@@ -183,9 +167,6 @@ public class Vary {
 				}
 			}
 		}
-		final long otherCodesFinalTime = System.currentTimeMillis();
-		System.out.println(
-				"// Other codes found in: " + Utils.timeConvert(otherCodesFinalTime - otherCodesStartTime) + "\n");
 
 		codeSeqs.addAll(futures);
 
