@@ -7676,7 +7676,7 @@ public final class Viewer {
                     // then spawns two advancing chains, so the same holes get
                     // reprocessed indefinitely instead of progressing.
                     // (Return value is unused by callers; 0 matches the normal exit.)
-					return 0
+					return 0;
 				}
 			}
 		}
