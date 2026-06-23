@@ -112,12 +112,10 @@ extern template class math::LinComVec<Cos<LinComArrZ<XY>>, Coeff16>;
 // We don't want these types to be vectorized, so don't align them.
 // This can cause some nasty bugs and undefined behaviour.
 // I'm not sure I want to stick with Eigen
-#ifndef COMPUTE_CANADA
 template <typename T>
 using Vector2 = Eigen::Matrix<T, 2, 1, Eigen::DontAlign>;
 template <typename T>
 using Matrix2 = Eigen::Matrix<T, 2, 2, Eigen::DontAlign>;
-#endif
 
 //extern template class Eigen::Matrix<Real, 2, 1, Eigen::DontAlign>;
 //extern template class Eigen::Matrix<Real, 2, 2, Eigen::DontAlign>;
@@ -172,7 +170,6 @@ inline std::ostream& operator<<(std::ostream& os, const Sign sign) {
     throw std::runtime_error(invalid_enum_value("Sign", sign));
 }
 
-#ifndef COMPUTE_CANADA
 template <uint32_t Precision>
 Sign sign(const boost::multiprecision::number<boost::multiprecision::mpfi_float_backend<Precision>>& interval) {
 
@@ -238,7 +235,6 @@ inline Order compare_interval(const Interval& a, const Interval& b) {
 
     throw std::runtime_error("unorderable intervals");
 }
-#endif
 
 // Convert a floating point number in decimal string form to a rational
 // We don't convert to a float first, because that may introduce rounding
