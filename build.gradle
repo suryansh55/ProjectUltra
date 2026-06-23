@@ -300,6 +300,15 @@ task varyLJar (type: Jar) {
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 }
 
+// CPU tuning for the native C++ build.
+//   default (dev):       -march=native  — fastest on the build machine, but the
+//                        resulting dylib may use instructions a different/older
+//                        Apple Silicon chip lacks (illegal-instruction crash).
+//   -Pportable (dist):   -mcpu=apple-m1 — Apple Silicon M1 baseline, which every
+//                        newer Apple Silicon Mac supports. Used by package-mac.sh
+//                        so the distributed .dmg runs on any arm64 Mac.
+def cpuTuneFlag = project.hasProperty('portable') ? '-mcpu=apple-m1' : '-march=native'
+
 model {
     // Zhao Yu Li, Aug 15, 2025.
     // These configurations are specific to MingW64 on Windows. Change the path to point to your MingW64 installation
