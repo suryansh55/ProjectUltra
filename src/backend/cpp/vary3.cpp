@@ -44,11 +44,19 @@ void iterateFireAway3(
 	// parallel code verify limit
 	std::atomic<int> inflight{0};
 
-	// Suryansh Ankur, 2026
-	unsigned int cores = std::thread::hardware_concurrency();
 	// Each queued task captures a code vector copy (max * 4 bytes).
 	// Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
 	const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
+	// setting limit for submition to the memory
+	float usage = 0.5;
+	if (max >30000){usage = 0.05;}
+	else if (max >25000){usage=0.1;}
+	else if (max >15000){usage=0.2;}
+	else if (max >10000){usage=0.3;}
+	else if (max >6000){usage = 0.4;};
+	const int MAX_INFLIGHT = compute_max_inflight(usage, 16384);
+	const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
+    	unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
     std::mutex codesFoundMutex;
 
 	try{
