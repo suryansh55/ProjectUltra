@@ -1,3 +1,5 @@
+#pragma once
+
 #include "math/xyz.hpp"
 #include "code_type.hpp"
 #include "code_sequence.hpp"

@@ -40,6 +40,8 @@ bool is_code_type_in_list(CodeType code, const std::vector<CodeType>& allowed);
 
 boost::optional<ClassifiedCodeSequence> convert(const std::vector<int>& codeList);
 
+std::string standard(ClassifiedCodeSequence code, const int count);
+
 boost::optional<CodeType> getCodeType(std::vector<int32_t>& codeList);
 
 int32_t modN(int32_t x, int32_t n);

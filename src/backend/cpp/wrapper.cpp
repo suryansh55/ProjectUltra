@@ -31,7 +31,11 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "vary4.hpp"
 #include <boost/optional/optional_io.hpp>
 // Suryansh Ankur, 2026
-// #include <sys/resource.h>
+
+#if __has_include(<sys/resource.h>)
+#include <sys/resource.h>
+#define HAVE_SYS_RESOURCE_H 1
+#endif
 
 // Java <-> C++
 // byte     int8_t
@@ -1325,14 +1329,17 @@ void backend_reset_cancel() {
 // Used for benchmarking memory usage. getrusage's ru_maxrss is reported in
 // bytes on macOS but in kilobytes on Linux, so normalize to bytes.
 int64_t backend_peak_rss_bytes() {
-//     struct rusage usage;
-//     if (getrusage(RUSAGE_SELF, &usage) != 0) {
-//         return -1;
-//     }
-// #if defined(__APPLE__) || defined(__MACH__)
-//     return static_cast<int64_t>(usage.ru_maxrss);
-// #else
-//     return static_cast<int64_t>(usage.ru_maxrss) * 1024;
-// #endif
-    return -1; // Not supported on Windows
+#if defined(HAS_SYS_RESOURCE_H)
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) != 0) {
+        return -1;
+    }
+#if defined(__APPLE__) || defined(__MACH__)
+    return static_cast<int64_t>(usage.ru_maxrss);
+#else
+    return static_cast<int64_t>(usage.ru_maxrss) * 1024;
+#endif // defined(__APPLE__) || defined(__MACH__)
+#else
+    return -1; // Unsupported platform (typically Windows), return errorfully
+#endif // HAS_SYS_RESOURCE_H
 }

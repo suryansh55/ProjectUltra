@@ -1,3 +1,4 @@
+#include <sstream>
 #include "utils.hpp"
 #include "conversion.hpp"
 
@@ -57,6 +58,22 @@ boost::optional<ClassifiedCodeSequence> convert(const std::vector<int>& codeList
         return boost::none;
     }
 
+}
+
+/*
+Jun 23 2026 Jeff Khuu
+gives a neat string of the code with information about it. Ported from Utils.java.
+*/
+std::string standard(ClassifiedCodeSequence code, const int count) {
+    std::ostringstream oss; 
+    const CodeType type = code.codeType;
+
+    oss << count;
+    if(count < 10) oss << " ";
+    oss << " - " << type;
+    if(type == CodeType::CS || type != CodeType::OSNO) oss << " ";
+    oss << "(" << code.codeLength << ", " << code.codeSum << ") " << code.toString();
+    return oss.str();
 }
 
 /*
