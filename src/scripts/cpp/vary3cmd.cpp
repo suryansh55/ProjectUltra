@@ -42,6 +42,7 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
     // Create a boost thread pool
     size_t numThreads = getNumThreads();
     boost::asio::thread_pool pool(numThreads);
+    std::cout << "Found " << numThreads << " threads" << std::endl;
 
     std::set<ClassifiedCodeSequence> codeSeqs;
 
@@ -77,14 +78,15 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
     if(args.oso || args.cns || args.ons || args.osno) {
 
         unsigned int availableThreads = numThreads / args.shots;
-        int sideSumInterval = args.maxSideSum / availableThreads;
+        int32_t searchSpace = args.maxSideSum - args.minSideSum;
         for(int count = 1; count <= args.shots; ++count) {
+            // Subdivide our side sum search space by the number of remaining threads (after we account for dividing by shots)
 
+            int32_t subdividedMinSideSum = args.minSideSum;
+            int32_t subdividedMaxSideSum = args.minSideSum;
             const float64_t pos = increment * count;
-            for(unsigned int inc = 0; inc < availableThreads - 1; ++inc){ 
-                // Subdivide our side sum search space by the number of remaining threads (after we account for dividing by shots)
-                int32_t subdividedMinSideSum = args.minSideSum + (inc * sideSumInterval);
-                int32_t subdividedMaxSideSum = args.minSideSum + ((inc + 1) * sideSumInterval);
+            for(unsigned int subdivision = 1; subdivision < availableThreads; ++subdivision){ 
+                subdividedMaxSideSum += searchSpace / (std::pow(2, subdivision));
 
                 // Start a parallelized vary3 job
                 std::cerr << "Job started from " << subdividedMinSideSum << " to " << subdividedMaxSideSum << std::endl;
@@ -96,9 +98,9 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
                         };
                     }
                 });
+                subdividedMinSideSum = subdividedMaxSideSum;
             }
             // Implement the last subdivision manually to make sure we search the space fully in the case where the sideSumInterval is weird
-            int32_t subdividedMinSideSum = args.minSideSum + ((availableThreads-1) * sideSumInterval);
             std::cerr << "Job started from " << subdividedMinSideSum << " to " << args.maxSideSum << std::endl;
             boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, &codeSeqs, &args]() {
                 std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, args.maxSideSum, xRad, yRad, pos, getReqTypesStr(args.oso, false, args.cns, args.ons, args.osno));
@@ -108,8 +110,6 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
                     };
                 }
             });
-
-
         }
 
         // Wait for all vary3 jobs to finish and collect results
