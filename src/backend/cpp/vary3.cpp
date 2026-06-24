@@ -46,7 +46,7 @@ void iterateFireAway3(
 
 	// setting limit for submition to the memory
 	const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
-    	unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
+    unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
 	// Suryansh Ankur, 2026
 	// Each queued task captures a code vector copy (max * 4 bytes).
 	// Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
@@ -55,8 +55,6 @@ void iterateFireAway3(
 
 	try{
 			boost::asio::thread_pool pool(cores); 
-		
-
 			while (!stack.empty()) {
                 if (cancel_flag().load(std::memory_order_relaxed)) {
                     std::cout << "C++ Vary3 Canceling" << std::endl;
@@ -162,7 +160,7 @@ void iterateFireAway3(
 				// billiard.getNextReverse(frame.goLeft);  // reverse the correct direction
 				stack.pop_back();
 				
-			}
+		}
 			pool.join();
 
      
