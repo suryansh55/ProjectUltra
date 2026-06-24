@@ -71,6 +71,8 @@ public final class ProgressMultiTask {
             cancelled = true;
             Wrapper.backend_cancel();
             if(boundTask) this.task.cancel();
+            /// June 24 2026, Jeff Khuu
+            Wrapper.backend_reset_cancel();
             //stage.close();
         });
         

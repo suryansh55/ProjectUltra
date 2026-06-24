@@ -42,6 +42,8 @@ public final class Progress {
         cancelButton.setOnAction(event -> {
             Wrapper.backend_cancel();
             task.cancel();
+            /// June 24 2026, Jeff Khuu
+            Wrapper.backend_reset_cancel();
             stage.close();
         });
     }
