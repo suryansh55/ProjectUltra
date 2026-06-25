@@ -27,6 +27,8 @@ import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
+
+import billiards.wrapper.Wrapper;
 /*
 PolyVaryTask encompasses the process of finding codes and calculating corresponding code regions.
 Both these processes are multithreaded. Because of this, the task does not perform ui updates directly. Instead, you should access partialResults using getPartials() or getPartialProperty() and set up a change listener from the javafx application thread if you wish to provide ui updates during execution.
@@ -108,6 +110,11 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
 
     @Override
     protected ObservableList<Storage> call() {
+        // Clear any stale cancel from a previous run before launching new backend work.
+        // The backend cancel flag is process-wide, so it must be reset at the start of the
+        // run (race-free: prior run's C++ threads have exited) rather than in the cancel handler.
+        Wrapper.backend_reset_cancel();
+
         // storageExecutor handles the more expensive process of calculating code regions,
         // while shotExecutor handles the much faster calculation of finding the codes present at a given point
 

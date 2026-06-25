@@ -8,6 +8,7 @@ import billiards.vary.Vary3;
 import billiards.vary.Vary4;
 import billiards.vary.VaryCS;
 import billiards.database.Database;
+import billiards.wrapper.Wrapper;
 
 import org.apache.commons.math3.util.FastMath;
 import org.eclipse.collections.api.list.MutableList;
@@ -278,6 +279,10 @@ public class BoyanMenu {
 
 					@Override
 					protected MutableSortedSet<ClassifiedCodeSequence> call() throws Exception {
+						// Clear any stale cancel from a previous run before launching new backend work.
+						// The backend cancel flag is process-wide, so it must be reset at the start of the
+						// run (race-free: prior run's C++ threads have exited) rather than in the cancel handler.
+						Wrapper.backend_reset_cancel();
 						return varyTriangles(2, executor);
 					}
 
@@ -503,6 +508,10 @@ public class BoyanMenu {
 
                 @Override
                 protected MutableSortedSet<ClassifiedCodeSequence> call() throws Exception {
+                    // Clear any stale cancel from a previous run before launching new backend work.
+                    // The backend cancel flag is process-wide, so it must be reset at the start of the
+                    // run (race-free: prior run's C++ threads have exited) rather than in the cancel handler.
+                    Wrapper.backend_reset_cancel();
                     return varyTriangles(3, executor);
                 }
 
