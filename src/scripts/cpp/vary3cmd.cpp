@@ -52,7 +52,6 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
         float64_t yAngle = yRad;
 
         for(int32_t i = 0; i < 3; ++i) {
-
             // Start a parallelized vary_cs job for the current angles
             boost::asio::post(pool, [xAngle, yAngle, &codeSeqs, &args]() {
                 std::vector<std::vector<int32_t>> foundCodes = fireAwayCS(args.minSideSum, args.maxSideSum, xAngle, yAngle, "cs");
@@ -80,8 +79,7 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
         unsigned int availableThreads = numThreads / args.shots;
         int32_t searchSpace = args.maxSideSum - args.minSideSum;
         for(int count = 1; count <= args.shots; ++count) {
-            // Subdivide our side sum search space by the number of remaining threads (after we account for dividing by shots)
-
+            // Subdivide our search space in half per availableThread
             int32_t subdividedMinSideSum = args.minSideSum;
             int32_t subdividedMaxSideSum = args.minSideSum;
             const float64_t pos = increment * count;
@@ -89,7 +87,6 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
                 subdividedMaxSideSum += searchSpace / (std::pow(2, subdivision));
 
                 // Start a parallelized vary3 job
-                std::cerr << "Job started from " << subdividedMinSideSum << " to " << subdividedMaxSideSum << std::endl;
                 boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, subdividedMaxSideSum, &codeSeqs, &args]() {
                     std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, subdividedMaxSideSum, xRad, yRad, pos, getReqTypesStr(args.oso, false, args.cns, args.ons, args.osno));
                     for(const auto& code : foundCodes) {
@@ -101,7 +98,6 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
                 subdividedMinSideSum = subdividedMaxSideSum;
             }
             // Implement the last subdivision manually to make sure we search the space fully in the case where the sideSumInterval is weird
-            std::cerr << "Job started from " << subdividedMinSideSum << " to " << args.maxSideSum << std::endl;
             boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, &codeSeqs, &args]() {
                 std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, args.maxSideSum, xRad, yRad, pos, getReqTypesStr(args.oso, false, args.cns, args.ons, args.osno));
                 for(const auto& code : foundCodes) {
@@ -121,8 +117,8 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
 
 int main(int argc, char *argv[])
 {
-    if(argc != 11) {
-        cerr << "Usage: " << argv[0] << " <db_x> <db_y> <int_minSideSum> <int_maxSideSum> <int_shots> <bool_oso> <bool_cs> <bool_cns> <bool_ons> <bool_osno>" << endl;
+    if(argc != 12) {
+        cerr << "Usage: " << argv[0] << " <db_x> <db_y> <int_minSideSum> <int_maxSideSum> <int_shots> <bool_oso> <bool_cs> <bool_cns> <bool_ons> <bool_osno> <REGULAR/MIDDLE/FIRSTMIDLAST_printMode>" << endl;
         return 1;
     }
 
@@ -139,18 +135,23 @@ int main(int argc, char *argv[])
     bool cns = std::stoi(argv[8]) != 0;
     bool ons = std::stoi(argv[9]) != 0;
     bool osno = std::stoi(argv[10]) != 0;
-
+    PrintMode mode = strToPrintMode(argv[11]).value_or(PrintMode::REGULAR);
+    
     Vary3Args args = {x, y, minSideSum, maxSideSum, shots, oso, cs, cns, ons, osno};
 
-
+    auto start = std::chrono::steady_clock::now();
     printStartInfo(args);
-    ScopedTimer t{"Vary3"};
 	auto codeSequences = findCodesVary3(args);
-    int count = 0;
-    
-    for(auto& seq : codeSequences) {
-        ++count;
-        cout << standard(seq, count) << endl;
-    }
-    
+    printCodes(codeSequences, mode);
+    auto end = std::chrono::steady_clock::now();
+
+    std::chrono::duration<double> elapsed = end - start;
+
+    auto hrs = std::chrono::duration_cast<std::chrono::hours>(elapsed);
+    auto mins = std::chrono::duration_cast<std::chrono::minutes>(elapsed - hrs);
+    auto secs = std::chrono::duration_cast<std::chrono::seconds>(elapsed - hrs - mins);
+
+    std::cout << hrs.count() << "h " 
+              << mins.count() << "m " 
+              << secs.count() << "s\n";
 }
