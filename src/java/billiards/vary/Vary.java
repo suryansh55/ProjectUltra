@@ -24,6 +24,7 @@ import billiards.codeseq.CodeTypeSet;
 import billiards.codeseq.CodeTypeCollection;
 import billiards.geometry.Vector2;
 import billiards.viewer.Utils;
+import billiards.wrapper.Wrapper;
 
 public class Vary {
 	/*
@@ -37,6 +38,7 @@ public class Vary {
 			final double xCoord, final double yCoord, final int min, final int max, final double shots,
 			final CodeTypeSet types, final ExecutorService executor) {
 
+        Wrapper.backend_reset_cancel();
 		final double xRad = FastMath.toRadians(xCoord);
 		final double yRad = FastMath.toRadians(yCoord);
 
@@ -178,6 +180,7 @@ public class Vary {
 			final double xCoord, final double yCoord, final int min, final int max, final double shots,
 			final CodeTypeSet types) {
 
+        Wrapper.backend_reset_cancel();
 		final double xRad = FastMath.toRadians(xCoord);
 		final double yRad = FastMath.toRadians(yCoord);
 
@@ -227,6 +230,7 @@ public class Vary {
 			final double xCoord, final double yCoord, final int min, final int max, final double shots,
 			final CodeTypeSet types, final ExecutorService executor) {
 
+		Wrapper.backend_reset_cancel();
 		final double xRad = FastMath.toRadians(xCoord);
 		final double yRad = FastMath.toRadians(yCoord);
 
