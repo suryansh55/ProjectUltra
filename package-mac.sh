@@ -25,7 +25,11 @@ echo "[INFO] Detected JAVA_HOME: $JAVA_HOME"
 echo "[INFO] Rebuilding backend dylib for portable distribution (-Pportable / -mcpu=apple-m1)..."
 ./gradlew backendSharedLibrary -Pportable -q
 
-echo "[INFO] Ensuring main JAR is present..."
+# Rebuild the JAR from current sources FIRST, so the .dmg can never bundle a
+# stale jar (a prior build shipped without the latest UI changes for exactly
+# this reason). `jar` depends on compileJava, so this recompiles too.
+echo "[INFO] Rebuilding main JAR from current sources..."
+./gradlew jar -q
 cp -f "$INPUT_DIR/$MAIN_JAR" "$BUILD_DIR/$MAIN_JAR"
 
 
@@ -195,7 +199,7 @@ echo "[INFO] Running jpackage..."
   --icon "$ICON_PATH" \
   --java-options "-Djna.library.path=\$APPDIR/backend/shared" \
   --java-options "--add-modules=javafx.controls,javafx.fxml,java.sql" \
-  --app-version 3.0
+  --app-version 3.1
 
 
 echo "[✅ SUCCESS] Installer created at $DIST_DIR"
