@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -915,8 +916,20 @@ public class BoyanMenu {
                 try {
                     MutableList<ClassifiedCodeSequence> partial = future.get(); // get the actual list
                     futures.addAll(partial); // now addAll on MutableList, not Future
-                } catch (InterruptedException | ExecutionException e) {
-                    e.printStackTrace(); // handle exceptions as needed
+                } catch (InterruptedException e) {
+                    // Cancellation, not a failure: the worker thread was interrupted
+                    // because the user cancelled the run. Restore the interrupt flag,
+                    // stop the remaining backend tasks, and propagate as a cancellation
+                    // so PolyVaryTask.call's loop exits cleanly instead of grinding
+                    // through the rest of the coordinates — and without a scary trace.
+                    // Suryansh Ankur, 2026
+                    Thread.currentThread().interrupt();
+                    for (Future<MutableList<ClassifiedCodeSequence>> f : futures2) {
+                        f.cancel(true);
+                    }
+                    throw new CancellationException("AutoPolyVary cancelled");
+                } catch (ExecutionException e) {
+                    e.printStackTrace(); // a real failure inside fireAway — keep surfacing it
                 }
             }
         }

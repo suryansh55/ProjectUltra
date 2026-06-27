@@ -265,7 +265,9 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         final String peak = peakBytes < 0
                 ? "unavailable"
                 : String.format("%.1f MB", peakBytes / (1024.0 * 1024.0));
-        System.out.printf("[Benchmark] LiLuMaxVary: %.2f s, peak RSS %s%n", seconds, peak);
+        // Benchmark logging disabled for release. Re-enable when profiling the
+        // vary threading/memory model. Suryansh Ankur, 2026
+        // System.out.printf("[Benchmark] LiLuMaxVary: %.2f s, peak RSS %s%n", seconds, peak);
     }
 
     // Cancel or detect execution errors; This is where we do checking to see if we were cancelled

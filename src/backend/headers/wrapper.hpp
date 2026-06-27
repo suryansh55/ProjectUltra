@@ -138,6 +138,11 @@ void backend_cancel();        // set flag = true
 // Suryansh Ankur, 2026
 void backend_reset_cancel();  // set flag = false; call once before a new run
 int64_t backend_peak_rss_bytes();  // peak process RSS in bytes (benchmarking)
+
+// In-app console capture (Suryansh Ankur, 2026)
+int32_t setup_console_capture();                       // redirect stdout/stderr into a pipe; 0 ok, -1 fail
+int32_t console_read(char* buffer, int32_t max_len);   // blocking drain; bytes read, 0 EOF, -1 error
+int32_t change_working_dir(const char* path);          // chdir for native relative-path writes; 0 ok, -1 fail
 }
 
 

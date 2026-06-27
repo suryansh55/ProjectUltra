@@ -159,6 +159,17 @@ for dylib in *.dylib; do
     fix_dependencies "$dylib"
 done
 
+# Re-sign after install_name_tool. (Suryansh Ankur, 2026)
+# Each install_name_tool rewrite above invalidates that dylib's code signature.
+# macOS on Apple Silicon (26.x) SIGKILLs any process the instant dyld loads a
+# dylib whose signature is invalid ("SIGKILL — Code Signature Invalid"), which
+# crashes the app at launch with no useful error. An ad-hoc re-sign re-hashes
+# the modified code and restores a valid signature the loader accepts.
+echo "[INFO] Re-signing dylibs (ad-hoc) after install_name_tool..."
+for dylib in *.dylib; do
+    codesign --force --sign - "$dylib"
+done
+
 # Return to build root
 cd - > /dev/null
 

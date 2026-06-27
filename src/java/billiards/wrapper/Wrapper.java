@@ -40,8 +40,32 @@ public final class Wrapper {
     private static native void database_create(final String dbPath);
     private static native void database_clear(final String dbPath);
 
+    // In-app console capture (Suryansh Ankur, 2026)
+    private static native int setup_console_capture();
+    private static native int console_read(byte[] buffer, int maxLen);
+    private static native int change_working_dir(String path);
+
     public static void errorLogging() {
         sqlite_error_logging();
+    }
+
+    // Redirect native + JVM stdout/stderr into a pipe the GUI can read.
+    // Returns true on success. Idempotent.
+    public static boolean setupConsoleCapture() {
+        return setup_console_capture() == 0;
+    }
+
+    // Blocking drain of captured output into buffer. Returns bytes read (>0),
+    // 0 on EOF, or -1 if capture is not installed / on error.
+    public static int consoleRead(final byte[] buffer, final int maxLen) {
+        return console_read(buffer, maxLen);
+    }
+
+    // Change the native process working directory so the backend resolves its
+    // relative output paths (cover/*.txt, tmp/*.txt) under a writable dir.
+    // Returns true on success.
+    public static boolean changeWorkingDir(final String path) {
+        return change_working_dir(path) == 0;
     }
 
     public static void createDatabase(final String dbPath) {

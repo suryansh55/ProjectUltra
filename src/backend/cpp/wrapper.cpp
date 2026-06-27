@@ -32,6 +32,10 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include <boost/optional/optional_io.hpp>
 // Suryansh Ankur, 2026
 #include <sys/resource.h>
+#include <unistd.h>   // pipe, dup2, read, close — in-app console capture
+#include <fcntl.h>    // fcntl, open — in-app console capture
+#include <cerrno>     // errno
+#include <cstdio>     // setvbuf
 
 // Java <-> C++
 // byte     int8_t
@@ -1334,4 +1338,85 @@ int64_t backend_peak_rss_bytes() {
 #else
     return static_cast<int64_t>(usage.ru_maxrss) * 1024;
 #endif
+}
+
+// ---------------------------------------------------------------------------
+// In-app console capture
+// Suryansh Ankur, 2026
+//
+// Redirect the process stdout/stderr (fd 1 and 2) into a pipe so the Java GUI
+// can display everything the backend AND the JVM print, without a terminal.
+// Both std::cout/printf (native) and System.out (JVM, which also writes to
+// fd 1) flow through this single pipe. Java drains it with console_read().
+static int g_console_read_fd = -1;
+
+int32_t setup_console_capture() {
+    if (g_console_read_fd >= 0) {
+        return 0;  // already installed; idempotent
+    }
+
+    // CRITICAL for GUI (double-click) launch: launchd starts the app with fds
+    // 0/1/2 CLOSED, whereas a terminal launch leaves them open on the TTY. If
+    // they are closed, pipe() below would hand back the lowest free descriptors
+    // (e.g. 0 and 1) and the redirect logic would then clobber its own stdout.
+    // Guarantee 0/1/2 are valid first by pointing any closed one at /dev/null,
+    // so pipe() is forced to return descriptors >= 3.
+    for (int fd = 0; fd <= 2; ++fd) {
+        if (fcntl(fd, F_GETFD) == -1 && errno == EBADF) {
+            const int nullfd = open("/dev/null", O_RDWR);
+            if (nullfd < 0) {
+                return -1;
+            }
+            if (nullfd != fd) {
+                dup2(nullfd, fd);
+                close(nullfd);
+            }
+        }
+    }
+
+    int fds[2];
+    if (pipe(fds) != 0) {
+        return -1;
+    }
+    // fds[0] = read end (Java reads this), fds[1] = write end.
+    if (dup2(fds[1], STDOUT_FILENO) < 0 || dup2(fds[1], STDERR_FILENO) < 0) {
+        close(fds[0]);
+        close(fds[1]);
+        return -1;
+    }
+    // fd 1 and 2 now reference the pipe; the extra write-end fd is redundant.
+    // (After the guard above, fds[1] is always >= 3, never 1 or 2.)
+    close(fds[1]);
+    g_console_read_fd = fds[0];
+
+    // A pipe is not a TTY, so libc would default stdout to FULLY buffered and
+    // output would stall until ~4-8 KB accumulates. Force line buffering on
+    // stdout and unbuffered stderr so messages reach the GUI promptly.
+    setvbuf(stdout, nullptr, _IOLBF, 0);
+    setvbuf(stderr, nullptr, _IONBF, 0);
+    return 0;
+}
+
+// Blocking read of captured output. Returns bytes read (>0), 0 on EOF, or -1
+// if capture was never installed / on error. Java calls this from a dedicated
+// daemon thread that always drains the pipe, so the kernel pipe buffer never
+// fills and never blocks the native compute threads writing to it.
+int32_t console_read(char* const buffer, const int32_t max_len) {
+    if (g_console_read_fd < 0 || buffer == nullptr || max_len <= 0) {
+        return -1;
+    }
+    const ssize_t n = read(g_console_read_fd, buffer, static_cast<size_t>(max_len));
+    return static_cast<int32_t>(n);
+}
+
+// Change the process working directory. (Suryansh Ankur, 2026)
+// The backend writes several output files (cover/*.txt, tmp/*.txt, ...) using
+// paths RELATIVE to the process cwd. A double-clicked .app launches with cwd
+// "/" (read-only), so Java redirects cwd to a writable dir at startup and calls
+// this so the native side resolves those same relative paths there too.
+int32_t change_working_dir(const char* const path) {
+    if (path == nullptr) {
+        return -1;
+    }
+    return chdir(path) == 0 ? 0 : -1;
 }

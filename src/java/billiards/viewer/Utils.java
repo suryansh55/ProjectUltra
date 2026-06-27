@@ -131,12 +131,30 @@ public final class Utils {
         }
     }
 
-    public static void writeToFile(final String path, final String contents) {
+    // Resolve a (usually relative) path against the current working directory,
+    // read from the user.dir property so it honors any startup relocation to a
+    // writable data dir on double-clicked .app launches (see Main). Returns an
+    // absolute path and does NOT depend on nio's cached default directory.
+    // Suryansh Ankur, 2026
+    private static Path resolveWorkPath(final String path) {
+        final Path p = Paths.get(path);
+        if (p.isAbsolute()) {
+            return p;
+        }
+        return Paths.get(System.getProperty("user.dir")).resolve(p);
+    }
+
+    public static void writeToFile(final String string, final String contents) {
         try {
-            if (!Files.exists(Paths.get(path))) {
-                Files.createFile(Paths.get(path));
+            final Path path = resolveWorkPath(string);
+            final Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
             }
-            Files.write(Paths.get(path), contents.getBytes());
+            if (!Files.exists(path)) {
+                Files.createFile(path);
+            }
+            Files.write(path, contents.getBytes());
         } catch (final IOException e) {
             throw new RuntimeException(e);
         }
@@ -160,8 +178,12 @@ public final class Utils {
 
         try {
 
-            final Path path = Paths.get(string);
+            final Path path = resolveWorkPath(string);
 
+            final Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
             if (!Files.exists(path)) {
                 Files.createFile(path);
             }

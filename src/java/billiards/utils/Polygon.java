@@ -37,12 +37,27 @@ public class Polygon {
         final MutableList<Vector2> pointList = new FastList<>();
 
         for (final String line : lines) {
-            final String[] coords = line.split(" ");
+            // Tolerate blank/trailing lines instead of crashing on parseDouble("").
+            if (line.trim().isEmpty()) {
+                continue;
+            }
+            final String[] coords = line.trim().split("\\s+");
+            if (coords.length < 2) {
+                // Clear, typed error (a RuntimeException) so callers can show a
+                // friendly alert instead of leaking an opaque parse trace.
+                // Suryansh Ankur, 2026
+                throw new IllegalArgumentException(
+                    "Each polygon point must be two numbers 'x y'; got: \"" + line.trim() + "\"");
+            }
             final double x = Math.toRadians(Double.parseDouble(coords[0]));
             final double y = Math.toRadians(Double.parseDouble(coords[1]));
             pointList.add(Vector2.create(x, y));
         }
 
+        if (pointList.isEmpty()) {
+            throw new IllegalArgumentException(
+                "No polygon coordinates entered. Enter one 'x y' point per line.");
+        }
         return ConvexPolygon.create(pointList.toImmutable());
     }
 }

@@ -251,17 +251,31 @@ public final class VaryWindowL {
     			return;
         	}
             fullContent = text.getText();
-            
-            final String cleaned = cleanPolygon(fullContent);
 
-            final String[] lines = cleaned.split("\n");
             final MutableList<Vector2> pointList = new FastList<>();
-
-            for (final String line : lines) {
-                final String[] coords = line.split(" ");
-                final double x = Double.parseDouble(coords[0]);
-                final double y = Double.parseDouble(coords[1]);
-                pointList.add(Vector2.create(x, y));
+            try {
+                final String cleaned = cleanPolygon(fullContent);
+                if (cleaned.trim().isEmpty()) {
+                    throw new NumberFormatException("no coordinates entered");
+                }
+                for (final String line : cleaned.split("\n")) {
+                    if (line.trim().isEmpty()) continue;
+                    final String[] coords = line.split(" ");
+                    final double x = Double.parseDouble(coords[0]);
+                    final double y = Double.parseDouble(coords[1]);
+                    pointList.add(Vector2.create(x, y));
+                }
+            } catch (final RuntimeException ex) {
+                // Empty or malformed polygon input. Mirror the friendly alert the
+                // 'Max' integer boxes use above, instead of dumping a stack trace
+                // into the (now visible) in-app console. Suryansh Ankur, 2026
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("VaryL Error");
+                alert.setHeaderText("Invalid polygon coordinates");
+                alert.setContentText("Please enter the polygon as one 'x y' point per line "
+                    + "before running.");
+                alert.showAndWait();
+                return;
             }
             this.result = Optional.of(Tuple.of(pointList, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             Utils.writeToFile(fileName, fullContent);

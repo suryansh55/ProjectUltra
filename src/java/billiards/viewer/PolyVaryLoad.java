@@ -205,8 +205,17 @@ public final class PolyVaryLoad {
                 this.result = Optional.of(Tuple.of(fullScreen.toConvexPolygon(), BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
 
             } else {
-                final String lines = cleanPolygon(polygonString);
-                final ConvexPolygon poly = createConvexPolygon(lines);
+                final ConvexPolygon poly;
+                try {
+                    poly = createConvexPolygon(cleanPolygon(polygonString));
+                } catch (final RuntimeException ex) {
+                    final Alert polyAlert = new Alert(AlertType.ERROR);
+                    polyAlert.setTitle("PolyVary Error");
+                    polyAlert.setHeaderText("Invalid polygon coordinates");
+                    polyAlert.setContentText("Please enter the polygon as one 'x y' point per line before running.");
+                    polyAlert.showAndWait();
+                    return;
+                }
                 this.result = Optional.of(Tuple.of(poly, BoundCSMax, BoundOSOMax, BoundOSNOMax, BoundCSMaxSS, BoundOSOMaxSS, BoundOSNOMaxSS));
             }
             //Utils.writeToFile(polyFileName, polygonString);
