@@ -166,8 +166,10 @@ fix (neither is a fundamental blocker):
 | **content change** (rare; the relabel codes) | a coincident curve at a degenerate vertex is recorded as the edge → a `left_rights` element actually changes | **canonical edge selection** — deterministic tie-break: among curves binding the same edge within tolerance, pick the one canonical map order would (smallest key) → bit-identical result |
 
 With both canonicalizations the parallel result is bit-identical to canonical,
-so the guard never trips. (Smoke test n=4: 3 rotation-only, 1 content-change.
-Full n=160 frequencies reproducible via the harness.)
+so the guard never trips. **Full run n=160:** 139 codes rotation-only, 8 codes
+content-change, 13 already bit-identical. So ~87 % of codes need only the cheap
+canonical rotation; the canonical edge-selection tie-break matters for just 8 of
+160 (the degenerate-vertex relabel cases).
 
 #### Parallel non-binding filter — prototype (candidate #1 ∪ #3, 2026-06-28)
 
@@ -181,8 +183,10 @@ polygon∩polygon primitive required.
 
 Prototyped in `experiment_refine_order` (the binding test currently *is* a
 `refine_polygon` against the start; survivor count + correctness reported).
-**Validated:** filtered region **bit-identical to canonical** on every code
-(n=4 smoke test: 0 mismatches), pruning **53–82 %** of curves (avg ~66 %).
+**Validated at scale (n=160):** filtered region **bit-identical to canonical on
+all 160 codes** (0 mismatches), pruning **52.4 %** of curves overall (111,559 of
+234,224 refinement steps survive). So the sequential chain is cut roughly in
+half before any parallelism is applied.
 
 **Speedup reading (important):** as prototyped the binding test costs a full
 refine, and the survivor tail is still sequential, so the standalone win is only

@@ -60,8 +60,10 @@ Run it:
    (canonical edge selection). Both make the parallel result bit-identical.
 3. **Parallel non-binding filter works.** Refinement only shrinks the polygon,
    so curves that don't cut the *starting* polygon can be discarded (tested in
-   parallel); refining the survivors reproduces the region **bit-identically**
-   (validated, 0 mismatches). Prunes ~66 % of curves. Standalone speedup ~2–3×.
+   parallel); refining the survivors reproduces the region **bit-identically on
+   all 160 codes** (0 mismatches), pruning **52.4 %** of curves overall
+   (111,559 / 234,224 steps survive). Standalone speedup ~2× (survivor tail
+   still sequential + test costs a full refine — see Next steps).
 
 ## Next steps (resume here)
 
