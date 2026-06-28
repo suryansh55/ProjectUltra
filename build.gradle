@@ -231,6 +231,43 @@ model {
                 }
             }
         }
+
+        // Refinement-order invariance experiment (src/experiment/cpp/main.cpp).
+        // Identical build setup to `bench`; calls experiment_refine_order to
+        // check whether the polygon refinement chain is order-independent (the
+        // prerequisite for tree-parallelizing it). Run: ./gradlew experimentBackend
+        experiment(NativeExecutableSpec) {
+
+            sources.cpp {
+                lib library: 'backend', linkage: 'static'
+            }
+
+            binaries.all {
+
+                cppCompiler.define "NDEBUG"
+                cppCompiler.args '-O3', cpuTuneFlag, '-flto', '-ftrapv'
+                if (currentOs.isMacOsX()){
+                    cppCompiler.args '-I/opt/homebrew/include'
+                    linker.args '-headerpad_max_install_names','-L/opt/homebrew/lib','-L/opt/homebrew/opt/','-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb','-lboost_thread'
+                } else {
+                    linker.args '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb12','-lboost_thread','-lboost_system'
+                }
+
+                if (toolChain in Clang) {
+                    cppCompiler.args  '-Werror',
+                                     '-Wno-padded', '-Wno-comma',
+                                     '-Wno-disabled-macro-expansion', '-Wno-global-constructors',
+                                     '-Wno-c++98-compat', '-Wno-c++98-compat-pedantic',
+                                     '-std=c++17'
+                }
+
+                if (toolChain in Gcc) {
+                    cppCompiler.args '-Wall', '-Wextra', '-Wpedantic', '-Werror',
+                                     '-Wno-c++11-compat', '-Wno-c++14-compat',
+                                     '-std=c++17'
+                }
+            }
+        }
     }
 }
 
@@ -244,6 +281,15 @@ task testBackend(type: Exec, dependsOn: 'testExecutable') {
 
 task benchBackend(type: Exec, dependsOn: 'benchExecutable') {
     commandLine 'build/exe/bench/bench'
+}
+
+task experimentBackend(type: Exec, dependsOn: 'experimentExecutable') {
+    commandLine 'build/exe/experiment/experiment'
+    // Optional: ./gradlew experimentBackend -Pcodes=tmp/my_codes.txt
+    // Default (no -Pcodes) reads experiment_codes.txt from the project root.
+    if (project.hasProperty('codes')) {
+        args project.getProperty('codes')
+    }
 }
 
 // Make sure the C++ code is up to date when running the Java program

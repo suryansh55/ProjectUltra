@@ -11,6 +11,13 @@
 #include "trig_identities.hpp"
 #include "unfolding.hpp"
 
+#include <algorithm>
+#include <limits>
+#include <map>
+#include <set>
+#include <string>
+#include <vector>
+
 // WARNING: always make this class a temporary
 class LeftRightVariant final : public boost::static_visitor<LeftRight> {
   private:
@@ -166,6 +173,291 @@ static boost::optional<IntervalPolygon> calculate_final_polygon(const std::vecto
     }
 
     return interval_polygon;//note george aug 26,2019 the last stuff is the mrr region
+}
+
+// ---------------------------------------------------------------------------
+// EXPERIMENT (Suryansh, 2026): refinement-order invariance probe.
+// See equations.hpp and docs/algorithmic-optimization-opportunities.md (#1).
+// Recompute the MRR region under reordered refinement sequences and compare
+// each to the canonical (sines-then-cosines, map order) result. Production
+// path (calculate_final_polygon above) is untouched.
+// ---------------------------------------------------------------------------
+namespace {
+
+using AnyCurve = boost::variant<Equation<Sin>, Equation<Cos>>;
+
+struct RefineVisitor final : public boost::static_visitor<boost::optional<IntervalPolygon>> {
+    const IntervalPolygon& poly;
+    explicit RefineVisitor(const IntervalPolygon& poly_) : poly{poly_} {}
+    boost::optional<IntervalPolygon> operator()(const Equation<Sin>& c) const { return refine_polygon(poly, c); }
+    boost::optional<IntervalPolygon> operator()(const Equation<Cos>& c) const { return refine_polygon(poly, c); }
+};
+
+// Refine a starting polygon against an explicit ordered list of curves.
+boost::optional<IntervalPolygon> refine_seq(IntervalPolygon poly, const std::vector<AnyCurve>& seq) {
+    for (const auto& c : seq) {
+        const auto maybe = boost::apply_visitor(RefineVisitor{poly}, c);
+        if (!maybe) {
+            return boost::none;
+        }
+        poly = *maybe;
+    }
+    return poly;
+}
+
+std::string edge_equation_string(const BoundaryEquation& eq) {
+    return boost::apply_visitor(EquationPrinter{}, eq);
+}
+
+std::multiset<std::string> edge_equation_multiset(const IntervalPolygon& poly) {
+    std::multiset<std::string> s;
+    for (const auto& v : poly) { s.insert(edge_equation_string(v.equation)); }
+    return s;
+}
+
+// Max |Δ endpoint| across the x and y interval bounds of two vertices.
+double vertex_endpoint_delta(const Vector2<Interval>& a, const Vector2<Interval>& b) {
+    double m = 0.0;
+    for (int k = 0; k < 2; ++k) {
+        const Real dl = boost::multiprecision::abs(
+            boost::multiprecision::lower(a[k]) - boost::multiprecision::lower(b[k]));
+        const Real du = boost::multiprecision::abs(
+            boost::multiprecision::upper(a[k]) - boost::multiprecision::upper(b[k]));
+        m = std::max(m, dl.convert_to<double>());
+        m = std::max(m, du.convert_to<double>());
+    }
+    return m;
+}
+
+// Symmetric nearest-neighbour (Hausdorff) distance between two vertex sets.
+// Independent of edge labeling and vertex ordering, so it measures whether the
+// two regions are geometrically the same even when their recorded boundary
+// equations differ.
+double vertex_hausdorff_delta(const IntervalPolygon& a, const IntervalPolygon& b) {
+    const auto directed = [](const IntervalPolygon& from, const IntervalPolygon& to) {
+        double worst = 0.0;
+        for (const auto& v : from) {
+            double best = std::numeric_limits<double>::infinity();
+            for (const auto& w : to) {
+                best = std::min(best, vertex_endpoint_delta(v.point, w.point));
+            }
+            worst = std::max(worst, best);
+        }
+        return worst;
+    };
+    return std::max(directed(a, b), directed(b, a));
+}
+
+// Compare one alternative ordering's result against the canonical polygon.
+RefineOrderReport::Alt compare_to_canonical(const std::string& name,
+                                            const boost::optional<IntervalPolygon>& maybe_alt,
+                                            const IntervalPolygon& canon,
+                                            const CurvesLR& curves,
+                                            const std::vector<LeftRight>& lr_canon,
+                                            bool lr_canon_ok) {
+    RefineOrderReport::Alt alt;
+    alt.name = name;
+    if (!maybe_alt) {
+        return alt; // ok stays false: the reordering drove the region empty
+    }
+    alt.ok = true;
+    const IntervalPolygon& p = *maybe_alt;
+    alt.size = p.size();
+    alt.same_size = (p.size() == canon.size());
+
+    // Gate #1: recompute stable_left_right on the reordered polygon and compare
+    // to canonical. This is the exact vector wrapper.cpp's consistency guard
+    // checks, so it tells us whether a reorder/parallel run would trip the
+    // "pattern changed" throw.
+    try {
+        const std::vector<LeftRight> lr_alt = stable_left_right(p, curves);
+        alt.left_rights_match = lr_canon_ok && (lr_alt == lr_canon);
+        // Multiset comparison separates a benign cyclic rotation of the edge
+        // cycle (same elements, different start vertex) from a genuine content
+        // change caused by an edge relabel.
+        if (lr_canon_ok && lr_alt.size() == lr_canon.size()) {
+            std::vector<LeftRight> a = lr_alt;
+            std::vector<LeftRight> b = lr_canon;
+            std::sort(a.begin(), a.end());
+            std::sort(b.begin(), b.end());
+            alt.left_rights_same_multiset = (a == b);
+        }
+    } catch (const std::exception&) {
+        alt.left_rights_threw = true;
+    }
+
+    // Multiset of edge equations is order-independent: identical structure?
+    std::multiset<std::string> canon_eqs;
+    std::multiset<std::string> alt_eqs;
+    for (const auto& v : canon) { canon_eqs.insert(edge_equation_string(v.equation)); }
+    for (const auto& v : p)     { alt_eqs.insert(edge_equation_string(v.equation)); }
+    alt.same_equations = (canon_eqs == alt_eqs);
+
+    // Which edge equations are NOT shared (multiset symmetric difference).
+    std::set_difference(alt_eqs.begin(), alt_eqs.end(), canon_eqs.begin(), canon_eqs.end(),
+                        std::back_inserter(alt.edges_only_in_alt));
+    std::set_difference(canon_eqs.begin(), canon_eqs.end(), alt_eqs.begin(), alt_eqs.end(),
+                        std::back_inserter(alt.edges_only_in_canon));
+    alt.eq_diff_count = alt.edges_only_in_alt.size();
+
+    // Geometric closeness, independent of edge labeling. This is the key deep-
+    // dive metric: if it is ~1e-49 even when edge equations differ, the region
+    // is the same shape and the relabel is a benign near-degenerate vertex.
+    alt.vertex_hausdorff = vertex_hausdorff_delta(canon, p);
+
+    // If structurally identical, match vertices by edge equation and measure
+    // the worst endpoint disagreement; bit_identical iff that worst delta == 0.
+    if (alt.same_size && alt.same_equations) {
+        std::multimap<std::string, std::size_t> alt_by_eq;
+        for (std::size_t i = 0; i < p.size(); ++i) {
+            alt_by_eq.emplace(edge_equation_string(p[i].equation), i);
+        }
+        double worst = 0.0;
+        bool matched_all = true;
+        for (const auto& cv : canon) {
+            const std::string key = edge_equation_string(cv.equation);
+            const auto it = alt_by_eq.find(key);
+            if (it == alt_by_eq.end()) { matched_all = false; break; }
+            worst = std::max(worst, vertex_endpoint_delta(cv.point, p[it->second].point));
+            alt_by_eq.erase(it);
+        }
+        if (matched_all) {
+            alt.max_endpoint_delta = worst;
+            alt.bit_identical = (worst == 0.0);
+        }
+    }
+    return alt;
+}
+
+} // namespace
+
+RefineOrderReport experiment_refine_order(const CodeSequence& code_sequence, const CodeType code_type) {
+    RefineOrderReport report;
+
+    // --- Replicate calculate_stable's curve construction exactly. ---
+    const auto code_numbers = code_sequence.numbers();
+    const auto code_angles = code_sequence.angles(XYZ::X, XYZ::Y);
+    const auto code_angles_eta = falgo::transform(code_angles, xyz_to_xyeta);
+    const auto code_angles_pi = falgo::transform(code_angles, xyz_to_xypi);
+
+    const Unfolding unfold{code_numbers, code_angles};
+
+    CurvesLR curves{};
+    if (code_type == CodeType::OSO) {
+        const auto sv = shooting_vector_open(code_sequence, code_angles_pi);
+        curves = unfold.generate_curves_lr(sv.first, sv.second);
+    } else if (code_type == CodeType::CS) {
+        const auto sv = shooting_vector_closed(code_sequence, code_angles_eta);
+        curves = unfold.generate_curves_lr(sv.first, sv.second);
+    } else if (code_type == CodeType::OSNO) {
+        const auto sv = unfold.shooting_vector_general();
+        curves = unfold.generate_curves_lr(sv.first, sv.second);
+    } else {
+        return report; // unstable / unsupported: built stays false
+    }
+
+    // Starting interval polygon, exactly as calculate_final_polygon builds it.
+    const auto rational_polygon = calculate_bounding_polygon(code_numbers, code_angles);
+    if (!rational_polygon) {
+        report.built = true;
+        report.empty_region = true;
+        return report;
+    }
+    const IntervalPolygon start = convert_to_interval(*rational_polygon);
+
+    // Curve keys in canonical (std::map) order.
+    std::vector<Equation<Sin>> sins;
+    for (const auto& kv : curves.first)  { sins.push_back(kv.first); }
+    std::vector<Equation<Cos>> coss;
+    for (const auto& kv : curves.second) { coss.push_back(kv.first); }
+    report.n_sin = sins.size();
+    report.n_cos = coss.size();
+
+    // Canonical application sequence: all sines (map order), then all cosines.
+    std::vector<AnyCurve> canon_seq;
+    canon_seq.reserve(sins.size() + coss.size());
+    for (const auto& c : sins) { canon_seq.emplace_back(c); }
+    for (const auto& c : coss) { canon_seq.emplace_back(c); }
+
+    const auto canon = refine_seq(start, canon_seq);
+    report.built = true;
+    if (!canon) {
+        report.empty_region = true;
+        return report;
+    }
+    report.canon_size = canon->size();
+
+    // Canonical left_rights (the downstream vector wrapper.cpp guards on).
+    std::vector<LeftRight> lr_canon;
+    bool lr_canon_ok = true;
+    try {
+        lr_canon = stable_left_right(*canon, curves);
+    } catch (const std::exception&) {
+        lr_canon_ok = false;
+    }
+
+    // --- Alternative orderings (deterministic permutations of canon_seq). ---
+
+    // 1. Full reverse of the entire applied sequence.
+    std::vector<AnyCurve> rev(canon_seq.rbegin(), canon_seq.rend());
+    report.alts.push_back(compare_to_canonical("full-reverse", refine_seq(start, rev),
+                                               *canon, curves, lr_canon, lr_canon_ok));
+
+    // 2. Groups swapped: all cosines first, then all sines (within-group order kept).
+    std::vector<AnyCurve> swapped;
+    swapped.reserve(canon_seq.size());
+    for (const auto& c : coss) { swapped.emplace_back(c); }
+    for (const auto& c : sins) { swapped.emplace_back(c); }
+    report.alts.push_back(compare_to_canonical("cosines-first", refine_seq(start, swapped),
+                                               *canon, curves, lr_canon, lr_canon_ok));
+
+    // 3. Interleaved: alternate sines and cosines to maximally scramble order.
+    std::vector<AnyCurve> interleaved;
+    interleaved.reserve(canon_seq.size());
+    {
+        std::size_t i = 0;
+        std::size_t j = 0;
+        while (i < sins.size() || j < coss.size()) {
+            if (i < sins.size()) { interleaved.emplace_back(sins[i++]); }
+            if (j < coss.size()) { interleaved.emplace_back(coss[j++]); }
+        }
+    }
+    report.alts.push_back(compare_to_canonical("interleaved", refine_seq(start, interleaved),
+                                               *canon, curves, lr_canon, lr_canon_ok));
+
+    // --- Parallel non-binding filter prototype ------------------------------
+    // Keep only curves that cut the STARTING bounding polygon. By monotonicity
+    // (refinement only shrinks the region), this survivor set is a superset of
+    // the truly binding curves, so refining by it in canonical order reproduces
+    // the canonical region exactly -- while the per-curve binding tests are
+    // independent of each other and so parallelizable. Here we run the tests
+    // serially (this is a measurement harness) and report the survivor count
+    // and whether the filtered region matches canonical.
+    {
+        const std::multiset<std::string> start_edges = edge_equation_multiset(start);
+        std::vector<AnyCurve> survivors;
+        for (const auto& c : canon_seq) {
+            const auto r = refine_seq(start, std::vector<AnyCurve>{c});
+            if (!r) {
+                survivors.push_back(c); // single curve drove region empty -> binding
+                continue;
+            }
+            if (edge_equation_multiset(*r) != start_edges) {
+                survivors.push_back(c);
+            }
+        }
+        report.binding_count = survivors.size();
+        report.filter_ran = true;
+
+        const auto filtered = refine_seq(start, survivors);
+        const RefineOrderReport::Alt cmp =
+            compare_to_canonical("filtered", filtered, *canon, curves, lr_canon, lr_canon_ok);
+        report.filtered_matches_canon =
+            cmp.ok && cmp.same_size && cmp.same_equations && cmp.bit_identical;
+        report.filtered_hausdorff = cmp.vertex_hausdorff;
+    }
+
+    return report;
 }
 
 static boost::optional<IntervalLineSegment> calculate_final_line_segment(const std::vector<CodeNumber>& code_numbers, const std::vector<XYZ>& code_angles, const LinComArrZ<XYEta>& constraint, const CurvesLR& curves) {

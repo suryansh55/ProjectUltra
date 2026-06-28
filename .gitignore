@@ -38,3 +38,6 @@ vary3.txt
 middleVary3.txt
 tmp/VaryLBounds.txt
 tmp/VaryPoints4.txt
+
+# Pasted input codes for the refinement-order experiment (local data)
+experiment_codes.txt

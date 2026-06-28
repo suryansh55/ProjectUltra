@@ -73,6 +73,136 @@ then intersect the partial polygons (`parallel_reduce`).
 - **Payoff if valid:** this is the only lever that attacks the 94% directly and
   could give near-linear speedup on cores.
 
+#### Experiment findings (2026-06-28)
+
+To answer the two questions above empirically *before* touching the production
+path, we built a refinement-order invariance probe:
+
+- `experiment_refine_order()` in `src/backend/cpp/equations.cpp` (declared in
+  `equations.hpp`, result struct `RefineOrderReport`). It replicates
+  `calculate_stable`'s curve construction exactly, then recomputes the region
+  under several **deterministic reorderings** of the same curve set —
+  `full-reverse`, `cosines-first`, `interleaved` — and compares each to the
+  canonical order (sines→cosines, `std::map` order). The production
+  `calculate_final_polygon` is **untouched**.
+- Driver `src/experiment/cpp/main.cpp`, run with **`./gradlew experimentBackend`**.
+- Metrics per ordering: same vertex count? identical multiset of edge equations?
+  bit-identical endpoints? and — independent of edge labeling — the **vertex
+  Hausdorff distance** (symmetric nearest-neighbour distance between the two
+  vertex sets), which measures whether the *region itself* moved.
+
+Result on 4 real codes from a LiLuMaxVary run (lengths 20 / 65 / 92 / 96):
+
+| Code | Steps | Edge-equation multiset | **Vertex Hausdorff Δ** |
+|---|---|---|---|
+| small | 176 | identical | ≤ 1.2e-50 |
+| medium | 1473 | **1 of 5 edges relabeled** | **≤ 5.3e-50** |
+| big_a | 3778 | identical | ≤ 4.3e-50 |
+| big_b | 3768 | identical | ≤ 2.0e-49 |
+
+**Interpretation.** The MRR **region is geometrically order-invariant** — every
+vertex stays put to ~1e-49, i.e. last-place noise at 50-digit MPFI precision,
+across all codes and all reorderings. For `medium` the *symbolic* boundary
+labeling differs (canonical records a `cos(...)` curve as one edge; the
+reordered runs record a `sin(...)` curve there), yet the vertex set is identical
+to 5e-50. This is a **benign relabel at a near-degenerate vertex**: two distinct
+generated curves bind the same boundary segment simultaneously, and the
+refinement order only decides which coincident curve gets recorded as the edge.
+
+**Answers to the professor's questions (provisional, n=4):**
+1. *Region identical as a set under reordering?* **Geometrically yes** (vertex
+   set invariant to ~1e-49). Only the symbolic edge label can flip, at
+   degenerate vertices — the region does not move.
+2. *Differences within tolerance / cover-safe?* The geometric differences
+   (~1e-49) are far below any plausible cover tolerance, and the cover argument
+   already relies on outward-rounded intervals to absorb exactly this.
+
+**Therefore #1 looks viable for the region computation**, gated on two checks
+before implementation:
+- **Downstream label-sensitivity.** The edge equations feed `stable_left_right`
+  / `LeftRightVariant` (`curves.first.at(eq).at(0)`). A sin↔cos relabel at a
+  degenerate vertex could change or throw that lookup even though the region is
+  unchanged — so the parallel reduction must **canonicalize edge selection** (or
+  be proven label-stable) before adoption.
+- **Validation method.** Output won't be byte-identical (~1e-49 endpoint drift),
+  so #1 must be validated by "CODES ARE IN COVER" + a tolerance check, *not* a
+  byte diff.
+
+**Scaled confirmation (2026-06-28, n=160).** The harness reads codes from a
+file (`./gradlew experimentBackend -Pcodes=<file>`; tolerant of the app's
+`CS (len, count) …` / index / `, zy` decoration). Ran it over the full output
+of a 100-hole AutoPolyVary run — **160 real codes** (83 CS + 56 OSO + 21 OSNO),
+including codes with thousands of refinement steps:
+
+| Metric | Value |
+|---|---|
+| codes compared | 160 |
+| region-invariant (vertex Hausdorff Δ < 1e-30) | **160 / 160** |
+| region MOVED (Δ ≥ 1e-30) | **0** |
+| worst vertex Hausdorff Δ over the whole run | **1.9e-48** |
+| codes hitting the benign edge-relabel | 12 (all still region-invariant) |
+
+Across every code and every reordering the **region never moved** — worst
+disagreement anywhere was 1.9e-48, last-place noise at 50-digit MPFI. The
+edge-relabel appeared on 12/160 codes but was benign in all of them. The
+order-invariance of the *region* is now well-supported empirically; the only
+open item before implementing #1 is the **downstream label-stability gate**
+above (canonicalize edge selection so a relabel can't perturb `stable_left_right`).
+
+#### Gate #1 investigation: downstream label-stability (2026-06-28)
+
+The consistency guard in `wrapper.cpp:425` recomputes a code's `Stable` and
+**throws "The pattern changed do it in the slow way!"** if the recomputed
+`left_rights` don't equal the expected vector. So `left_rights` is NOT cosmetic
+— a reorder/parallel run that changes it would spuriously trip this guard.
+
+The experiment now recomputes `stable_left_right` under each reordering and
+compares. The break splits cleanly into two effects, each with a deterministic
+fix (neither is a fundamental blocker):
+
+| Effect | Cause | Fix |
+|---|---|---|
+| **rotation** (common) | same region + same `left_rights` *set*, but the edge cycle starts at a different vertex → vector is a cyclic permutation | **canonical rotation** — rotate the edge cycle to a canonical anchor before emitting; pure post-processing, no geometry change |
+| **content change** (rare; the relabel codes) | a coincident curve at a degenerate vertex is recorded as the edge → a `left_rights` element actually changes | **canonical edge selection** — deterministic tie-break: among curves binding the same edge within tolerance, pick the one canonical map order would (smallest key) → bit-identical result |
+
+With both canonicalizations the parallel result is bit-identical to canonical,
+so the guard never trips. (Smoke test n=4: 3 rotation-only, 1 content-change.
+Full n=160 frequencies reproducible via the harness.)
+
+#### Parallel non-binding filter — prototype (candidate #1 ∪ #3, 2026-06-28)
+
+**Key monotonicity fact:** refinement only ever *shrinks* the polygon, so a
+curve that does not cut the **starting** bounding polygon can never cut any
+later sub-polygon. Therefore every curve can be tested against the *fixed*
+starting polygon **in parallel**, the non-binding ones discarded, and only the
+surviving (binding) curves refined sequentially. The survivor set is a superset
+of the truly-binding curves, so refining by it reproduces the exact region — no
+polygon∩polygon primitive required.
+
+Prototyped in `experiment_refine_order` (the binding test currently *is* a
+`refine_polygon` against the start; survivor count + correctness reported).
+**Validated:** filtered region **bit-identical to canonical** on every code
+(n=4 smoke test: 0 mismatches), pruning **53–82 %** of curves (avg ~66 %).
+
+**Speedup reading (important):** as prototyped the binding test costs a full
+refine, and the survivor tail is still sequential, so the standalone win is only
+~2–3× (scales with prune ratio). The two changes that make it matter:
+1. **Cheap binding test** — to decide "does curve C cut polygon P0" just
+   evaluate C's sign at P0's vertices (all same sign ⇒ prune); a handful of
+   evals vs a full clip, so the filter step becomes ~free and cost collapses
+   toward just the survivor refines. Must be conservative under interval
+   arithmetic: if an endpoint interval straddles zero, keep the curve. The
+   prototype already proves the *set* this cheap test must reproduce.
+2. **Tree-reduce the survivors** for the remaining factor (this is where the
+   polygon∩polygon primitive would come in).
+
+Combined target: filter ≈ free, sequential chain cut to ~1/3, then parallelize
+that third — potentially an order of magnitude on the big codes where the 94 %
+lives. All of this still requires cover-validation + professor sign-off before
+landing in the production path; the experiment harness (`src/experiment/`,
+`experiment_refine_order` in `equations.cpp`) is the safe place to develop it —
+`calculate_final_polygon` is untouched.
+
 ### 2. Lower interval precision during refinement
 The refinement chain runs at full MPFI precision throughout. If a lower
 precision suffices for the intermediate refinement steps (with a final
