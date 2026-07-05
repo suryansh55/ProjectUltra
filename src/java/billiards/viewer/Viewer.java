@@ -2095,7 +2095,11 @@ public final class Viewer {
             if (autoPolyVaryWindow == null) autoPolyVaryWindow = new AutoPolyVaryLoad("AutoPolyVary", "AutoVary", tmpDir + "cover_polygon.txt", tmpDir + "PolyAutoVaryBounds.txt");
 
             if (autoPolyVaryWindow.stage.isShowing()) {
+                // The load dialog is already open (a previous click's showAndWait is
+                // still nested-looping). Just surface it; calling getLoad() again
+                // would throw IllegalStateException: Stage already visible.
                 autoPolyVaryWindow.stage.toFront();
+                return;
             }
             final Optional<Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer>> polyOpt = autoPolyVaryWindow.getLoad();
             if (!polyOpt.isPresent()) {
@@ -7374,6 +7378,15 @@ public final class Viewer {
                 pointsFiltered.add(points.get(i+1));
             }
         }
+        // Suryansh Ankur, 2026 - diagnostic for "AutoPolyVary finishes with no codes".
+        // A run that generates nothing means the work-set is empty for every hole.
+        // This makes the cause visible: candidate=0 -> the query area does not
+        // intersect the current map view (zoom/pan) or falls outside the valid
+        // triangle; candidate>0 but filtered=0 -> every candidate pixel is already
+        // painted on screen (nothing left to fill at this view).
+        System.out.printf(
+                "//[point %d] view=[x %.4f..%.4f, y %.4f..%.4f] candidates=%d unfilled=%d%n",
+                currIdx + 1, xMin, xMax, yMin, yMax, points.size() / 2, pointsFiltered.size() / 2);
         // We want to filter the codes to avoid recalculating any codes that are already drawn on screen
         final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes = new TreeSortedSet<>();
         onScreenSequences.keySet().forEach(storage -> {onScreenCodes.add(storage.classCodeSeq);});

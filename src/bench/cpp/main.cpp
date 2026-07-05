@@ -33,8 +33,10 @@
 #include <cstdint>
 #include <cstdio>
 #include <exception>
+#include <functional>
 #include <iterator>
 #include <numeric>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -61,6 +63,24 @@ double peak_rss_mb() {
 
 // volatile sink so -O3 cannot elide the calculate_* call as dead code.
 volatile std::size_t g_sink = 0;
+
+// Full-precision fingerprint of a Stable result: hashes every interval bound
+// of every vertex plus the equations and left_rights, so ANY bit-level change
+// in the computed region changes the value. Used to verify the parallel
+// non-binding filter (BILLIARDS_PARALLEL_FILTER=1) is bit-identical to the
+// sequential path on the production kernel.
+std::size_t fingerprint(const Stable& s) {
+    std::ostringstream oss;
+    for (const auto& p : s.points) {
+        for (int k = 0; k < 2; ++k) {
+            oss << boost::multiprecision::lower(p[k]).str(0, std::ios_base::scientific) << ','
+                << boost::multiprecision::upper(p[k]).str(0, std::ios_base::scientific) << ';';
+        }
+    }
+    for (const auto& e : s.equations) { oss << e << '|'; }
+    oss << s.left_rights;
+    return std::hash<std::string>{}(oss.str());
+}
 
 double time_one_call(const CodeSequence& cs, const CodeType type) {
     const auto start = std::chrono::steady_clock::now();
@@ -128,8 +148,15 @@ int main() {
                 std::accumulate(samples.begin(), samples.end(), 0.0) /
                 static_cast<double>(samples.size());
 
-            std::printf("%-8s %4d %7s %10.1f %10.1f %10.1f\n",
-                        nc.name.c_str(), len, ts, tmin, tmed, tmean);
+            // One extra (untimed) call to fingerprint the actual output.
+            std::size_t fp = 0;
+            if (is_stable(type)) {
+                const auto stable = calculate_stable(cs, type);
+                if (stable) { fp = fingerprint(*stable); }
+            }
+
+            std::printf("%-8s %4d %7s %10.1f %10.1f %10.1f   fp=%016zx\n",
+                        nc.name.c_str(), len, ts, tmin, tmed, tmean, fp);
             std::fflush(stdout);
         } catch (const std::exception& e) {
             std::printf("%-8s  SKIPPED (%s)\n", nc.name.c_str(), e.what());

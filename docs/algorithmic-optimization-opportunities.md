@@ -200,6 +200,67 @@ refine, and the survivor tail is still sequential, so the standalone win is only
 2. **Tree-reduce the survivors** for the remaining factor (this is where the
    polygon∩polygon primitive would come in).
 
+#### Cheap sign-based binding test — VALIDATED (lever 1, 2026-07-04)
+
+Implemented as `cheap_curve_is_binding` in `equations.cpp` (experiment
+namespace). The structural justification is stronger than "conservative
+heuristic": `refine_polygon`'s entire corner logic is *driven by*
+`curve_sign_at_point` at the polygon's vertices (POS side kept, NEG discarded),
+so the vertex-sign sweep replicates the full test's binding decision exactly,
+except at ZERO vertices where we keep the curve instead of resolving gradients.
+Classification: all vertices strictly POS ⇒ no-op ⇒ prune; all strictly NEG ⇒
+curve empties the region ⇒ binding; any ZERO or mixed ⇒ binding. Early-exits on
+the first mixed pair.
+
+**n=160 validation (full corpus, 234,224 curve steps):**
+- cheap-filtered region **bit-identical to canonical on 160/160 codes**;
+- **missed binding curves = 0** — the cheap survivor set was a superset of the
+  full filter's on every code (the safety invariant);
+- prune ratio **51.6 %** vs the full filter's 52.4 % (1,790 extra curves kept,
+  ≈ 0.8 % conservatism cost);
+- test wall time **179 s vs 722 s** (~4× serially). Both tests are dominated by
+  the same 168-bit `mpfi_sin` vertex evaluations, hence 4× not 100× — but the
+  cheap test has zero cross-curve dependencies, so across N cores it is ~4N×
+  and the filter becomes negligible next to the survivor tail.
+
+**Consequence for staging:** refining survivors *in canonical order* is
+bit-identical to the canonical chain, so lever 1 needs **no left_rights
+canonicalization at all** — rotation/edge-selection fixes are only prerequisites
+for the tree-parallel reorder (lever 2). Lever 1 can therefore be
+production-integrated on its own with zero downstream-guard risk: expected
+~1.4× when cores are already saturated (AutoPolyVary batch), approaching ~2×
+when cores are idle (interactive single-region use). Threading note: the vary
+path already runs inside a `boost::asio` pool — inner parallelism for the
+filter should use TBB (composable work-stealing), NOT a nested asio pool (the
+known freeze cause; see CLAUDE.md).
+
+#### Lever 1 IN PRODUCTION — flag-guarded (2026-07-04)
+
+`calculate_final_polygon` gained an opt-in parallel-filter path, enabled by
+`BILLIARDS_PARALLEL_FILTER=1`; with the flag unset the historical sequential
+loop runs unchanged. Binding tests fan out over `tbb::parallel_for`; survivors
+refine in canonical order. Validated: 30/30 backend tests pass flag on and off;
+`benchBackend`'s new full-precision output fingerprint is **identical flag
+on/off on all bench codes** (bit-identical production output); measured
+speedups small 1.33×, medium 1.29×, big_a 1.28×, big_b 2.37× (tracks prune
+ratio). Outstanding: in-app "CODES ARE IN COVER" run, then the default-on
+decision.
+
+#### Lever 1 COMPLETE — default-on (2026-07-05)
+
+The final gate passed: an in-app AutoPolyVary run on 100 holes (4 shots,
+3 subdivisions, 2000 moves) with the filter enabled finished
+**"CODES ARE IN COVER"** in 27.2 s; a same-parameter run on the pre-filter
+build took 68.5 s (indicative ~2.5×, different session so not a controlled
+A/B). The filter is now **default-ON** in `parallel_filter_enabled()`
+(`equations.cpp`). Escape hatch: `BILLIARDS_PARALLEL_FILTER=0` — or
+`./gradlew run -PparallelFilter=0`, since the Gradle daemon does not reliably
+forward shell env vars — forces the historical sequential loop byte-for-byte.
+The backend prints its ENABLED/DISABLED state at first use so every run is
+attributable to the right code path. Re-verified after the flip: bench
+fingerprints identical both ways on all 4 codes; 30/30 backend tests pass both
+ways. Remaining work in this section is lever 2 only.
+
 Combined target: filter ≈ free, sequential chain cut to ~1/3, then parallelize
 that third — potentially an order of magnitude on the big codes where the 94 %
 lives. All of this still requires cover-validation + professor sign-off before

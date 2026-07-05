@@ -12,6 +12,8 @@
 #include "unfolding.hpp"
 
 #include <algorithm>
+#include <chrono>
+#include <cstdlib>
 #include <limits>
 #include <map>
 #include <set>
@@ -123,6 +125,86 @@ static IntervalPolygon convert_to_interval(const RationalPolygon& rat_polygon) {
     return int_polygon;
 }
 
+// ---------------------------------------------------------------------------
+// Parallel non-binding filter (lever 1). Shared by the production path below
+// and the experiment harness further down.
+//
+// Monotonicity fact: refinement only ever SHRINKS the polygon, so a curve that
+// does not cut the STARTING bounding polygon can never cut any later
+// sub-polygon. Every curve can therefore be tested against the fixed start IN
+// PARALLEL and the non-binding ones discarded; refining the survivors in the
+// usual canonical order reproduces the sequential result bit-for-bit
+// (validated on 160 real codes -- see
+// docs/algorithmic-optimization-opportunities.md, candidate #1).
+// ---------------------------------------------------------------------------
+namespace {
+
+using AnyCurve = boost::variant<Equation<Sin>, Equation<Cos>>;
+
+struct RefineVisitor final : public boost::static_visitor<boost::optional<IntervalPolygon>> {
+    const IntervalPolygon& poly;
+    explicit RefineVisitor(const IntervalPolygon& poly_) : poly{poly_} {}
+    boost::optional<IntervalPolygon> operator()(const Equation<Sin>& c) const { return refine_polygon(poly, c); }
+    boost::optional<IntervalPolygon> operator()(const Equation<Cos>& c) const { return refine_polygon(poly, c); }
+};
+
+struct CurveIsZeroVisitor final : public boost::static_visitor<bool> {
+    template <typename T>
+    bool operator()(const T& c) const { return c.is_zero(); }
+};
+
+struct CurveSignVisitor final : public boost::static_visitor<Sign> {
+    const Vector2<Interval>& point;
+    explicit CurveSignVisitor(const Vector2<Interval>& point_) : point{point_} {}
+    template <typename T>
+    Sign operator()(const T& c) const { return curve_sign_at_point(c, point); }
+};
+
+// Cheap conservative binding test: evaluate the curve's interval sign at each
+// vertex of the START polygon. refine_polygon's entire corner logic is driven
+// by exactly these vertex signs (POS side kept, NEG side discarded), so:
+//   all vertices strictly POS -> the refinement is a no-op        -> prune
+//   all vertices strictly NEG -> the curve empties the region     -> binding
+//   any ZERO or mixed signs   -> the curve may cut the boundary   -> binding
+// Conservative: a ZERO sign (interval straddling zero) always keeps the curve
+// instead of resolving it with gradient information, so the survivor set is a
+// superset of the truly binding curves.
+bool cheap_curve_is_binding(const IntervalPolygon& start, const AnyCurve& curve) {
+    if (boost::apply_visitor(CurveIsZeroVisitor{}, curve)) {
+        return true; // refine_polygon returns empty for a zero curve
+    }
+    bool seen_pos = false;
+    bool seen_neg = false;
+    for (const auto& v : start) {
+        const Sign s = boost::apply_visitor(CurveSignVisitor{v.point}, curve);
+        if (s == Sign::ZERO) { return true; }
+        if (s == Sign::POS) { seen_pos = true; } else { seen_neg = true; }
+        if (seen_pos && seen_neg) { return true; }
+    }
+    return seen_neg; // all NEG -> empties the region; all POS -> no-op
+}
+
+// Default-on since 2026-07-05 (validated: bit-identical bench fingerprints,
+// n=160 experiment, in-app AutoPolyVary CODES-ARE-IN-COVER pass). The filter
+// prunes provably non-binding curves before the sequential refinement loop;
+// survivors refine in canonical order, so output is bit-identical either way.
+// BILLIARDS_PARALLEL_FILTER=0 is the escape hatch: it forces the historical
+// sequential loop, byte-for-byte.
+bool parallel_filter_enabled() {
+    static const bool enabled = []() {
+        const char* v = std::getenv("BILLIARDS_PARALLEL_FILTER");
+        const bool on = v == nullptr || v[0] != '0';
+        // One unambiguous marker in the console/log so a run can always be
+        // attributed to the right code path.
+        std::cout << "[backend] parallel non-binding filter "
+                  << (on ? "ENABLED" : "DISABLED (BILLIARDS_PARALLEL_FILTER=0)") << std::endl;
+        return on;
+    }();
+    return enabled;
+}
+
+} // namespace
+
 // TODO give all of these more consistent names
 // TODO also do the refinement as the curves are generated
 // that should reduce the memory usage
@@ -135,10 +217,44 @@ static boost::optional<IntervalPolygon> calculate_final_polygon(const std::vecto
     }
 
     auto interval_polygon = convert_to_interval(*rational_polygon);
- 
+
  //george aug 26,2019 this starts with a bounding polygon
  //   print_region(interval_polygon);
  // std::cout << std::endl;
+
+    // --- Parallel non-binding filter (lever 1, opt-in) ---------------------
+    // Test every curve against the fixed starting polygon in parallel (cheap
+    // vertex-sign test, conservative under interval arithmetic), then refine
+    // only the survivors in exactly the canonical order the sequential loops
+    // below would use (sines then cosines, std::map order). Because survivors
+    // are a superset of the binding curves and the order is unchanged, the
+    // result is bit-identical to the sequential path (validated on 160 real
+    // codes). TBB is used deliberately: this function runs inside the vary
+    // path's boost::asio worker threads, and TBB's work-stealing composes
+    // there, whereas a nested asio pool is the known freeze cause.
+    if (parallel_filter_enabled()) {
+        std::vector<AnyCurve> seq;
+        seq.reserve(curves.first.size() + curves.second.size());
+        for (const auto& kv : curves.first)  { seq.emplace_back(kv.first); }
+        for (const auto& kv : curves.second) { seq.emplace_back(kv.first); }
+
+        std::vector<char> binding(seq.size(), 0);
+        tbb::parallel_for(std::size_t{0}, seq.size(), [&](const std::size_t i) {
+            binding[i] = cheap_curve_is_binding(interval_polygon, seq[i]) ? 1 : 0;
+        });
+
+        for (std::size_t i = 0; i < seq.size(); ++i) {
+            if (binding[i] == 0) {
+                continue; // cannot cut the start polygon => cannot cut any sub-polygon
+            }
+            const auto maybe = boost::apply_visitor(RefineVisitor{interval_polygon}, seq[i]);
+            if (!maybe) {
+                return boost::none;
+            }
+            interval_polygon = *maybe;
+        }
+        return interval_polygon;
+    }
 
     // Refine using the sines first
     for (const auto& kv : curves.first) {
@@ -183,15 +299,6 @@ static boost::optional<IntervalPolygon> calculate_final_polygon(const std::vecto
 // path (calculate_final_polygon above) is untouched.
 // ---------------------------------------------------------------------------
 namespace {
-
-using AnyCurve = boost::variant<Equation<Sin>, Equation<Cos>>;
-
-struct RefineVisitor final : public boost::static_visitor<boost::optional<IntervalPolygon>> {
-    const IntervalPolygon& poly;
-    explicit RefineVisitor(const IntervalPolygon& poly_) : poly{poly_} {}
-    boost::optional<IntervalPolygon> operator()(const Equation<Sin>& c) const { return refine_polygon(poly, c); }
-    boost::optional<IntervalPolygon> operator()(const Equation<Cos>& c) const { return refine_polygon(poly, c); }
-};
 
 // Refine a starting polygon against an explicit ordered list of curves.
 boost::optional<IntervalPolygon> refine_seq(IntervalPolygon poly, const std::vector<AnyCurve>& seq) {
@@ -435,16 +542,22 @@ RefineOrderReport experiment_refine_order(const CodeSequence& code_sequence, con
     // and whether the filtered region matches canonical.
     {
         const std::multiset<std::string> start_edges = edge_equation_multiset(start);
+
+        // Full-refine binding test (the original prototype), per-curve verdicts
+        // recorded so the cheap test below can be cross-checked against it.
+        std::vector<bool> full_binding(canon_seq.size(), false);
+        const auto full_t0 = std::chrono::steady_clock::now();
+        for (std::size_t i = 0; i < canon_seq.size(); ++i) {
+            const auto r = refine_seq(start, std::vector<AnyCurve>{canon_seq[i]});
+            // !r: the single curve drove the region empty -> binding.
+            full_binding[i] = !r || edge_equation_multiset(*r) != start_edges;
+        }
+        const auto full_t1 = std::chrono::steady_clock::now();
+        report.full_filter_seconds = std::chrono::duration<double>(full_t1 - full_t0).count();
+
         std::vector<AnyCurve> survivors;
-        for (const auto& c : canon_seq) {
-            const auto r = refine_seq(start, std::vector<AnyCurve>{c});
-            if (!r) {
-                survivors.push_back(c); // single curve drove region empty -> binding
-                continue;
-            }
-            if (edge_equation_multiset(*r) != start_edges) {
-                survivors.push_back(c);
-            }
+        for (std::size_t i = 0; i < canon_seq.size(); ++i) {
+            if (full_binding[i]) { survivors.push_back(canon_seq[i]); }
         }
         report.binding_count = survivors.size();
         report.filter_ran = true;
@@ -455,6 +568,35 @@ RefineOrderReport experiment_refine_order(const CodeSequence& code_sequence, con
         report.filtered_matches_canon =
             cmp.ok && cmp.same_size && cmp.same_equations && cmp.bit_identical;
         report.filtered_hausdorff = cmp.vertex_hausdorff;
+
+        // --- Cheap sign-based binding test (lever 1) ------------------------
+        // Replace the full refine_polygon per-curve test with one interval sign
+        // evaluation per start-polygon vertex. Must be a conservative superset
+        // of the full filter's survivors (cheap_missed_binding == 0), and
+        // refining by the cheap survivors must still be bit-identical.
+        std::vector<bool> cheap_binding(canon_seq.size(), false);
+        const auto cheap_t0 = std::chrono::steady_clock::now();
+        for (std::size_t i = 0; i < canon_seq.size(); ++i) {
+            cheap_binding[i] = cheap_curve_is_binding(start, canon_seq[i]);
+        }
+        const auto cheap_t1 = std::chrono::steady_clock::now();
+        report.cheap_filter_seconds = std::chrono::duration<double>(cheap_t1 - cheap_t0).count();
+
+        std::vector<AnyCurve> cheap_survivors;
+        for (std::size_t i = 0; i < canon_seq.size(); ++i) {
+            if (cheap_binding[i]) { cheap_survivors.push_back(canon_seq[i]); }
+            if (full_binding[i] && !cheap_binding[i]) { ++report.cheap_missed_binding; }
+            if (!full_binding[i] && cheap_binding[i]) { ++report.cheap_extra_kept; }
+        }
+        report.cheap_binding_count = cheap_survivors.size();
+        report.cheap_filter_ran = true;
+
+        const auto cheap_filtered = refine_seq(start, cheap_survivors);
+        const RefineOrderReport::Alt cheap_cmp =
+            compare_to_canonical("cheap-filtered", cheap_filtered, *canon, curves, lr_canon, lr_canon_ok);
+        report.cheap_matches_canon =
+            cheap_cmp.ok && cheap_cmp.same_size && cheap_cmp.same_equations && cheap_cmp.bit_identical;
+        report.cheap_hausdorff = cheap_cmp.vertex_hausdorff;
     }
 
     return report;

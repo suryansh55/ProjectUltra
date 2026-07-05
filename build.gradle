@@ -302,6 +302,17 @@ run.doFirst {
     //commandLine "./test.fish"
             // For native libraries
     environment 'JNA_LIBRARY_PATH', "$projectDir/build/libs/backend/shared"
+
+    // Lever 1 (parallel non-binding filter in calculate_final_polygon) is
+    // default-ON in the backend. This property is the escape hatch:
+    //   ./gradlew run -PparallelFilter=0
+    // forces the historical sequential loop. Use a Gradle -P property, NOT a
+    // shell env var: the daemon does not reliably forward client env vars to
+    // JavaExec on JDK 17+. The backend prints its ENABLED/DISABLED state at
+    // first use either way.
+    if (project.hasProperty('parallelFilter')) {
+        environment 'BILLIARDS_PARALLEL_FILTER', project.property('parallelFilter')
+    }
     
     if (isMac) {
         environment 'DYLD_LIBRARY_PATH', "$projectDir/build/libs/backend/shared"

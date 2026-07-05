@@ -41,6 +41,22 @@ struct RefineOrderReport final {
     bool filtered_matches_canon = false; // refine-by-survivors == canonical (bit-identical)
     double filtered_hausdorff = 0.0;     // vertex distance filtered vs canonical
 
+    // --- Cheap sign-based binding test (lever 1) ---
+    // Same filter idea, but the per-curve test is one interval sign evaluation
+    // per start-polygon vertex instead of a full refine_polygon. refine_polygon
+    // keeps the POS side, so all-strictly-POS => refinement is a no-op (prune),
+    // all-strictly-NEG => the curve empties the region (binding), and any ZERO
+    // (interval straddling zero) or mixed signs => keep. Conservative by
+    // construction: ZERO never resolves via gradients, it just keeps the curve.
+    bool cheap_filter_ran = false;
+    std::size_t cheap_binding_count = 0;   // survivors of the cheap test
+    bool cheap_matches_canon = false;      // refine-by-cheap-survivors == canonical (bit-identical)
+    double cheap_hausdorff = 0.0;          // vertex distance cheap-filtered vs canonical
+    std::size_t cheap_missed_binding = 0;  // kept by full filter, pruned by cheap -- MUST be 0
+    std::size_t cheap_extra_kept = 0;      // kept by cheap, pruned by full (conservatism cost)
+    double full_filter_seconds = 0.0;      // wall time of the full-refine binding tests
+    double cheap_filter_seconds = 0.0;     // wall time of the cheap sign binding tests
+
     struct Alt final {
         std::string name;            // ordering label
         bool ok = false;             // refinement completed without going empty

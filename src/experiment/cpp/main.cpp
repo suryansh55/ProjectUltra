@@ -181,6 +181,13 @@ int main(int argc, char** argv) {
     std::size_t filter_total_binding = 0;
     std::size_t filter_match = 0;          // codes where filtered == canonical
     std::size_t filter_mismatch = 0;       // codes where it differed (should be 0)
+    std::size_t cheap_total_binding = 0;   // cheap-test survivors, summed across codes
+    std::size_t cheap_match = 0;           // codes where cheap-filtered == canonical
+    std::size_t cheap_mismatch = 0;        // codes where it differed (should be 0)
+    std::size_t cheap_total_missed = 0;    // full-binding curves the cheap test pruned (MUST be 0)
+    std::size_t cheap_total_extra = 0;     // curves cheap kept but full pruned (conservatism cost)
+    double full_filter_time = 0.0;         // summed wall time of full-refine binding tests
+    double cheap_filter_time = 0.0;        // summed wall time of cheap sign binding tests
 
     for (const auto& nc : codes) {
         try {
@@ -218,6 +225,23 @@ int main(int argc, char** argv) {
                     std::printf(" (Hausdorff Δ = %.3e)", r.filtered_hausdorff);
                 }
                 std::printf("\n");
+            }
+
+            if (r.cheap_filter_ran && total_curves > 0) {
+                const double pct_pruned = 100.0 * static_cast<double>(total_curves - r.cheap_binding_count)
+                                          / static_cast<double>(total_curves);
+                std::printf("   cheap : %zu/%zu curves binding (%.1f%% pruned); missed=%zu extra=%zu; region: %s",
+                            r.cheap_binding_count, total_curves, pct_pruned,
+                            r.cheap_missed_binding, r.cheap_extra_kept,
+                            r.cheap_matches_canon ? "IDENTICAL to canonical"
+                                                  : "DIFFERS from canonical");
+                if (!r.cheap_matches_canon) {
+                    std::printf(" (Hausdorff Δ = %.3e)", r.cheap_hausdorff);
+                }
+                std::printf("\n   test time: full=%.3fs cheap=%.3fs (%.0fx faster)\n",
+                            r.full_filter_seconds, r.cheap_filter_seconds,
+                            r.cheap_filter_seconds > 0.0
+                                ? r.full_filter_seconds / r.cheap_filter_seconds : 0.0);
             }
 
             ++n_checked;
@@ -273,6 +297,14 @@ int main(int argc, char** argv) {
                 filter_total_binding += r.binding_count;
                 if (r.filtered_matches_canon) { ++filter_match; } else { ++filter_mismatch; }
             }
+            if (r.cheap_filter_ran) {
+                cheap_total_binding += r.cheap_binding_count;
+                if (r.cheap_matches_canon) { ++cheap_match; } else { ++cheap_mismatch; }
+                cheap_total_missed += r.cheap_missed_binding;
+                cheap_total_extra += r.cheap_extra_kept;
+                full_filter_time += r.full_filter_seconds;
+                cheap_filter_time += r.cheap_filter_seconds;
+            }
 
             std::printf("\n");
             std::fflush(stdout);
@@ -312,6 +344,27 @@ int main(int argc, char** argv) {
                     filter_total_binding, prune);
         std::printf("=> sequential refinement chain shrinks from %zu to %zu steps overall\n",
                     filter_total_curves, filter_total_binding);
+    }
+
+    std::printf("\n--- cheap sign-based binding test (lever 1) ---\n");
+    std::printf("cheap-filtered == canonical: %zu / %zu codes  (mismatches: %zu)\n",
+                cheap_match, cheap_match + cheap_mismatch, cheap_mismatch);
+    if (filter_total_curves > 0) {
+        const double prune = 100.0 * static_cast<double>(filter_total_curves - cheap_total_binding)
+                             / static_cast<double>(filter_total_curves);
+        std::printf("binding (survive cheap test): %zu  (%.1f%% pruned; full filter pruned to %zu)\n",
+                    cheap_total_binding, prune, filter_total_binding);
+        std::printf("missed binding curves      : %zu  (MUST be 0: cheap survivors ⊇ full survivors)\n",
+                    cheap_total_missed);
+        std::printf("extra kept (conservatism)  : %zu\n", cheap_total_extra);
+        std::printf("test wall time             : full=%.1fs cheap=%.3fs (%.0fx faster)\n",
+                    full_filter_time, cheap_filter_time,
+                    cheap_filter_time > 0.0 ? full_filter_time / cheap_filter_time : 0.0);
+        if (cheap_total_missed == 0 && cheap_mismatch == 0 && cheap_match > 0) {
+            std::printf("=> cheap test is a safe conservative filter: same prune power, ~free\n");
+        } else if (cheap_total_missed > 0 || cheap_mismatch > 0) {
+            std::printf("=> WARNING: cheap test dropped binding curves or changed the region\n");
+        }
     }
 
     return 0;
