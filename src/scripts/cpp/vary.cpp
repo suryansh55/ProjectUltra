@@ -69,7 +69,7 @@ boost::optional<PrintMode> strToPrintMode(std::string s) {
  * used to group together data we want to classify code sequences by
  */
 struct CodeLenAndPattern {
-    int32_t codeLength;
+    long codeLength;
     std::string oddEvenPattern;
 };
 
@@ -270,6 +270,7 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
 
 std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPolyArgs& args) {
     std::vector<std::vector<Vector2<Interval>>> filledRegion{};
+    std::vector<std::set<ClassifiedCodeSequence>> codes{};
 
     for(const auto& coordinates : args.holes){
         const size_t numPoints = coordinates.size();
@@ -300,6 +301,7 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
             int32_t csMaxSideSum = args.maxCSSideSum.value_or(args.maxSideSum);
             int32_t osoMaxSideSum = args.maxOSOSideSum.value_or(args.maxSideSum);
             int32_t osnoMaxSideSum = args.maxOSNOSideSum.value_or(args.maxSideSum);
+            std::cout << "// Starting Vary3 search for point (" << x << ", " << y << ")" << std::endl;
             Vary3Args CS = Vary3Args{x, y, args.minSideSum, csMaxSideSum, args.shots,
                 false, args.searchFor.cs, false, false, false};
             Vary3Args nonCS = Vary3Args{x, y, args.minSideSum, std::max(osoMaxSideSum, osnoMaxSideSum), args.shots,
@@ -327,7 +329,7 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
             }
 
             // Filter codes by max code length
-            auto polygons = filteredCodes
+            auto finalCodes= filteredCodes
                 | std::views::filter([](const ClassifiedCodeSequence& code) { return code.stable; })
                 | std::views::filter([&args](const ClassifiedCodeSequence& code) {
                     if(code.codeType == CodeType::CS) return code.codeLength <= args.maxCSCodeLength;
@@ -335,6 +337,10 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
                     else if(code.codeType == CodeType::OSNO) return code.codeLength <= args.maxOSNOCodeLength;
                     else return false;
                 })
+                | std::ranges::to<std::set<ClassifiedCodeSequence>>();
+
+
+            auto polygons = finalCodes
                 | std::views::transform([](const ClassifiedCodeSequence& code) { 
                     return calculate_stable(*code.codeSequence, code.codeType);
                 })
@@ -343,10 +349,12 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
                 | std::views::transform([](const Stable& stable){ return stable.points; })
                 | std::ranges::to<std::vector<std::vector<Vector2<Interval>>>>();
 
+            
+            codes.emplace_back(finalCodes);
             filledRegion.insert(filledRegion.end(), polygons.begin(), polygons.end());
         }
     }
 
-    return std::vector<std::set<ClassifiedCodeSequence>>();
+    return codes;
 }
 

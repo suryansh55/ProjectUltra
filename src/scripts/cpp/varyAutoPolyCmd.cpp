@@ -99,6 +99,22 @@ int main(int argc, const char* argv[]) {
         maxOSOSideSum, maxCSSideSum, maxOSNOSideSum, 
     };
 
+    auto start = std::chrono::steady_clock::now();
     printStartInfo(args);
     auto codes = findCodesPolyVary(args);
+    for (const auto& codeSet : codes) {
+        if(codeSet.empty()) continue;
+        std::cout << "// Found " << codeSet.size() << " codes for a hole" << std::endl;
+        printCodes(codeSet, printMode);
+    }
+    auto end = std::chrono::steady_clock::now();
+
+    auto elapsed = end - start;
+    auto hrs = std::chrono::duration_cast<std::chrono::hours>(elapsed);
+    auto mins = std::chrono::duration_cast<std::chrono::minutes>(elapsed - hrs);
+    auto secs = std::chrono::duration_cast<std::chrono::seconds>(elapsed - hrs - mins);
+
+    std::cout << hrs.count() << "h " 
+              << mins.count() << "m " 
+              << secs.count() << "s\n";
 }
