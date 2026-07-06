@@ -25,31 +25,53 @@
 
 package billiards.viewer;
 
-import billiards.codeseq.ClassifiedCodeSequence;
-import billiards.codeseq.CodeSequence;
-import billiards.codeseq.CodeType;
-import billiards.codeseq.CodeTypeCollection;
-import billiards.codeseq.InvalidCodeSequence;
-import billiards.codeseq.Storage;
-import billiards.cover.CoverStuff;
-import billiards.cover.HalfTriple;
-import billiards.cover.Triple;
-import billiards.database.*;
-import billiards.geometry.*;
-import billiards.geometry.Rectangle;
-import billiards.math.XYPi;
-import billiards.utils.BatchLoadStorage;
-import billiards.utils.PrintMid;
-import billiards.wrapper.ConnectionPool;
-import billiards.wrapper.Wrapper;
-import javafx.beans.property.SimpleBooleanProperty;
-import javafx.scene.control.TextArea;
+import static billiards.codeseq.CodeType.OSNO;
+import static billiards.utils.Polygon.cleanPolygon;
+import static billiards.utils.Polygon.createConvexPolygon;
+import static billiards.viewer.Utils.getCoverCodeString;
+import static billiards.viewer.Utils.readFromFile;
 
-import javaslang.*;
-import javaslang.collection.Array;
-import javaslang.control.Either;
-
-import java.sql.*;
+import java.awt.Dimension;
+import java.awt.MouseInfo;
+import java.awt.Toolkit;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+import java.util.Optional;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.DoubleUnaryOperator;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.collections.api.bimap.MutableBiMap;
 import org.eclipse.collections.api.list.ImmutableList;
@@ -60,35 +82,37 @@ import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.bimap.mutable.HashBiMap;
-import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 
-import java.awt.*;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
-import java.util.List;
-import java.util.Map.Entry;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.DoubleUnaryOperator;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
+import billiards.codeseq.ClassifiedCodeSequence;
+import billiards.codeseq.CodeSequence;
+import billiards.codeseq.CodeType;
+import billiards.codeseq.CodeTypeCollection;
+import billiards.codeseq.InvalidCodeSequence;
+import billiards.codeseq.Storage;
+import billiards.cover.CoverStuff;
+import billiards.cover.HalfTriple;
+import billiards.cover.Triple;
+import billiards.database.Database;
+import billiards.database.Info;
+import billiards.database.InfoAll;
+import billiards.geometry.ConvexPolygon;
+import billiards.geometry.Interval;
+import billiards.geometry.Location;
+import billiards.geometry.Rectangle;
+import billiards.geometry.Vector2;
+import billiards.math.XYPi;
+import billiards.utils.BatchLoadStorage;
+import billiards.utils.PrintMid;
+import billiards.wrapper.ConnectionPool;
+import billiards.wrapper.Wrapper;
 import javafx.application.Platform;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.collections.ObservableList;
 import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -102,6 +126,7 @@ import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
@@ -121,12 +146,13 @@ import javafx.stage.DirectoryChooser;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
-
-import static billiards.codeseq.CodeType.OSNO;
-import static billiards.utils.Polygon.cleanPolygon;
-import static billiards.utils.Polygon.createConvexPolygon;
-import static billiards.viewer.Utils.getCoverCodeString;
-import static billiards.viewer.Utils.readFromFile;
+import javaslang.Tuple;
+import javaslang.Tuple2;
+import javaslang.Tuple3;
+import javaslang.Tuple6;
+import javaslang.Tuple7;
+import javaslang.collection.Array;
+import javaslang.control.Either;
 
 // Places for input
 // btnIterate in other window
@@ -2144,8 +2170,8 @@ public final class Viewer {
 		lineEndField.setPromptText("End");
 		lineEndField.setPrefWidth(60);
 
-        findPointsBtn.setText("Find Points");
-        findPointsBtn.setTooltip(Utils.toolTip("Prints and stores all points used in a LiLuMaxVary calculation by searching for white pixels on the viewer."));
+        findPointsBtn.setText("Find Holes");
+        findPointsBtn.setTooltip(Utils.toolTip("Searches for empty holes in the cover polygon by finding white pixels on the viewer."));
 		findPointsBtn.setOnAction(event -> {
 			ConvexPolygon polygon;
 			int subdivisions;
@@ -2155,7 +2181,7 @@ public final class Viewer {
 				polygon = createConvexPolygon(polyString);
 			} catch (RuntimeException e) {
 				final Alert alert = new Alert(AlertType.ERROR);
-				alert.setTitle("Find Points");
+				alert.setTitle("Find Holes");
 				alert.setHeaderText("An invalid polygon was found in Cover");
 				alert.setContentText(e.toString());
 				alert.showAndWait();
@@ -2165,7 +2191,7 @@ public final class Viewer {
 			// Check for a loaded OBO file so we can determine start, step and end
 			if (fileCodeSequences.isEmpty()) {
 				final Alert alert = new Alert(AlertType.ERROR);
-				alert.setTitle("Find Points");
+				alert.setTitle("Find Holes");
 				alert.setHeaderText("No OBO File Loaded");
 				alert.setContentText(
 						"Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
@@ -2178,18 +2204,27 @@ public final class Viewer {
 				subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
 			} catch (NumberFormatException e) {
 				final Alert alert = new Alert(AlertType.ERROR);
-				alert.setTitle("Find Points");
+				alert.setTitle("Find Holes");
 				alert.setHeaderText("Unable to parse subdivisions");
 				alert.setContentText("The number of subdivisions could not be determined. " + e);
 				alert.showAndWait();
 				return;
 			}
 
-			System.out.println("+------------------------------ Finding Points ------------------------------+");
-			findAllPoints(polygon, subdivisions, startStepEnd._1-1, startStepEnd._2, startStepEnd._3, tmpDir + "/PolyAutoVaryCoords.txt");
-			System.out.println("+------------------------------ Finding Points Finished ------------------------------+");
+			FileChooser fileChooser = new FileChooser();
+			fileChooser.setTitle("Save Found Holes");
+			fileChooser.setInitialFileName("holes.txt");
+			fileChooser.getExtensionFilters().addAll(
+				new FileChooser.ExtensionFilter("Text Files (*.txt)", "*.txt"),
+				new FileChooser.ExtensionFilter("All Files", "*.*")
+			);
+			File selectedFile = fileChooser.showSaveDialog(primaryStage);
+
+			System.out.println("+------------------------------ Finding Holes ------------------------------+");
+			findAllPoints(polygon, subdivisions, startStepEnd._1-1, startStepEnd._2, startStepEnd._3, selectedFile.getPath());
+			System.out.println("+------------------------------ Finding Holes Finished ------------------------------+");
 			final Alert alert = new Alert(AlertType.INFORMATION);
-			alert.setTitle("Find Points");
+			alert.setTitle("Find Holes");
 			alert.setHeaderText("All points found");
 			alert.setContentText("Found points have been printed to the console and saved to file.");
 			alert.showAndWait();
@@ -8007,11 +8042,11 @@ public final class Viewer {
         for(int cur = start; cur < end; cur += step){
 			final MutableList<Double> points = findPoints(area, maxSubdivisions);
 			Array<Vector2> found = PolyVaryTask.toCoords(points);
-			System.out.println(fileCodeSequences.get(cur)); // Print the original point from the loaded OBO
 			content.append(fileCodeSequences.get(cur)).append(System.lineSeparator());
 			for(Vector2 coordinate : found){
-				System.out.println(coordinate);
-				content.append(coordinate).append(System.lineSeparator());
+				String line = String.format("%f %f", coordinate.x, coordinate.y);
+				System.out.println(line);
+				content.append(line).append(System.lineSeparator());
 			}
 			System.out.println();
 			content.append(System.lineSeparator());

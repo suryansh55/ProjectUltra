@@ -4,10 +4,7 @@
 #include <cmath>
 #include <sstream>
 #include <set>
-#include <boost/asio.hpp>
 
-#include "vary_cs.hpp"
-#include "vary3.hpp"
 #include "vary.hpp"
 #include "utils.hpp"
 #include "classified_code_sequence.hpp"
@@ -23,97 +20,14 @@ void printStartInfo(Vary3Args data) {
         << data.minSideSum << ", max = " << data.maxSideSum 
         << ", shots = " << data.shots << std::endl;
     std::cout 
-            << "// oso: " << checked(data.oso) 
-            << ", cs: " << checked(data.cs) 
-            << ", cns: " << checked(data.cns) 
-            << ", ons: " << checked(data.ons) 
-            << ", osno: " << checked(data.osno) 
+            << "// oso: " << checked(data.searchFor.oso) 
+            << ", cs: " << checked(data.searchFor.cs) 
+            << ", cns: " << checked(data.searchFor.cns) 
+            << ", ons: " << checked(data.searchFor.ons) 
+            << ", osno: " << checked(data.searchFor.osno) 
             << std::endl;
 }
 
-/**
- * Find the classified code sequences for the given Vary3 arguments using Vary3 and VaryCS.
- */
-std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
-    const float64_t pi = boost::math::constants::pi<double>();
-    const float64_t xRad = args.x * pi / 180.0;
-    const float64_t yRad = args.y * pi / 180.0;
-
-    // Create a boost thread pool
-    size_t numThreads = getNumThreads();
-    boost::asio::thread_pool pool(numThreads);
-    std::cout << "Found " << numThreads << " threads" << std::endl;
-
-    std::set<ClassifiedCodeSequence> codeSeqs;
-
-
-    if(args.cs) {
-        float64_t xAngle = xRad;
-        float64_t yAngle = yRad;
-
-        for(int32_t i = 0; i < 3; ++i) {
-            // Start a parallelized vary_cs job for the current angles
-            boost::asio::post(pool, [xAngle, yAngle, &codeSeqs, &args]() {
-                std::vector<std::vector<int32_t>> foundCodes = fireAwayCS(args.minSideSum, args.maxSideSum, xAngle, yAngle, "cs");
-                for(const auto& code : foundCodes) {
-                    if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
-                        codeSeqs.insert(seq.get());
-                    };
-                }
-            });
-
-            float64_t zAngle = pi - (xAngle + yAngle);
-            xAngle = yAngle;
-            yAngle = zAngle;
-        }
-
-        // Wait for all vary_cs jobs to finish and collect results
-        pool.join();
-    }
-
-    const float64_t base = sin(xRad + yRad);
-    const float64_t increment = base / (args.shots + 1);
-
-    if(args.oso || args.cns || args.ons || args.osno) {
-
-        unsigned int availableThreads = numThreads / args.shots;
-        int32_t searchSpace = args.maxSideSum - args.minSideSum;
-        for(int count = 1; count <= args.shots; ++count) {
-            // Subdivide our search space in half per availableThread
-            int32_t subdividedMinSideSum = args.minSideSum;
-            int32_t subdividedMaxSideSum = args.minSideSum;
-            const float64_t pos = increment * count;
-            for(unsigned int subdivision = 1; subdivision < availableThreads; ++subdivision){ 
-                subdividedMaxSideSum += searchSpace / (std::pow(2, subdivision));
-
-                // Start a parallelized vary3 job
-                boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, subdividedMaxSideSum, &codeSeqs, &args]() {
-                    std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, subdividedMaxSideSum, xRad, yRad, pos, getReqTypesStr(args.oso, false, args.cns, args.ons, args.osno));
-                    for(const auto& code : foundCodes) {
-                        if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
-                            codeSeqs.insert(seq.get());
-                        };
-                    }
-                });
-                subdividedMinSideSum = subdividedMaxSideSum;
-            }
-            // Implement the last subdivision manually to make sure we search the space fully in the case where the sideSumInterval is weird
-            boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, &codeSeqs, &args]() {
-                std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, args.maxSideSum, xRad, yRad, pos, getReqTypesStr(args.oso, false, args.cns, args.ons, args.osno));
-                for(const auto& code : foundCodes) {
-                    if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
-                        codeSeqs.insert(seq.get());
-                    };
-                }
-            });
-        }
-
-        // Wait for all vary3 jobs to finish and collect results
-        pool.join();
-    }
-
-    return codeSeqs;
-}
 
 int main(int argc, char *argv[])
 {
