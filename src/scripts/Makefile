@@ -33,10 +33,10 @@ ifeq ($(DETECTED_OS),Windows)
 endif
 ifeq ($(DETECTED_OS),Linux)
 	CXX = g++
-	CXXFLAGS = -std=c++17 -O2 -Wall -Wextra -Wno-attributes -D_USE_MATH_DEFINES
+	CXXFLAGS = -std=c++17 -O2 -Wall -Wextra -Wno-attributes -D_USE_MATH_DEFINES -DCOMPUTE_CANADA
 	INCLUDES = -Iheaders -I../backend/headers 
 	LDFLAGS = -L$(BUILD_DIR) -l:libbackend.so -Wl,-rpath,'$$ORIGIN'
-	LIBS = -lmpfr -lgmp -lboost_system
+	LIBS = -lmpfr -lgmp -lboost_system -lmpfi -lsqlite3
 	TARGET = $(BUILD_DIR)/$(PROG)
 	BACKEND_RUNTIME_LIB = libbackend.so
 endif
