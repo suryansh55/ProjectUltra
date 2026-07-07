@@ -5,6 +5,7 @@
 #include "utils.hpp"
 #include "vary_cs.hpp"
 #include "vary3.hpp"
+#include "vary4.hpp"
 #include "equations.hpp"
 #include "bounding_region.hpp"
 #include "wrapper.hpp"
@@ -132,8 +133,6 @@ std::vector<ClassifiedCodeSequence> filterFirstMidLast(const std::vector<Classif
  */
 void printCodes(std::set<ClassifiedCodeSequence> codeSequences, PrintMode mode) {
     int count = 0;
-    std::cout << "// CODES_START" << std::endl;
-    
     if(mode == PrintMode::REGULAR) {
         for(auto& seq : codeSequences) std::cout << standard(seq, ++count) << std::endl;
     } else {
@@ -149,7 +148,6 @@ void printCodes(std::set<ClassifiedCodeSequence> codeSequences, PrintMode mode) 
             }
         }
     }
-    std::cout << "// CODES_END" << std::endl;
 }
 
 enum Location {
@@ -195,7 +193,6 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
     // Create a boost thread pool
     size_t numThreads = getNumThreads();
     boost::asio::thread_pool pool(numThreads);
-    std::cout << "// Found " << numThreads << " threads" << std::endl;
 
     std::set<ClassifiedCodeSequence> codeSeqs;
 
@@ -268,17 +265,70 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
     return codeSeqs;
 }
 
+std::set<ClassifiedCodeSequence> findCodesVary4(const Vary4Args& args) {
+    const float64_t pi = boost::math::constants::pi<double>();
+    const float64_t xRad = args.x * pi / 180.0;
+    const float64_t yRad = args.y * pi / 180.0;
+
+    // Create a boost thread pool
+    size_t numThreads = getNumThreads();
+    boost::asio::thread_pool pool(numThreads);
+
+    std::set<ClassifiedCodeSequence> codeSeqs;
+
+    if(args.searchFor.cs) {
+        float64_t xAngle = xRad;
+        float64_t yAngle = yRad;
+
+        for(int32_t i = 0; i < 3; ++i) {
+            // Start a parallelized vary_cs job for the current angles
+            boost::asio::post(pool, [xAngle, yAngle, &codeSeqs, &args]() {
+                std::vector<std::vector<int32_t>> foundCodes = fireAwayCS(args.minSideSum, args.maxSideSum, xAngle, yAngle, "cs");
+                for(const auto& code : foundCodes) {
+                    if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
+                        codeSeqs.insert(seq.get());
+                    };
+                }
+            });
+
+            float64_t zAngle = pi - (xAngle + yAngle);
+            xAngle = yAngle;
+            yAngle = zAngle;
+        }
+
+        // Wait for all vary_cs jobs to finish and collect results
+        pool.join();
+    }
+
+    if(args.searchFor.oso || args.searchFor.cns || args.searchFor.ons || args.searchFor.osno) {
+        // Start a parallelized vary4 job
+        boost::asio::post(pool, [xRad, yRad, &codeSeqs, &args]() {
+            std::vector<std::vector<int32_t>> foundCodes = fireAway4(args.minSideSum, args.maxSideSum, 
+                xRad, yRad, getReqTypesStr(args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno));
+            for(const auto& code : foundCodes) {
+                if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
+                    codeSeqs.insert(seq.get());
+                };
+            }
+        });
+
+        // Wait for all vary4 jobs to finish and collect results
+        pool.join();
+    }
+    return codeSeqs;
+}
+
 std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPolyArgs& args) {
     std::vector<std::vector<Vector2<Interval>>> filledRegion{};
     std::vector<std::set<ClassifiedCodeSequence>> codes{};
 
+    int i = 1;
     for(const auto& coordinates : args.holes){
         const size_t numPoints = coordinates.size();
+        std::cout << "// Processing Group " << i << " of " << args.holes.size() << std::endl;
         for(size_t index = 0; index < numPoints; ++index) {
-            std::cout << "// Processing point " << index + 1 << " of " << numPoints << std::endl;
             float64_t x = coordinates[index][0];
             float64_t y = coordinates[index][1];
-            std ::cout << "// Point: (" << x << ", " << y << ")" << std::endl;
 
             // Check to see if the point is covered by any of the previous points' stables
             bool skip = false;
@@ -301,7 +351,7 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
             int32_t csMaxSideSum = args.maxCSSideSum.value_or(args.maxSideSum);
             int32_t osoMaxSideSum = args.maxOSOSideSum.value_or(args.maxSideSum);
             int32_t osnoMaxSideSum = args.maxOSNOSideSum.value_or(args.maxSideSum);
-            std::cout << "// Starting Vary3 search for point (" << x << ", " << y << ")" << std::endl;
+            std ::cout << "// Inspecting Point (" << x << ", " << y << ")" << std::endl;
             Vary3Args CS = Vary3Args{x, y, args.minSideSum, csMaxSideSum, args.shots,
                 false, args.searchFor.cs, false, false, false};
             Vary3Args nonCS = Vary3Args{x, y, args.minSideSum, std::max(osoMaxSideSum, osnoMaxSideSum), args.shots,
@@ -329,7 +379,7 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
             }
 
             // Filter codes by max code length
-            auto finalCodes= filteredCodes
+            auto finalCodes = filteredCodes
                 | std::views::filter([](const ClassifiedCodeSequence& code) { return code.stable; })
                 | std::views::filter([&args](const ClassifiedCodeSequence& code) {
                     if(code.codeType == CodeType::CS) return code.codeLength <= args.maxCSCodeLength;
@@ -339,6 +389,7 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
                 })
                 | std::ranges::to<std::set<ClassifiedCodeSequence>>();
 
+            printCodes(finalCodes, args.mode);
 
             auto polygons = finalCodes
                 | std::views::transform([](const ClassifiedCodeSequence& code) { 
@@ -353,6 +404,8 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
             codes.emplace_back(finalCodes);
             filledRegion.insert(filledRegion.end(), polygons.begin(), polygons.end());
         }
+        std::cout << std::endl;
+        ++i;
     }
 
     return codes;

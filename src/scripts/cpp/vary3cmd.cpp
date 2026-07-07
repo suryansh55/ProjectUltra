@@ -4,6 +4,7 @@
 #include <cmath>
 #include <sstream>
 #include <set>
+#include <ranges>
 
 #include "vary.hpp"
 #include "utils.hpp"
@@ -29,10 +30,10 @@ void printStartInfo(Vary3Args data) {
 }
 
 
-int main(int argc, char *argv[])
-{
-    if(argc != 12) {
-        cerr << "Usage: " << argv[0] << " <db_x> <db_y> <int_minSideSum> <int_maxSideSum> <int_shots> <bool_oso> <bool_cs> <bool_cns> <bool_ons> <bool_osno> <REGULAR/MIDDLE/FIRSTMIDLAST_printMode>" << endl;
+int main(int argc, char *argv[]) {
+    if(argc != 12 && argc != 15 && argc != 18) {
+        cerr << "Usage: " << argv[0] << " <db_x> <db_y> <int_minSideSum> <int_maxSideSum> <int_shots> <bool_oso> <bool_cs> <bool_cns> <bool_ons> <bool_osno> <REGULAR/MIDDLE/FIRSTMIDLAST_printMode> "; 
+        cerr << "<int_maxOSOCodeLength?> <int_maxCSCodeLength?> <int_maxOSNOCodeLength?> <int_overrideCS?> <int_overrideOSO?> <int_overrideOSNO?>" << endl;
         return 1;
     }
 
@@ -49,14 +50,47 @@ int main(int argc, char *argv[])
     bool cns = std::stoi(argv[8]) != 0;
     bool ons = std::stoi(argv[9]) != 0;
     bool osno = std::stoi(argv[10]) != 0;
-    PrintMode mode = strToPrintMode(argv[11]).value_or(PrintMode::REGULAR);
-    
+    boost::optional<PrintMode> opt = strToPrintMode(argv[11]);
+    if(!opt){
+        cerr << "Failed to parse print mode " << argv[11];
+        return 1;
+    }
+    PrintMode mode = opt.get();
+
+    boost::optional<int32_t> maxOSOCodeLength = argc == 15 ? boost::optional<int32_t>(stoi(argv[12])) : boost::none;
+    boost::optional<int32_t> maxCSCodeLength = argc == 15 ? boost::optional<int32_t>(stoi(argv[13])) : boost::none;
+    boost::optional<int32_t> maxOSNOCodeLength = argc == 15 ? boost::optional<int32_t>(stoi(argv[14])) : boost::none;
+    boost::optional<int32_t> overrideOSO = argc == 18 ? boost::optional<int32_t>(stoi(argv[15])) : boost::none;
+    boost::optional<int32_t> overrideCS = argc == 18 ? boost::optional<int32_t>(stoi(argv[16])) : boost::none;
+    boost::optional<int32_t> overrideOSNO = argc == 18 ? boost::optional<int32_t>(stoi(argv[17])) : boost::none;
+
     Vary3Args args = {x, y, minSideSum, maxSideSum, shots, oso, cs, cns, ons, osno};
+
+    size_t numThreads = getNumThreads();
+    std::cout << "// Found " << numThreads << " threads" << std::endl;
 
     auto start = std::chrono::steady_clock::now();
     printStartInfo(args);
 	auto codeSequences = findCodesVary3(args);
-    printCodes(codeSequences, mode);
+
+    auto filteredSequences = codeSequences
+        | std::views::filter([&argc, &maxOSOCodeLength, &maxCSCodeLength, &maxOSNOCodeLength](const ClassifiedCodeSequence& code) {
+            if(argc != 15) return true;
+            if(code.codeType == CodeType::CS) return code.codeLength <= maxCSCodeLength.get();
+            else if(code.codeType == CodeType::OSO) return code.codeLength <= maxOSOCodeLength.get();
+            else if(code.codeType == CodeType::OSNO) return code.codeLength <= maxOSNOCodeLength.get();
+            else return true;
+        })
+        | std::views::filter([&argc, &overrideCS, &overrideOSO, &overrideOSNO](const ClassifiedCodeSequence& code) {
+            if(argc != 18) return true;
+            if(code.codeType == CodeType::CS) return code.codeLength <= overrideCS.get();
+            else if(code.codeType == CodeType::OSO) return code.codeLength <= overrideOSO.get();
+            else if(code.codeType == CodeType::OSNO) return code.codeLength <= overrideOSNO.get();
+            else return true;
+        })
+        | std::ranges::to<std::set<ClassifiedCodeSequence>>();
+    printCodes(filteredSequences, mode);
+
     auto end = std::chrono::steady_clock::now();
 
     std::chrono::duration<double> elapsed = end - start;

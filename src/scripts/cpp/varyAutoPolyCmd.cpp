@@ -102,10 +102,12 @@ int main(int argc, const char* argv[]) {
     auto start = std::chrono::steady_clock::now();
     printStartInfo(args);
     auto codes = findCodesPolyVary(args);
+    std::cout << "// +------------------------ AutoPolyVary finished successfully ------------------------+" << std::endl;
+    std::cout << "// Printing summary of codes found..." << std::endl;
     for (const auto& codeSet : codes) {
         if(codeSet.empty()) continue;
-        std::cout << "// Found " << codeSet.size() << " codes for a hole" << std::endl;
         printCodes(codeSet, printMode);
+        std::cout << std::endl;
     }
     auto end = std::chrono::steady_clock::now();
 
@@ -114,7 +116,8 @@ int main(int argc, const char* argv[]) {
     auto mins = std::chrono::duration_cast<std::chrono::minutes>(elapsed - hrs);
     auto secs = std::chrono::duration_cast<std::chrono::seconds>(elapsed - hrs - mins);
 
-    std::cout << hrs.count() << "h " 
-              << mins.count() << "m " 
-              << secs.count() << "s\n";
+    std::cout << "// Elapsed time: "
+        << hrs.count() << "h " 
+        << mins.count() << "m " 
+        << secs.count() << "s\n";
 }

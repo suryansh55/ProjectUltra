@@ -12,7 +12,7 @@ BACKEND_LIB_DIR := .
 # Usage: make            -> builds vary3cmd
 #        make PROG=autopolycmd
 PROG ?= vary3cmd
-VALID_PROGS := vary3cmd varyAutoPolyCmd
+VALID_PROGS := vary3cmd vary4cmd varyAutoPolyCmd
 ifeq ($(filter $(PROG),$(VALID_PROGS)),)
 $(error Unknown PROG '$(PROG)'. Valid options: $(VALID_PROGS))
 endif
@@ -66,6 +66,7 @@ endif
 # Convenience target: build both programs in one go
 both:
 	$(MAKE) PROG=vary3cmd
+	$(MAKE) PROG=vary4cmd
 	$(MAKE) PROG=varyautopolycmd
 
 clean:

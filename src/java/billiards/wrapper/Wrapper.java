@@ -584,8 +584,6 @@ public final class Wrapper {
 
         private static native int vary_cs_cpp(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
             CString result, String reqTypes);
-//    private static native int vary_cs_cpp_parallel(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
-//            CString result, String reqTypes);
 
     public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCpp(int movesMin, int movesMax, double xAngle,
             double yAngle, String reqTypes) {
@@ -659,8 +657,6 @@ public final class Wrapper {
 
     private static native int vary_3_cpp(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
             double db_yAngle, CString result, String reqTypes);
-//    private static native int vary_3_cpp_parallel(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
-//            double db_yAngle, CString result, String reqTypes);
 
     public static Optional<MutableList<ClassifiedCodeSequence>> vary3Cpp(int movesMin, int movesMax,
             double initPosition, double xAngle, double yAngle, String reqTypes) {

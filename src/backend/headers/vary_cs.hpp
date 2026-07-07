@@ -75,7 +75,4 @@ void iterateFireAwayCS2(
             // Entry point (Java fireAway equivalent)
 std::vector<std::vector<int32_t>> fireAwayCS(const int32_t movesMin, const int32_t movesMax, const float64_t xAngle, const float64_t yAngle,const std::string reqType);
 
-
-std::vector<std::vector<int32_t>> fireAwayParallelCS(const int32_t movesMin, const int32_t movesMax, const float64_t xAngle, const float64_t yAngle);
-
 #endif

@@ -220,13 +220,3 @@ std::vector<std::vector<int32_t>> fireAwayCS(const int32_t movesMin, const int32
 
 	return foundCodes;
 }
-
-std::vector<std::vector<int32_t>> fireAwayParallelCS(const int32_t movesMin, const int32_t movesMax,
-        const float64_t xAngle, const float64_t yAngle) {
-
-    std::vector<std::vector<int32_t>> foundCodes;
-
-    // TO BE IMPLEMENTED: parallel version of fireAwayCS, which will divide the search space and call iterateFireAwayCS2 in parallel threads.
-
-    return foundCodes;
-}

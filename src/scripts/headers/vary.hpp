@@ -45,6 +45,16 @@ struct Vary3Args {
     CodeTypeSet searchFor;
 };
 
+/**
+ * Vary4Args is a wrapper around the data required to run Vary4
+ */
+struct Vary4Args {
+    double x;
+    double y;
+    int32_t minSideSum;
+    int32_t maxSideSum;
+    CodeTypeSet searchFor;
+};
 
 /**
  * VaryAutoPolyArgs is a wrapper around the data required to run VaryAutoPoly
@@ -69,5 +79,6 @@ size_t getNumThreads();
 std::string getReqTypesStr(bool oso, bool cs, bool cns, bool ons, bool osno);
 void printCodes(std::set<ClassifiedCodeSequence> codeSequences, PrintMode mode);
 std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args);
+std::set<ClassifiedCodeSequence> findCodesVary4(const Vary4Args& args);
 std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPolyArgs& args);
 

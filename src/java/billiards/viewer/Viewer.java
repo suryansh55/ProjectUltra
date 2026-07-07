@@ -8039,12 +8039,16 @@ public final class Viewer {
 	 */
 	private void findAllPoints(ConvexPolygon area, int maxSubdivisions, int start, int step, int end, String pointsFile) {
 		StringBuilder content = new StringBuilder();
+		ExecutorService executor = new PriorityExecutor(Utils.numThreads);
         for(int cur = start; cur < end; cur += step){
+			setOBO(cur, pool, executor);
 			final MutableList<Double> points = findPoints(area, maxSubdivisions);
 			Array<Vector2> found = PolyVaryTask.toCoords(points);
-			content.append(fileCodeSequences.get(cur)).append(System.lineSeparator());
+
 			for(Vector2 coordinate : found){
-				String line = String.format("%f %f", coordinate.x, coordinate.y);
+				double degX = coordinate.x * 180 / Math.PI;
+				double degY = coordinate.y * 180 / Math.PI;
+				String line = String.format("%.15f %.15f", degX, degY);
 				System.out.println(line);
 				content.append(line).append(System.lineSeparator());
 			}
