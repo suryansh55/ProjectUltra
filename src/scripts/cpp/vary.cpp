@@ -339,7 +339,9 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
 
                 Location loc = location(poly, xRad, yRad);
                 if(loc == Location::INSIDE) {
+                    #ifdef DEBUG
                     std::cout << "// Point (" << x << ", " << y << ") is covered by a previous stable" << std::endl;
+                    #endif
                     skip = true;
                     break;
                 }

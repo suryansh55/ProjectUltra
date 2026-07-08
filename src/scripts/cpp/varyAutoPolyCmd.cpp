@@ -1,3 +1,4 @@
+#include <boost/algorithm/string.hpp>
 #include <boost/optional.hpp>
 #include <boost/cstdfloat.hpp>
 #include <cstdint>
@@ -35,8 +36,8 @@ void printStartInfo(VaryAutoPolyArgs data) {
 int main(int argc, const char* argv[]) {
     if(argc != 14 && argc != 17) {
         cerr << "Usage: " << argv[0] << " <path/to/holes> <int_minSideSum> <int_maxSideSum> <int_shots> ";
-        cerr << "<bool_oso> <bool_cs> <bool_cns> <bool_ons> <bool_osno> <str_printMode> ";
-        cerr << "<int_maxOSOCodeLength> <int_maxCSCodeLength> <int_maxOSNOCodeLength> ";
+        cerr << "<bool_oso> <bool_cs> <bool_cns> <bool_ons> <bool_osno> ";
+        cerr << "<int_maxOSOCodeLength> <int_maxCSCodeLength> <int_maxOSNOCodeLength> <str_printMode>";
         cerr << "<int_maxOSOSideSum?> <int_maxCSSideSum?> <int_maxOSNOSideSum?>" << endl;
         return 1;
     }
@@ -50,6 +51,7 @@ int main(int argc, const char* argv[]) {
     }
     string line{""};
     while(getline(holeFile, line)){
+        boost::trim(line);
         // Empty line represents another sets of pixels for a different hole
         if(line.empty()){
             holes.emplace_back(curHoles);
