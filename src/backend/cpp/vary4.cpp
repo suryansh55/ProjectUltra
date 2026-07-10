@@ -199,8 +199,8 @@ std::vector<TriangleStart> lazySort(std::vector<TriangleStart> array) {
 std::vector<std::vector<int32_t>> fireAway4(const int32_t movesMin, const int32_t movesMax,
 		const float64_t xAngle, const float64_t yAngle,const std::string reqType) {
 
-    unsigned int cores = std::thread::hardware_concurrency();
-
+	const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
+    unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
 		
 	TriangleBilliard4 startBilliard = TriangleBilliard4::create(xAngle, yAngle);
     SideSum sideSum = SideSum::create(xAngle, yAngle);

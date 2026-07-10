@@ -17,9 +17,20 @@ using namespace std;
 void printStartInfo(Vary3Args data) {
     auto checked = [](bool flag) { return flag ? "y" : "n"; };
 
-    std::cout << "// Vary3 at (" << data.x << ", " << data.y << "), min = " 
-        << data.minSideSum << ", max = " << data.maxSideSum 
-        << ", shots = " << data.shots << std::endl;
+    if(std::holds_alternative<int32_t>(data.maxSideSum)) {
+        std::cout << "// Vary3 at (" << data.x << ", " << data.y << "), min = " 
+            << data.minSideSum << ", max = " << std::get<int32_t>(data.maxSideSum) 
+            << ", shots = " << data.shots << std::endl;
+    } else {
+        const auto& maxSideSumOverrides = std::get<CodeTypeCollection<int32_t>>(data.maxSideSum);
+        std::cout << "// Vary3 at (" << data.x << ", " << data.y << "), min = " 
+            << data.minSideSum 
+            << ", max (overrides) = CS: " << maxSideSumOverrides.cs
+            << ", OSO: " << maxSideSumOverrides.oso
+            << ", OSNO: " << maxSideSumOverrides.osno
+            << ", shots = " << data.shots
+            << std::endl;
+    }
     std::cout 
             << "// oso: " << checked(data.searchFor.oso) 
             << ", cs: " << checked(data.searchFor.cs) 
@@ -43,6 +54,7 @@ int main(int argc, char *argv[]) {
 
     int32_t minSideSum = std::stoi(argv[3]);
     int32_t maxSideSum = std::stoi(argv[4]);
+    std::variant<int32_t, CodeTypeCollection<int32_t>> maxSideSumVariant = maxSideSum;
     int32_t shots = std::stoi(argv[5]);
 
     bool oso = std::stoi(argv[6]) != 0;
@@ -64,7 +76,17 @@ int main(int argc, char *argv[]) {
     boost::optional<int32_t> overrideCS = argc == 18 ? boost::optional<int32_t>(stoi(argv[16])) : boost::none;
     boost::optional<int32_t> overrideOSNO = argc == 18 ? boost::optional<int32_t>(stoi(argv[17])) : boost::none;
 
-    Vary3Args args = {x, y, minSideSum, maxSideSum, shots, oso, cs, cns, ons, osno};
+    if(argc == 18) {
+        if(overrideOSO && overrideCS && overrideOSNO) {
+            CodeTypeCollection<int32_t> maxSideSumOverrides = {overrideOSO.get(), overrideCS.get(), maxSideSum, maxSideSum, overrideOSNO.get()};
+            maxSideSumVariant = maxSideSumOverrides;
+        } else {
+            cerr << "All three overrides must be provided if any are provided." << endl;
+            return 1;
+        }
+    }
+
+    Vary3Args args = {x, y, minSideSum, maxSideSumVariant, shots, oso, cs, cns, ons, osno};
 
     size_t numThreads = getNumThreads();
     std::cout << "// Found " << numThreads << " threads" << std::endl;
@@ -79,13 +101,6 @@ int main(int argc, char *argv[]) {
             if(code.codeType == CodeType::CS) return code.codeLength <= maxCSCodeLength.get();
             else if(code.codeType == CodeType::OSO) return code.codeLength <= maxOSOCodeLength.get();
             else if(code.codeType == CodeType::OSNO) return code.codeLength <= maxOSNOCodeLength.get();
-            else return true;
-        })
-        | std::views::filter([&argc, &overrideCS, &overrideOSO, &overrideOSNO](const ClassifiedCodeSequence& code) {
-            if(argc != 18) return true;
-            if(code.codeType == CodeType::CS) return code.codeLength <= overrideCS.get();
-            else if(code.codeType == CodeType::OSO) return code.codeLength <= overrideOSO.get();
-            else if(code.codeType == CodeType::OSNO) return code.codeLength <= overrideOSNO.get();
             else return true;
         })
         | std::ranges::to<std::set<ClassifiedCodeSequence>>();

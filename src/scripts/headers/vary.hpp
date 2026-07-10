@@ -40,7 +40,7 @@ struct Vary3Args {
     double x;
     double y;
     int32_t minSideSum;
-    int32_t maxSideSum;
+    std::variant<int32_t, CodeTypeCollection<int32_t>> maxSideSum;
     int32_t shots;
     CodeTypeSet searchFor;
 };

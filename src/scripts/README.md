@@ -11,6 +11,7 @@ Currently supported functionality includes:
 For use on DRAC clusters, it is recommended for each C++ program to be compiled on the server it will be used.
 ## Requirements
 The necessary libraries should be a subset of the libraries required by the C++ backend of billiards-everything.
+Programs are built using C++23
 
 On **Windows**, see the latest 'Billiards jar Windows Setup Guide' for a complete list of libraries. 
 The `makefile` expects each `.dll` to be in a subdirectory of `scripts` called `libs`

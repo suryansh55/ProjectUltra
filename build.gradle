@@ -348,7 +348,6 @@ model {
             binaries.all {
 
                 cppCompiler.define "NDEBUG"
-		cppCompiler.define "COMPUTE_CANADA"
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively

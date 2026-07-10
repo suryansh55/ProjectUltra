@@ -356,22 +356,7 @@ public final class Utils {
 
 	// this gives a neat string of the code with information about it
 	public static String standard(final ClassifiedCodeSequence code, final int count) {
-
-		final CodeType type = code.codeType;
-
-		String countStr = count + "";
-		if (count < 10) {
-			countStr += " ";
-		}
-		String codeStr = " - " + type;
-		if (codeStr.equals(" - CS")) {
-			codeStr += "  ";
-		} else if (!codeStr.equals(" - OSNO")) {
-			codeStr += " ";
-		}
-		final String codeString = codeStr + " (" + code.codeLength + ", " + code.codeSum + ") " + code;
-
-		return countStr + codeString;
+		return String.format("%-3d- %-4s (%d, %d) %s", count, code.codeType, code.codeLength, code.codeSum, code);
 	}
 
 	/**

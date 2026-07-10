@@ -203,7 +203,8 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
         for(int32_t i = 0; i < 3; ++i) {
             // Start a parallelized vary_cs job for the current angles
             boost::asio::post(pool, [xAngle, yAngle, &codeSeqs, &args]() {
-                std::vector<std::vector<int32_t>> foundCodes = fireAwayCS(args.minSideSum, args.maxSideSum, xAngle, yAngle, "cs");
+                int32_t maxSideSum = std::holds_alternative<int32_t>(args.maxSideSum) ? std::get<int32_t>(args.maxSideSum) : std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).cs;
+                std::vector<std::vector<int32_t>> foundCodes = fireAwayCS(args.minSideSum, maxSideSum, xAngle, yAngle, "cs");
                 for(const auto& code : foundCodes) {
                     if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
                         codeSeqs.insert(seq.get());
@@ -225,7 +226,9 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
 
     if(args.searchFor.oso || args.searchFor.cns || args.searchFor.ons || args.searchFor.osno) {
         unsigned int availableThreads = numThreads / args.shots;
-        int32_t searchSpace = args.maxSideSum - args.minSideSum;
+        int32_t maxSideSum = std::holds_alternative<int32_t>(args.maxSideSum) ? std::get<int32_t>(args.maxSideSum) 
+            : std::max({std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).oso, std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).osno});
+        int32_t searchSpace = maxSideSum - args.minSideSum;
         for(int count = 1; count <= args.shots; ++count) {
             // Subdivide our search space in half per availableThread
             int32_t subdividedMinSideSum = args.minSideSum;
@@ -247,8 +250,8 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
                 subdividedMinSideSum = subdividedMaxSideSum;
             }
             // Implement the last subdivision manually to make sure we search the space fully in the case where the sideSumInterval is weird
-            boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, &codeSeqs, &args]() {
-                std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, args.maxSideSum, 
+            boost::asio::post(pool, [xRad, yRad, pos, subdividedMinSideSum, &codeSeqs, &maxSideSum, &args]() {
+                std::vector<std::vector<int32_t>> foundCodes = fireAway3(subdividedMinSideSum, maxSideSum, 
                     xRad, yRad, pos, getReqTypesStr(args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno));
                 for(const auto& code : foundCodes) {
                     if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
