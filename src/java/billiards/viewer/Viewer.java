@@ -8045,10 +8045,8 @@ public final class Viewer {
 			Array<Vector2> found = PolyVaryTask.toCoords(points);
 
 			for(Vector2 coordinate : found){
-				System.out.println("Rad: " + coordinate.x + " " + coordinate.y);
 				double degX = coordinate.x * 180 / Math.PI;
 				double degY = coordinate.y * 180 / Math.PI;
-				System.out.println("Deg: " + degX + " " + degY);
 				String line = String.format("%.15f %.15f", degX, degY);
 				System.out.println(line);
 				content.append(line).append(System.lineSeparator());

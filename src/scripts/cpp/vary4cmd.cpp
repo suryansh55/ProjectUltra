@@ -43,7 +43,7 @@ int main(int argc, char* argv[]) {
     }
     PrintMode mode = printMode.get();
 
-    Vary4Args args = {x, y, minSideSum, maxSideSum, oso, cs, cns, ons, osno};
+    Vary4Args args = {x, y, minSideSum, maxSideSum, CodeTypeSet{oso, cs, cns, ons, osno}};
 
     auto start = std::chrono::steady_clock::now();
     printStartInfo(args);
@@ -56,7 +56,9 @@ int main(int argc, char* argv[]) {
     auto mins = std::chrono::duration_cast<std::chrono::minutes>(elapsed - hrs);
     auto secs = std::chrono::duration_cast<std::chrono::seconds>(elapsed - hrs - mins);
 
-    std::cout << hrs.count() << "h " 
-              << mins.count() << "m " 
-              << secs.count() << "s\n";
+    std::cout << "// Elapsed time: "
+        << hrs.count() << "h " 
+        << mins.count() << "m " 
+        << secs.count() << "s"
+        << std::endl;
 }

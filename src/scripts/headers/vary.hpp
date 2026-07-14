@@ -4,6 +4,7 @@
 #include <string>
 #include <boost/optional.hpp>
 #include "general.hpp"
+#include <variant>
 #include "classified_code_sequence.hpp"
 
 /**

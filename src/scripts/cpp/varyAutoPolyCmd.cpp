@@ -6,6 +6,7 @@
 #include <iostream>
 #include <string>
 #include <optional>
+#include <variant>
 #include "general.hpp"
 #include "vary.hpp"
 using namespace std;
@@ -96,7 +97,7 @@ int main(int argc, const char* argv[]) {
     boost::optional<int32_t> maxOSNOSideSum = argc == 17 ? boost::optional<int32_t>(stoi(argv[16])) : boost::none;
 
     VaryAutoPolyArgs args{
-        holes, minSideSum, maxSideSum, shots, oso, cs, cns, ons, osno, 
+        holes, minSideSum, maxSideSum, shots, CodeTypeSet{oso, cs, cns, ons, osno},
         maxOSOCodeLength, maxCSCodeLength, maxOSNOCodeLength, printMode,
         maxOSOSideSum, maxCSSideSum, maxOSNOSideSum, 
     };

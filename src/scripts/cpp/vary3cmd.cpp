@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    Vary3Args args = {x, y, minSideSum, maxSideSumVariant, shots, oso, cs, cns, ons, osno};
+    Vary3Args args = {x, y, minSideSum, maxSideSumVariant, shots, CodeTypeSet{oso, cs, cns, ons, osno}};
 
     size_t numThreads = getNumThreads();
     std::cout << "// Found " << numThreads << " threads" << std::endl;
@@ -114,7 +114,9 @@ int main(int argc, char *argv[]) {
     auto mins = std::chrono::duration_cast<std::chrono::minutes>(elapsed - hrs);
     auto secs = std::chrono::duration_cast<std::chrono::seconds>(elapsed - hrs - mins);
 
-    std::cout << hrs.count() << "h " 
-              << mins.count() << "m " 
-              << secs.count() << "s\n";
+    std::cout << "// Elapsed time: "
+        << hrs.count() << "h " 
+        << mins.count() << "m " 
+        << secs.count() << "s" 
+        << std::endl;
 }
