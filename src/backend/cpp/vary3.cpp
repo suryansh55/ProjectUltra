@@ -39,11 +39,6 @@ const float64_t OFFSET = 0.000005;
 //   pool as an independent task that runs the *same* DFS loop as the original
 //   function, but scoped to its own local stack, sideSum, and code vector
 //   (copied out of the Node so branches never touch each other's state).
-//
-// Assumes SideSum is copyable (has copy ctor, .add(int32_t), .sub(int32_t), .sum()).
-// Everything else (TriangleBilliard, CodeType, parse_code_types, getCodeType,
-// is_code_type_in_list, stringToCodeType, cancel_flag, OFFSET, float64_t) is
-// taken from the existing codebase, unchanged.
 
 void iterateFireAway3(
     int32_t min, int32_t max, float64_t specMin, float64_t specMax, float64_t initPosition,
@@ -67,15 +62,8 @@ void iterateFireAway3(
     // Never try to BFS deeper than the traversal itself goes.
     // breadthDepth <=0 means "no extra cap" — the frontier-size target below
     // (targetFrontierSize) is what actually decides when the BFS phase ends.
-    int32_t breadthDepth = std::min(12, max);
+    int32_t breadthDepth = std::min(1, max);
     int32_t tasksPerCore = 4;
-
-    // Stop expanding once the frontier has roughly enough independent branches
-    // to keep every core busy with a few tasks each (tasksPerCore lets threads
-    // that finish early steal / pick up more work rather than sitting idle —
-    // pure "cores" branches would mean any imbalance in branch depth stalls
-    // the whole pool on its slowest task).
-    const std::size_t targetFrontierSize = static_cast<std::size_t>(cores) * std::max(1, tasksPerCore);
 
     // ---- Per-branch state carried across the BFS frontier ----
     struct Node {
@@ -129,7 +117,7 @@ void iterateFireAway3(
         frontier.push_back(Node{specMin, specMax, billiard, sideSum, code, 0});
 
         int32_t depth = 0;
-        while (depth < breadthDepth && !frontier.empty() && frontier.size() < targetFrontierSize) {
+        while (frontier.size() < cores && !frontier.empty()) {
             if (cancel_flag().load(std::memory_order_relaxed)) {
                 std::cout << "C++ Vary3 Canceling" << std::endl;
                 pool.stop();
@@ -184,7 +172,13 @@ void iterateFireAway3(
             depth++;
         }
 
-        std::cout << "// BFS phase complete: depth=" << depth << ", frontier size=" << frontier.size() << std::endl;
+        std::cout << "frontier size: " << frontier.size() << std::endl;
+        for(const auto& node : frontier) {
+            for(const auto& codeValue : node.code) {
+                std::cout << codeValue << " ";
+            }
+            std::cout << std::endl;
+        }
 
         // ---------- Phase 2: one DFS task per surviving frontier node ----------
         // Each task runs its candidate-code checks synchronously, in-line, on its
@@ -195,7 +189,6 @@ void iterateFireAway3(
         for (auto& node : frontier) {
             boost::asio::post(pool, [node, min, max, initPosition,
                                       &codesFound, &codesFoundMutex, &allowed]() mutable {
-
                 // Identical algorithm to the original DFS, scoped to this
                 // branch's own local stack / sideSum / code — no shared state
                 // with sibling branches running in other pool threads.
