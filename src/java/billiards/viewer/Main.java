@@ -28,7 +28,7 @@ public final class Main extends Application {
     // stuff myself. A lot less magic that way.
 
     // We currently don't use this
-    @Override
+    @Override 
     public void init() {
         Wrapper.errorLogging();
     }
@@ -45,7 +45,7 @@ public final class Main extends Application {
 
         // since we just have two programs for now, this is just a boolean telling if we're
         // using viewer or not.
-        viewerSelected = dbGui.getProgram();
+        final boolean viewerSelected = dbGui.getProgram();
 
         databaseName.ifPresent(dbName -> {
 

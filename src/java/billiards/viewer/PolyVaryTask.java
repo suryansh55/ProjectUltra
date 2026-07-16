@@ -78,16 +78,19 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 					new ArrayList<Storage>()));
 	private final Array<Vector2> coordList;
 	private final MutableSortedSet<ClassifiedCodeSequence> onScreenCodes;
-	private final BoyanMenu boyanMenu;
+	private volatile PixelReader pixelReader;
 	private final ConnectionPool pool;
 	private final CodeTypeCollection<Integer> max;
 	private final Optional<CodeTypeCollection<Integer>> overrideSum;
 	private final ExecutorService storageExecutor;
 	private final ExecutorService shotExecutor;
 	private final ImageView screenImage;
+	private final BoyanMenu boyanMenu;
 	private final PixelRadianMap screenMap;
 	private final int mode;
 	private final int numGroupToPrint;
+    private volatile double imgWidth;
+    private volatile double imgHeight;
 
 	// Constructor takes a list of points to vary at
 	public PolyVaryTask(
@@ -123,6 +126,19 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
         // Benchmark: wall-clock + peak process RSS for this run (see logBenchmark below).
         final long benchStartNanos = System.nanoTime();
 
+		try {
+            final FutureTask<PixelReader> initReader = new FutureTask<>(() -> this.screenImage.getImage().getPixelReader());
+            Platform.runLater(initReader);
+            this.pixelReader = initReader.get();
+            final FutureTask<Image> initImg = new FutureTask<>(() -> this.screenImage.getImage());
+            Platform.runLater(initImg);
+            final Image img = initImg.get();
+            this.imgWidth = img.getWidth();
+            this.imgHeight = img.getHeight();
+        } catch (final InterruptedException | ExecutionException e) {
+            this.pixelReader = null;
+        }
+
 		// storageExecutor handles the more expensive process of calculating code
 		// regions,
 		// while shotExecutor handles the much faster calculation of finding the codes
@@ -154,6 +170,10 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 		// last coordinate fills the square.
 		COORD_LOOP:
 		for (Vector2 coord : this.coordList) {
+			long tPixel = 0;
+            long tFind = 0;
+            long tStorage = 0;
+            long iterStart = System.nanoTime();
 			this.updateProgress(progress.incrementAndGet(), todo);
 
 			for (Storage storage : storages) {
@@ -176,46 +196,69 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 			// need to catch them
 			// By taking a second to check the pixel color, we can potentially avoid all
 			// other work for this coord.
-			int color = pixelColor(coord);
-			if (color != 0)
-				continue;
-			try {
-				localCodes = autoCodesFiltered(coord, shotExecutor);
-			} catch (RuntimeException e) {
-				if (this.isCancelled() || Thread.interrupted()) {
-					break;
-				} else {
-					System.err.println("Terminating because of uncaught exception when finding codeSet");
-					throw e;
-				}
-			}
-			// We want to know if we submitted a task that will update the progress for us.
-			if (localCodes.isEmpty()) {
-				++empty;
-				if (empty >= emptyMax) {
-					System.out.println("Finish Vary due to too many empty pixels");
-					// Clear the partial results so that it's added to the relist, this is a hack, we should find a better way to do this
-					this.partialResults.get().clear(); 
-					break COORD_LOOP;
-				}
-				this.updateProgress(progress.incrementAndGet(), todo);
-				continue;
-			}
+			// Nick Shan, July, 2026
+			// Use cached PixelReader directly (non-blocking, avoids JavaFX thread bottleneck)
+            long t0 = System.nanoTime();
+            int color = 0;
+            if (this.pixelReader != null) {
+                final int midX = (int) this.screenMap.pixelX(coord.x);
+                final int midY = (int) this.screenMap.pixelY(coord.y);
+                if (midX >= 0 && midY >= 0 && midX < this.imgWidth && midY < this.imgHeight) {
+                    color = this.pixelReader.getArgb(midX, midY);
+                }
+            }
+            tPixel = System.nanoTime() - t0;
+            this.updateProgress(progress.incrementAndGet(), todo);
+            if(color != 0) {
+                //System.out.printf("  [coord %d] pixelColor=%s  (filled)%n", coordIdx, Profiler.fmt(tPixel));
+                continue;
+            }
+            t0 = System.nanoTime();
+            try {
+                localCodes = autoCodesFiltered(coord, shotExecutor);
+            } catch(RuntimeException e) {
+                if(this.isCancelled() || Thread.interrupted()) {
+                    break;
+                } else {
+                    //System.err.println("Terminating because of uncaught exception when finding codeSet");
+					shotExecutor.shutdownNow();
+                    throw e;
+                }
+            }
+			tFind = System.nanoTime() - t0;
+            // We want to know if we submitted a task that will update the progress for us.
+            if(localCodes.isEmpty()) {
+                ++empty;
+                //if(empty >= emptyMax) {
+                //    System.out.println("Finish Vary due to too many empty pixels");
+                //    break;
+                //}
+                if(empty >= emptyMax) {
+                    break;
+                }
+                this.updateProgress(progress.incrementAndGet(), todo);
+                final long tOther = (System.nanoTime() - iterStart) - tPixel - tFind;
+                //System.out.printf("  [coord %d] pixelColor=%s  findCodes=%s  other=%s  total=%s%n",
+                //    coordIdx, Profiler.fmt(tPixel), Profiler.fmt(tFind), Profiler.fmt(tOther), Profiler.fmt(System.nanoTime() - iterStart));
+                continue;
+            }
+            empty = 0;
 
-			// Zhao Yu Li, Jul 03, 2025.
-			// Do not invalidate all results just because only one code was used previously
-			// Check if any of the codes found were previously used
-			// boolean used = false;
-			// for(ClassifiedCodeSequence code: usedCodes) {
-			// used = used || localCodes.contains(code);
-			// }
-			// for(ClassifiedCodeSequence code: this.onScreenCodes) {
-			// used = used || localCodes.contains(code);
-			// }
-			// if(used) {
-			// this.updateProgress(progress.incrementAndGet(), todo);
-			// continue;
-			// }
+            // Zhao Yu Li, Jul 03, 2025.
+            // Do not invalidate all results just because only one code was used previously
+            // Check if any of the codes found were previously used
+//            boolean used = false;
+//            for(ClassifiedCodeSequence code: usedCodes) {
+//                used = used || localCodes.contains(code);
+//            }
+//            for(ClassifiedCodeSequence code: this.onScreenCodes) {
+//                used = used || localCodes.contains(code);
+//            }
+//            if(used) {
+//                this.updateProgress(progress.incrementAndGet(), todo);
+//                continue;
+//            }
+            t0 = System.nanoTime();
 			if (mode == 0) {
 				boolean noCodes = true;
 
@@ -330,83 +373,31 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 		return Array.ofAll(out);
 	}
 
-	    // Runs a fast application thread task which determines the color of the pixel at a point
-    private int pixelColor(final Vector2 point) {
-        // Suryansh Ankur, 2026
 
-        FutureTask<Integer> task = new FutureTask<Integer>(() -> {
-            final Image image = this.screenImage.getImage();
-            final PixelReader reader = image.getPixelReader();
-            final int midX = (int) this.screenMap.pixelX(point.x);
-            final int midY = (int) this.screenMap.pixelY(point.y);
-            return reader.getArgb(midX, midY);
-            // Suryansh Ankur, 2026
-
-        });
-        // Suryansh Ankur, 2026
-
-
-        Platform.runLater(task);
-        try {
-            // Suryansh Ankur, 2026
-            return task.get(3, TimeUnit.SECONDS);
-        } catch(TimeoutException e) {
-            // FX thread is overloaded; treat as uncolored and proceed
-            task.cancel(true);
-            return 0;
-        } catch(InterruptedException e) {
-            System.err.println("//Interruption when finding pixel color");
-            return -1;
-        } catch(ExecutionException e) {
-            System.err.println("//Failed to find pixel color");
-            e.printStackTrace();
-            return -1;
+    // Find the storage associated to a codeSequence if it exists. Return the error if not
+    private Either<String, Storage> loadStorage(final ClassifiedCodeSequence classCodeSeq) {
+        // Check to see if cancel was called
+        if(this.isCancelled() || Thread.interrupted()) {
+            // Note that this method is intended to be submitted to an executor, hence this interrupts the thread inside the threadpool
+            Thread.currentThread().interrupt();
+            System.out.println("//Cancel detected before loadStorage");
+            return Either.left("");
         }
-
-    }
-
-	// Find the storage associated to a codeSequence if it exists. Return the error
-	// if not
-	private Either<String, Storage> loadStorage(final ClassifiedCodeSequence classCodeSeq) {
-		// Check to see if cancel was called
-		if (this.isCancelled() || Thread.interrupted()) {
-			// Note that this method is intended to be submitted to an executor, hence this
-			// interrupts the thread inside the threadpool
-			Thread.currentThread().interrupt();
-			System.out.println("//Cancel detected before loadStorage");
-			return Either.left("");
-		}
-	    // Suryansh Ankur, 2026
-        // Gate large calculations so at most LARGE_CALC_GATE permits run at once,
-        // bounding peak memory. Small codes are unaffected and keep full parallelism.
-        final boolean large = classCodeSeq.length() > LARGE_CODE_THRESHOLD;
-        if (large) {
-            try {
-                LARGE_CALC_GATE.acquire();
-            } catch (final InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return Either.left("");
-            }
+        // Load from database if code already exists. If not, calculate
+        final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
+        // Check to see if cancel was called
+        if(this.isCancelled() || Thread.interrupted()) {
+            Thread.currentThread().interrupt();
+            System.out.println("//Cancel detected after loadStorage");
+            return Either.left("");
         }
-        try {
-            // Load from database if code already exists. If not, calculate
-            final Optional<Storage> opt = Database.loadStorage(classCodeSeq, this.pool);
-            // Check to see if cancel was called
-            if(this.isCancelled() || Thread.interrupted()) {
-                Thread.currentThread().interrupt();
-                System.out.println("//Cancel detected after loadStorage");
-                return Either.left("");
-            }
-            if (opt.isPresent()) {
-                final Storage storage = opt.get();
-                // Update partialResults on the application thread in order to enforce thread safety
-                Platform.runLater(() -> this.partialResults.get().add(storage));
-                return Either.right(storage);
-            } else {
-                return Either.left("//empty set " + classCodeSeq);
-            }
-        } finally {
-            if (large) LARGE_CALC_GATE.release();
+        if (opt.isPresent()) {
+            final Storage storage = opt.get();
+            // Update partialResults on the application thread in order to enforce thread safety
+            Platform.runLater(() -> this.partialResults.get().add(storage));
+            return Either.right(storage);
+        } else {
+            return Either.left("//empty set " + classCodeSeq);
         }
     }
 

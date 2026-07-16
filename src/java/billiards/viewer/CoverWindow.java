@@ -18,7 +18,9 @@ import org.eclipse.collections.api.list.primitive.IntList;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List; // added jul31,2025 marco
+import java.util.Map;
 import java.util.Optional;//added oct 15,2017 george
 import java.util.concurrent.ForkJoinPool;
 
@@ -170,64 +172,120 @@ public final class CoverWindow {
             cover.mkdir();
 
             if (mrr) {
-
                 final String cleanedPolygon = cleanPolygon(polygonString);
-                final String cleanedStablesPre = cleanStables(stablesString, pool);
-                final Tuple2<String, String> cleanedTriplesPre = cleanTriples(triplesString, pool);
-                //final Tuple2<String , String> cleanedHalfTriplePre = cleanHalfTriples(halfTripleString, pool);
-                //ArrayLit<Tuple2<tring,String>> temp = cleanedHalfTriplePre._1.split("\n");
-                /*if (!halfTripleString.isEmpty()) {
-                    final String cleanedHalfTriples = cleanedHalfTriplePre._1;
-                    final String cleanedStables = (cleanedStablesPre + '\n' + cleanedHalfTriplePre._2).trim();
-                    //final String cleanedStables = cleanedStablesPre.trim();
-                    // Stables in the half triple
-                    //final String cleanedStableshalf = (cleanedHalfTriplePre._2).trim();
-                    // Stables
-                    //final String cleanedStables = (cleanedStablesPre).trim();
-                    //final String[] cleanedStables_str = cleanedStables.split("\n");
-                    //final String[] cleanedStablesHalf_str = cleanedStableshalf.split("\n");
-                    //final String[] cleanedHalftriples_str = cleanedHalfTriples.split("\n");
+                final boolean addToSmallCover = viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected();
 
-                    if (diagonalCheckBox.isSelected()) {
-                        Wrapper.coverWrapperDiagonal(cleanedPolygon, cleanedStables, cleanedHalfTriples, digits, magnifications, empty, mrr, pool);
-                    }
-                    else {
-                        Wrapper.coverWrapperHalf(cleanedPolygon, cleanedStables, cleanedHalfTriples, digits, magnifications, empty, mrr, pool);
-                    }
-                }*/
-                //else {
-                final String cleanedTriples = cleanedTriplesPre._1;
-                final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
-//                System.out.println(cleanedStables);
+                calcBtn.setDisable(true);
 
-                String res = Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, mrr, pool);
-                if (viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected()) {
-                    viewer.smallCoverWindow.replacePolygons(res);
-                }
-                //}
+                final javafx.concurrent.Task<String> task = new javafx.concurrent.Task<String>() {
+                    @Override
+                    protected String call() {
+                        final String cleanedStablesPre = cleanStables(stablesString, pool);
+                        final Tuple2<String, String> cleanedTriplesPre = cleanTriples(triplesString, pool);
+                        final String cleanedTriples = cleanedTriplesPre._1;
+                        final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
+
+                        //System.out.println("DEBUG JAVA: before coverWrapper call");
+                        String res = Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, true, pool);
+                        //System.out.println("DEBUG JAVA: after coverWrapper call, result empty=" + res.isEmpty());
+                        return res;
+                    }
+                };
+
+                task.setOnSucceeded(e -> {
+                    calcBtn.setDisable(false);
+                    String res = task.getValue();
+                    if (addToSmallCover) {
+                        //System.out.println("DEBUG JAVA: adding polygons to smallCoverWindow");
+                        viewer.smallCoverWindow.addPolygons(res);
+                        //System.out.println("DEBUG JAVA: addPolygons done");
+                    }
+
+                    //System.out.println("DEBUG JAVA: before loadCover.run()");
+                    loadCover.run();
+                    //System.out.println("DEBUG JAVA: after loadCover.run()");
+
+                    //System.out.println("DEBUG JAVA: before println title");
+                    //System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
+
+                    //System.out.println("DEBUG JAVA: before saveToFile");
+                    saveToFile();
+                    //System.out.println("DEBUG JAVA: after saveToFile");
+
+                    //System.out.println("DEBUG JAVA: before redoInfo");
+                    redoInfo();
+                    //System.out.println("DEBUG JAVA: after redoInfo");
+
+                    //System.out.println("DEBUG JAVA: before stage.close");
+                    stage.close();
+                    //System.out.println("DEBUG JAVA: after stage.close");
+                });
+
+                task.setOnFailed(e -> {
+                    calcBtn.setDisable(false);
+                    System.err.println("Cover calculation failed: " + task.getException().getMessage());
+                    task.getException().printStackTrace();
+                });
+
+                final Thread thread = new Thread(task);
+                thread.setDaemon(true);
+                thread.start();
+
             } else {
-
+                //System.out.println("DEBUG JAVA: ALL branch selected");
                 final DirectoryChooser chooser = new DirectoryChooser();
                 chooser.setTitle("Choose an MRR Cover Directory");
 
                 final File dir = chooser.showDialog(stage);
 
                 if (dir == null) {
-                    // User did not select a directory, so just cancel
                     return;
                 }
 
-                Wrapper.coverWrapperAll(dir.getPath(), pool, magnifications);
+                final String dirPath = dir.getPath();
+                calcBtn.setDisable(true);
+
+                final javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<Void>() {
+                    @Override
+                    protected Void call() {
+                        Wrapper.coverWrapperAll(dirPath, pool, magnifications);
+                        return null;
+                    }
+                };
+
+                task.setOnSucceeded(e -> {
+                    calcBtn.setDisable(false);
+
+                    //System.out.println("DEBUG JAVA: before loadCover.run()");
+                    loadCover.run();
+                    //System.out.println("DEBUG JAVA: after loadCover.run()");
+
+                    //System.out.println("DEBUG JAVA: before println title");
+                    //System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
+
+                    //System.out.println("DEBUG JAVA: before saveToFile");
+                    saveToFile();
+                    //System.out.println("DEBUG JAVA: after saveToFile");
+
+                    //System.out.println("DEBUG JAVA: before redoInfo");
+                    redoInfo();
+                    //System.out.println("DEBUG JAVA: after redoInfo");
+
+                    //System.out.println("DEBUG JAVA: before stage.close");
+                    stage.close();
+                    //System.out.println("DEBUG JAVA: after stage.close");
+                });
+
+                task.setOnFailed(e -> {
+                    calcBtn.setDisable(false);
+                    System.err.println("Cover calculation failed: " + task.getException().getMessage());
+                    task.getException().printStackTrace();
+                });
+
+                final Thread thread = new Thread(task);
+                thread.setDaemon(true);
+                thread.start();
             }
-
-            loadCover.run();
-
-            System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
-
-            saveToFile();
-            redoInfo();
-
-            stage.close();
         });
 
         autoVaryBtn.setText("AutoVary");
@@ -780,6 +838,16 @@ public final class CoverWindow {
                                Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
         final StringBuilder postInfo = new StringBuilder();
 
+        final Map<String, String> preInfoMap = new HashMap<>();
+        for (final String preLine : preInfo.split("\\r?\\n")) {
+            final String trimmed = Utils.tripleTrimmer(preLine.split("#")[0].trim());
+            if (preLine.contains("#")) {
+                preInfoMap.put(trimmed, preLine.split("#")[1].trim());
+            } else {
+                preInfoMap.put(trimmed, "");
+            }
+        }
+
         for (final String line : info.split("\\r?\\n")) {
             postInfo.append(line.trim());
             if (line.startsWith("//") || line.trim().isEmpty()) {
@@ -794,13 +862,9 @@ public final class CoverWindow {
                 else code = code.split(" - ")[1];
             }
 
-            for (String preLine : preInfo.split("\\r?\\n")) {
-                if (Utils.tripleTrimmer(preLine.split("#")[0].trim()).equals(code)) {
-
-                    if (preLine.contains("#")) postInfo.append(" # " + preLine.split("#")[1].trim());
-
-                    break;
-                }
+            final String suffix = preInfoMap.get(code);
+            if (suffix != null && !suffix.isEmpty()) {
+                postInfo.append(" # ").append(suffix);
             }
             postInfo.append("\n");
         }

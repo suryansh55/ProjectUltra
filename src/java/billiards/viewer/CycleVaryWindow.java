@@ -828,19 +828,19 @@ public class CycleVaryWindow {
     }
 
     private void CycleVaryFunction(ConvexPolygon polygon) {
+        final int cycles = extractNumberFromTextField(cyclesTextfield);
         final int originalSubdivision = extractNumberFromTextField(subdivisionsTextfield);
         int reps = useRepsCheckBox.isSelected() ? Reps : 1;
         final SimpleObjectProperty<Integer> step = new SimpleObjectProperty<>();
-        final ProgressMultiTask cyclesProgress = new ProgressMultiTask("CycleVary Cycles %d out of %d", false, 0, Cycles);
-        final ProgressMultiTask repsProgress = new ProgressMultiTask("CycleVary Reps %d out of %d", false, 0, reps);
+        final ProgressMultiTask cyclesProgress = new ProgressMultiTask("CycleVary Cycles %d out of %d", false, 0, cycles);
+        final ProgressMultiTask repsProgress = new ProgressMultiTask("CycleVary Reps %d out of %d", false, 0, useRepsCheckBox.isSelected() ? Reps : 1);
         final Array<Color> cycleColors = Array.of(
                 Color.RED, Color.BLUE, Color.GREEN, Color.MAGENTA,
                 Color.CHOCOLATE, Color.ORANGE, Color.PINK, Color.LIME,
                 Color.PURPLE, Color.TURQUOISE);
 
         final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
-        // final double originalScale = viewer.map.getScale();
-        previousCodes.clear();
+        final double originalScale = viewer.map.getScale();
 
         step.setValue(-1);
         step.addListener((o, oldVal, newVal) -> {
@@ -849,7 +849,7 @@ public class CycleVaryWindow {
                 return;
             }
 
-            final int rep = newVal % reps;
+            final int rep = newVal % Reps;
 
             if (newVal != 0 && rep == 0) {
                 final int empties = extractNumberFromTextField(emptySquaresTextfield);
@@ -874,7 +874,7 @@ public class CycleVaryWindow {
                 final String cleanedTriples = cleanedTriplesPre._1;
                 final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 
-                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * Cycles);
+                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * cycles);
 
                 coordinateCodeArea.replaceText(newCoordinates);
 
@@ -896,7 +896,7 @@ public class CycleVaryWindow {
 
                 cyclesProgress.increment(1);
                 repsProgress.resetProgress();
-                // viewer.map.setScale(originalScale);
+                viewer.map.setScale(originalScale);
                 subdivisionsTextfield.setText(originalSubdivision + "");
                 emptySquaresTextfield.setText(empties + deltaEmpties + "");
                 viewer.coverWindow.magnificationsTextField.setText(magnifications + deltaMagnification + "");
@@ -1141,7 +1141,7 @@ public class CycleVaryWindow {
                         viewer.addToOnScreenSequences(storage, color);
                         viewer.renderRegion(storage, (WritableImage) viewer.regionsImageView.getImage(), color);
 
-                        if (autoCover) {
+                        if (mode == 0 || autoCover) {
                             // print the code
                             final String msg;
                             final CodeType type = storage.codeType();

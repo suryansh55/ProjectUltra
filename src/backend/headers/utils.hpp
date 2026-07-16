@@ -22,13 +22,7 @@ inline std::atomic<bool>& cancel_flag() {
     return f;
 }
 
-static std::unordered_map<std::string, CodeType> stringToCodeType = {
-    {"oso", CodeType::OSO},
-    {"osno", CodeType::OSNO},
-    {"ons", CodeType::ONS},
-    {"cs", CodeType::CS},
-    {"cns", CodeType::CNS}
-};
+extern std::unordered_map<std::string, CodeType> stringToCodeType;
 
 // std::unordered_set<CodeType> parse_code_type_set(const std::string& input);
 std::string to_lower(const std::string& str);
@@ -42,6 +36,6 @@ boost::optional<ClassifiedCodeSequence> convert(const std::vector<int>& codeList
 
 std::string standard(ClassifiedCodeSequence code, const int count);
 
-boost::optional<CodeType> getCodeType(std::vector<int32_t>& codeList);
+boost::optional<CodeType> getCodeType(const std::vector<int32_t>& codeList);
 
 int32_t modN(int32_t x, int32_t n);

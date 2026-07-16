@@ -792,7 +792,7 @@ static cover::Cover cover_square(const ClosedConvexPolygonQ& polygon, const Sing
         return cover::Empty{};
     }
 
-    Evaluator eval{prec};
+    Evaluator& eval = Evaluator::thread_local_instance(prec);
 
     const auto center = square.center();
     const Rational radius = square.width() / 2;
@@ -849,7 +849,7 @@ static cover::Cover cover_square(const ClosedConvexPolygonQ& polygon, const Trip
         return cover::Empty{};
     }
 
-    Evaluator eval{prec};
+    Evaluator& eval = Evaluator::thread_local_instance(prec);
 
     const auto center = square.center();
     const Rational radius = square.width() / 2;

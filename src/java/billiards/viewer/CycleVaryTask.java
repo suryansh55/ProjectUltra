@@ -71,6 +71,9 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
     final boolean CSIsSelected;
     final boolean OSOIsSelected;
     final boolean OSNOIsSelected;
+    private volatile PixelReader pixelReader;
+    private volatile double imgWidth;
+    private volatile double imgHeight;
 
     // Constructor takes a list of points to vary at
     public CycleVaryTask(
@@ -105,9 +108,22 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         // storageExecutor handles the more expensive process of calculating code regions,
         // while shotExecutor handles the much faster calculation of finding the codes present at a given point
 
+        // Initialize pixel reader once (blocks briefly on JavaFX thread, avoids per-coord blocking)
+        try {
+            final FutureTask<PixelReader> initReader = new FutureTask<>(() -> this.screenImage.getImage().getPixelReader());
+            Platform.runLater(initReader);
+            this.pixelReader = initReader.get();
+            final FutureTask<Image> initImg = new FutureTask<>(() -> this.screenImage.getImage());
+            Platform.runLater(initImg);
+            final Image img = initImg.get();
+            this.imgWidth = img.getWidth();
+            this.imgHeight = img.getHeight();
+        } catch (final InterruptedException | ExecutionException e) {
+            this.pixelReader = null;
+        }
+
         final MutableSortedSet<ClassifiedCodeSequence> usedCodes = new TreeSortedSet<ClassifiedCodeSequence>();
         final MutableList<Future<Either<String, Storage>>> futures = new FastList<>();
-        ArrayList<Storage> storages = new ArrayList<>();
 
         AtomicInteger progress = new AtomicInteger(); // Create an integer which supports non-locking concurrent operations
         AtomicInteger codeNum = new AtomicInteger(1);
@@ -118,40 +134,13 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         int empty = 0; // Number of empty pixels
         // The meat and potatoes. Finds codes sequentially, and submits them to the executer as they are found.
         // This is the most efficient way to implement multithreaded polyvary since each code can be calculated as soon as it's found, without interfering with the process of finding more codes.
-        for(int i = 0; i < this.coordList.size(); i++) {
-            Vector2 coord = this.coordList.get(i);
-            this.updateProgress(progress.incrementAndGet(), todo);
-
-            boolean skip = false;
-
-            for (Storage storage : storages) {
-                Storage.Stable stable = (Storage.Stable) storage;
-                final Location location = stable.polygon.location(coord.x, coord.y);
-
-                if (location == Location.INSIDE) {
-                    // System.out.println("Skipped because a code sequence from previous coordinate covers this coordinate.");
-                    // System.out.println(Utils.standard(storage.classCodeSeq, 1));
-
-                    skip = true;
-                    break;
-                }
-            }
-
-            if (skip) {
-                continue;
-            }
-
-            storages.clear();
-
+        for(Vector2 coord: this.coordList) {
             MutableSortedSet<ClassifiedCodeSequence> localCodes;
             // The BoyanCodes method vary3() called by autoVary() can throw exceptions. We need to catch them
             // By taking a second to check the pixel color, we can potentially avoid all other work for this coord.
-
-            if (i != 0) {
-                int color = pixelColor(coord);
-                if (color != 0) continue;
-            }
-
+            int color = pixelColor(coord);
+            this.updateProgress(progress.incrementAndGet(), todo);
+            if(color != 0) continue; 
             try {
                 localCodes = autoCodesFiltered(coord, shotExecutor);
             } catch(RuntimeException e) {
@@ -172,6 +161,7 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
                 this.updateProgress(progress.incrementAndGet(), todo);
                 continue;
             }
+            empty = 0;
 
             // Zhao Yu Li, Jul 03, 2025.
             // Do not invalidate all results just because only one code was used previously
@@ -187,7 +177,6 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
 //                this.updateProgress(progress.incrementAndGet(), todo);
 //                continue;
 //            }
-            System.out.println("// pixel " + (i + 1));
             if (mode == 0) {
                 boolean noCodes = true;
 
@@ -212,51 +201,50 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
             } else {
                 throw new NotImplementedException("Invalid mode value for CycleTask");
             }
-            
-            // If one of the futures throws an exception (like a failed to
-            // calculate exception), we need to save it, cancel the rest of
-            // the futures, and then throw that exception to bubble up the stack
-            for (final Future<Either<String, Storage>> future : futures) {
-                Either<String, Storage> either = checkStatus(future);
+        }
 
-                    if (either != null) {
-                        if (either.isLeft()) { // Print things like empty sets
-                            if (!either.left().get().isEmpty()) System.out.println(either.left().get());
-                        } else {
-                            storages.add(either.right().get());
-                        }
-                    }
-            }
 
-            futures.clear();
+        Optional<ExecutionException> except = Optional.empty();
+
+        // If one of the futures throws an exception (like a failed to
+        // calculate exception), we need to save it, cancel the rest of
+        // the futures, and then throw that exception to bubble up the stack
+        for (final Future<Either<String, Storage>> future : futures) {
+            except = checkStatus(future);
+        }
+
+        if (except.isPresent()) {
+            throw new RuntimeException(except.get());
         }
 
         return this.partialResults.get();
     }
 
     // Cancel or detect execution errors; This is where we do checking to see if we were cancelled
-    private Either<String, Storage> checkStatus(final Future<Either<String, Storage>> future) {
+    private Optional<ExecutionException> checkStatus(final Future<Either<String, Storage>> future) {
+        Optional<ExecutionException> except = Optional.empty();
         if (this.isCancelled()) {
             // If the task was cancelled, or one of the futures threw an
             // exception, we need to cancel the rest of the futures
             //System.out.println("//Cancelling submitted future");
             future.cancel(true);
-            return null;
         } else {
             try {
-                return future.get();
+                final Either<String, Storage> either = future.get();
+                if (either.isLeft()) { // Print things like empty sets 
+                    if(!either.left().get().isEmpty()) System.out.println(either.left().get());
+                }
             } catch (final ExecutionException e) {
                 // One of the futures threw an exception during its calculation,
                 // so we need to cancel the rest of the futures
-                throw new RuntimeException(e);
+                except = Optional.of(e);
             } catch (final InterruptedException e) {
                 if (!this.isCancelled()) {
                     throw new RuntimeException(e);
                 }
             }
         }
-
-        return null;
+        return except;
     }
 
     // Calculates codeSequence set at a specific coordinate 
@@ -291,26 +279,15 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
 
     // Runs a fast application thread task which determines the color of the pixel at a point
     private int pixelColor(final Vector2 point) {
-        FutureTask<Integer> task = new FutureTask<Integer>(() -> {
-            final Image image = this.screenImage.getImage();
-            final PixelReader reader = image.getPixelReader();
-            final int midX = (int) this.screenMap.pixelX(point.x);
-            final int midY = (int) this.screenMap.pixelY(point.y);
-            return reader.getArgb(midX, midY);
-        });
-        Platform.runLater(task);
-        try {
-            //System.err.println("//Found pixel color");
-            return task.get();
-        } catch(InterruptedException e) {
-            System.err.println("//Interruption when finding pixel color");
-            return -1;
-        } catch(ExecutionException e) {
-            System.err.println("//Failed to find pixel color");
-            e.printStackTrace();
+        if (this.pixelReader == null) {
             return -1;
         }
-
+        final int midX = (int) this.screenMap.pixelX(point.x);
+        final int midY = (int) this.screenMap.pixelY(point.y);
+        if (midX >= 0 && midY >= 0 && midX < this.imgWidth && midY < this.imgHeight) {
+            return this.pixelReader.getArgb(midX, midY);
+        }
+        return -1;
     }
 
     // Find the storage associated to a codeSequence if it exists. Return the error if not

@@ -75,46 +75,74 @@ static size_t smallest_index(const std::vector<CodeNumber>& code_numbers) {
     return size;
 }
 
+// Nick Shan, July, 2026
+// Minimum-expression (a.k.a. Booth-style least rotation) algorithm:
+// returns the index of the lexicographically smallest rotation of the
+// input sequence.  O(n) time, O(n) extra space.
+// Replaces a previous O(n^2) brute-force scan over all rotations.
+// Reference: https://cp-algorithms.com/string/lyndon_factorization.html
+static size_t least_rotation_index(const std::vector<CodeNumber>& s_in) {
+    const size_t n = s_in.size();
+    if (n <= 1) return 0;
+
+    std::vector<CodeNumber> s;
+    s.reserve(2 * n);
+    s.insert(s.end(), s_in.begin(), s_in.end());
+    s.insert(s.end(), s_in.begin(), s_in.end());
+
+    size_t i = 0, ans = 0;
+    while (i < n) {
+        ans = i;
+        size_t j = i + 1, k = i;
+        while (j < 2 * n && s[k] <= s[j]) {
+            if (s[k] < s[j]) {
+                k = i;
+            } else {
+                ++k;
+            }
+            ++j;
+        }
+        while (i <= k) {
+            i += j - k;
+        }
+    }
+    return ans;
+}
+
+// Nick Shan, July, 2026
+static std::vector<CodeNumber> rotated_copy(const std::vector<CodeNumber>& v, size_t start) {
+    std::vector<CodeNumber> result;
+    result.reserve(v.size());
+    const size_t n = v.size();
+    for (size_t i = 0; i < n; ++i) {
+        result.push_back(v[(start + i) % n]);
+    }
+    return result;
+}
+
+// Nick Shan, July, 2026
 // If we're going to mutate a parameter, it's better to just
-// do so in a meaningful way instead of returning the actual result
-// WARNING: this method involves quite a bit of mutability. Be careful.
-// It turns out this is a well known problem in computer science:
-// https://en.wikipedia.org/wiki/Lexicographically_minimal_string_rotation
-// If this ever becomes a performance bottleneck (say if we want to generate
-// lists of all valid code sequences), then this might be useful
-// We could also just concatenate the vector with itself
-// See also Lyndon words
+// do so in a meaningful way instead of returning the actual result.
+// Lexicographically minimal rotation, considering both the forward sequence
+// and the reversed sequence (the prior O(n^2) brute-force implementation
+// scanned rotations of code_numbers followed by rotations of its reverse).
+// Each pass is O(n); the overall function is O(n).
 static void minimal_rotation(std::vector<CodeNumber>& code_numbers) {
+    const size_t n = code_numbers.size();
+    if (n <= 1) return;
 
-    // This must be a copy, not a reference, since we mutate code_numbers
-    auto min = code_numbers;
+    const auto k_forward = least_rotation_index(code_numbers);
+    auto best = rotated_copy(code_numbers, k_forward);
 
-    const auto size = code_numbers.size();
+    std::vector<CodeNumber> reversed_input(code_numbers.rbegin(), code_numbers.rend());
+    const auto k_reversed = least_rotation_index(reversed_input);
+    auto rotated_reversed = rotated_copy(reversed_input, k_reversed);
 
-    for (size_t i = 0; i < size; ++i) {
-        // rotate left
-        std::rotate(std::begin(code_numbers), std::next(std::begin(code_numbers)), std::end(code_numbers));
-
-        if (code_numbers < min) {
-            min = code_numbers;
-        }
+    if (rotated_reversed < best) {
+        best = std::move(rotated_reversed);
     }
 
-    // After size rotations, the vector is now back to where it was before.
-    // Now we reverse it, and do it again
-
-    std::reverse(std::begin(code_numbers), std::end(code_numbers));
-
-    for (size_t i = 0; i < size; ++i) {
-        // rotate left
-        std::rotate(std::begin(code_numbers), std::next(std::begin(code_numbers)), std::end(code_numbers));
-
-        if (code_numbers < min) {
-            min = code_numbers;
-        }
-    }
-
-    code_numbers = min;
+    code_numbers = std::move(best);
 }
 
 static void validate(const std::vector<CodeNumber>& code_numbers) {
@@ -372,18 +400,10 @@ Jul 31 2025 Marco Mai
 transfer from Java
 */
 void CodeSequence::rotateLeft(std::vector<int32_t>& list){
-
-        if (!list.empty()) {
-            int32_t first = list[0];
-            for (size_t i = 1; i < list.size(); i++) {
-                list[i - 1] = list[i];
-            }
-            list[list.size() - 1] = first;
-        }
-    // c++ build in rotate method
-    // if (!list.empty()){
-    //     std::rotate(list.begin(), list.begin() + 1, list.end());
-    // }
+	// Nick Shan, July, 2026
+    if (!list.empty()){
+        std::rotate(list.begin(), list.begin() + 1, list.end());
+    }
 }
 
 /*
@@ -461,26 +481,35 @@ bool CodeSequence::is_stable() const{
 }
 
 CodeType CodeSequence::type() const {
+	// Nick Shan, July, 2026
+	// Memoized code types
+    if (cached_type_) {
+        return *cached_type_;
+    }
 
     auto odd = is_odd();
     auto closed = is_closed();
     auto stable = is_stable();
 
+    CodeType result;
     if (!closed && stable && odd) {
-        return CodeType::OSO;
+        result = CodeType::OSO;
     } else if (!closed && stable && !odd) {
-        return CodeType::OSNO;
+        result = CodeType::OSNO;
     } else if (!closed && !stable) {
-        return CodeType::ONS;
+        result = CodeType::ONS;
     } else if (closed && stable) {
-        return CodeType::CS;
+        result = CodeType::CS;
     } else if (closed && !stable) {
-        return CodeType::CNS;
+        result = CodeType::CNS;
     } else {
         std::ostringstream err{};
         err << code_numbers << " cannot be given a code type";
         throw std::runtime_error(err.str());
     }
+
+    cached_type_ = result;
+    return result;
 }
 
 CodeNumber CodeSequence::number(size_t i) const {

@@ -1,6 +1,10 @@
 package billiards.viewer;
 
+import billiards.geometry.Vector2;
+
 import javafx.scene.text.Text;
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.list.mutable.FastList;
 
 import java.util.ArrayList;
 import java.util.Optional;
@@ -142,10 +146,6 @@ public class SuperPolyVaryLoad {
     		this.result = Optional.empty();
     		stage.close();
     	});
-
-//		stage.setOnShowing(e -> {
-//			autoSmallCoverBox.setSelected(useSuper.isSelected());
-//		});
     	
     	text.setPrefColumnCount(40);
     	text.setPrefRowCount(10);

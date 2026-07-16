@@ -32,6 +32,8 @@ class Evaluator {
 
     ~Evaluator();
 
+    static Evaluator& thread_local_instance(const uint32_t prec);
+
     template <template <typename> class Trig>
     bool is_positive(const Equation<Trig>& eq, const Coeff64 bx, const Coeff64 by,
                      const PointQ& center, const Rational& rx, const Rational& ry);

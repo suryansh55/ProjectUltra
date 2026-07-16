@@ -1,19 +1,32 @@
 package billiards.vary;
 
 import java.util.*;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import org.apache.commons.math3.util.FastMath;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.BooleanArrayList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
+import com.google.common.collect.Lists;
 
 import billiards.codeseq.ClassifiedCodeSequence;
 import billiards.geometry.TriangleBilliard4;
 import billiards.viewer.SideSum;
+import billiards.viewer.Utils;
+import javaslang.Tuple;
+import javaslang.Tuple3;
+import javaslang.collection.Array;
 import billiards.wrapper.Wrapper;
 
 public class Vary4 {
+private static final double OFFSET = 0.05;
 	// Zhao Yu Li, Jul 11, 2025.
 	// Replaced recursion with a while loop.
 	public static int doneIteration(MutableIntList code, IntArrayList sideSumArray, BooleanArrayList leftArray, BooleanArrayList rightArray, ArrayList<TriangleBilliard4> billiards, int iterationDepth, SideSum sideSum) {
@@ -42,6 +55,8 @@ public class Vary4 {
 		if (!rightArray.isEmpty()) rightArray.removeAtIndex(rightArray.size() - 1);
 		if (!billiards.isEmpty()) billiards.remove(billiards.size() - 1);
 	}
+
+    private static final java.util.concurrent.atomic.AtomicLong vary4Iter = new java.util.concurrent.atomic.AtomicLong(0);
 
 		/* jul,31,2025 Marco Mai
      * move vary3 to backend, rest of the code here being disable

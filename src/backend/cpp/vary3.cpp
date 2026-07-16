@@ -21,152 +21,254 @@ void iterateFireAway3(
     int32_t min, int32_t max, float64_t specMin, float64_t specMax, float64_t initPosition,
     SideSum& sideSum, TriangleBilliard billiard,
     std::vector<int32_t>& code,
-    std::vector<std::vector<int32_t>>& codesFound, std::string reqType)
+    std::vector<std::vector<int32_t>>& codesFound, std::string reqType)   
 {
-    // store data in each level
-    struct Frame {
+    std::vector<CodeType> allowed = parse_code_types(reqType, stringToCodeType);
+ 
+    // parallel code verify limit
+    std::atomic<int> inflight{0};
+ 
+    // setting limit for submission to the memory
+    const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
+    unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
+    // Suryansh Ankur, 2026
+    // Each queued task captures a code vector copy (max * 4 bytes).
+    // Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
+    const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
+    std::mutex codesFoundMutex;
+ 
+    // Never try to BFS deeper than the traversal itself goes.
+    const int32_t breadthDepth = std::min(static_cast<int32_t>(std::floor(std::log2(cores)))-1, max);
+ 
+    // ---- Per-branch state carried across the BFS frontier ----
+    struct Node {
         float64_t specMin;
         float64_t specMax;
-        int32_t swapValue;
         TriangleBilliard cbilliard;
-        bool leftTried = false;
-        bool rightTried = false;
-        bool goLeft = false;
+        SideSum sideSum;              // per-branch copy of accumulated side sum
+        std::vector<int32_t> code;    // per-branch copy of the code path so far
+        int32_t depth;
     };
-
-    std::vector<Frame> stack;
-    int32_t depth = 0;
-
-    stack.push_back(Frame{specMin, specMax, 0, billiard, false, false, false});
-
-	    std::vector<CodeType> allowed = parse_code_types(reqType,stringToCodeType);
-
-	// parallel code verify limit
-	std::atomic<int> inflight{0};
-
-	// setting limit for submition to the memory
-	const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
-    unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
-	// Suryansh Ankur, 2026
-	// Each queued task captures a code vector copy (max * 4 bytes).
-	// Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
-	const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
-    std::mutex codesFoundMutex;
-
-	try{
-			boost::asio::thread_pool pool(cores); 
-			while (!stack.empty()) {
-                if (cancel_flag().load(std::memory_order_relaxed)) {
-                    std::cout << "C++ Vary3 Canceling" << std::endl;
-					pool.stop();
-                    pool.join();
-					std::cout << "Canceled" << std::endl;
-                    return ;}
-
-
-				Frame& frame = stack.back();
-
-				if (depth >= max) {
-					if (!code.empty()) {   // only pop if there is something to pop
-						code.pop_back();
-					}
-					depth--;
-					frame.goLeft? sideSum.sub(frame.swapValue) : sideSum.add(frame.swapValue);
-					stack.pop_back();
-					continue;
-				}
-
-				float64_t specialAngle = frame.cbilliard.getSpecialAngle();
-
-				if (!frame.leftTried && !frame.rightTried ) {
-
-					if (depth > min) {
-						if (std::abs(sideSum.sum()) < OFFSET && frame.cbilliard.side == 2 &&
-								frame.cbilliard.orient == 1) {
-							
-								float64_t perfectAngle = std::atan2(
-									frame.cbilliard.vertexA.y,
-									frame.cbilliard.vertexA.x + initPosition);
-
-								if (frame.specMax > perfectAngle && perfectAngle > frame.specMin) {
-
-									std::vector<int32_t> code2 = code;
-
-									while (inflight >= MAX_INFLIGHT) {
-										// Suryansh Ankur, 2026
-										if (cancel_flag().load(std::memory_order_relaxed)) break;
-										std::this_thread::sleep_for(std::chrono::milliseconds(1));
-									}
-									// type check if its is the right candidate, add it in the code
-									inflight.fetch_add(1, std::memory_order_relaxed);
-									boost::asio::post(pool, [=, &codesFound, &inflight, &codesFoundMutex] {
-										std::vector<int32_t> intVec(code2.begin(),code2.end());
-										boost::optional<CodeType> codeType = getCodeType(intVec);
-										if (codeType && is_code_type_in_list(codeType.get(),allowed)) {
+ 
+    try {
+        boost::asio::thread_pool pool(cores);
+ 
+        // Same "found code" check the original DFS ran on entering a frame,
+        // reused for both the BFS phase and the per-branch DFS phase.
+        auto checkAndDispatch = [&](const TriangleBilliard& cbilliard, SideSum& localSideSum,
+                                     const std::vector<int32_t>& localCode,
+                                     float64_t frameSpecMin, float64_t frameSpecMax, int32_t depth) {
+            if (depth > min) {
+                if (std::abs(localSideSum.sum()) < OFFSET &&
+                    cbilliard.side == 2 && cbilliard.orient == 1) {
+ 
+                    float64_t perfectAngle = std::atan2(
+                        cbilliard.vertexA.y,
+                        cbilliard.vertexA.x + initPosition);
+ 
+                    if (frameSpecMax > perfectAngle && perfectAngle > frameSpecMin) {
+                        std::vector<int32_t> code2 = localCode;
+ 
+                        while (inflight >= MAX_INFLIGHT) {
+                            std::this_thread::sleep_for(std::chrono::microseconds(100));
+                        }
+                        inflight.fetch_add(1, std::memory_order_relaxed);
+                        boost::asio::post(pool, [code2 = std::move(code2), &codesFound, &inflight,
+                                                  &codesFoundMutex, &allowed] {
+                            boost::optional<CodeType> codeType = getCodeType(code2);
+                            if (codeType && is_code_type_in_list(codeType.get(), allowed)) {
+                                std::lock_guard<std::mutex> lock(codesFoundMutex);
+                                codesFound.push_back(code2);
+                            }
+                            inflight.fetch_sub(1, std::memory_order_relaxed);
+                        });
+                    }
+                }
+            }
+        };
+ 
+        // ---------- Phase 1: BFS down to breadthDepth ----------
+        std::vector<Node> frontier;
+        frontier.push_back(Node{specMin, specMax, billiard, sideSum, code, 0});
+ 
+        int32_t depth = 0;
+        while (depth < breadthDepth && !frontier.empty()) {
+            if (cancel_flag().load(std::memory_order_relaxed)) {
+                std::cout << "C++ Vary3 Canceling" << std::endl;
+                pool.stop();
+                pool.join();
+                std::cout << "Canceled" << std::endl;
+                return;
+            }
+ 
+            std::vector<Node> nextFrontier;
+            nextFrontier.reserve(frontier.size() * 2);
+ 
+            for (auto& node : frontier) {
+                checkAndDispatch(node.cbilliard, node.sideSum, node.code,
+                                  node.specMin, node.specMax, node.depth);
+ 
+                float64_t specialAngle = node.cbilliard.getSpecialAngle();
+ 
+                // "right" child — mirrors the original leftTried branch (getNext(true))
+                if (node.specMax > specialAngle) {
+                    TriangleBilliard newbilliard = node.cbilliard.getNext(true);
+                    int32_t rightSwap = 3 - node.cbilliard.side - newbilliard.side;
+ 
+                    Node child = node;              // copies sideSum + code
+                    child.sideSum.add(rightSwap);
+                    child.code.emplace_back(rightSwap);
+                    child.specMin = std::max(specialAngle, node.specMin);
+                    child.specMax = node.specMax;
+                    child.cbilliard = newbilliard;
+                    child.depth = node.depth + 1;
+ 
+                    nextFrontier.push_back(std::move(child));
+                }
+ 
+                // "left" child — mirrors the original rightTried branch (getNext(false))
+                if (node.specMin < specialAngle) {
+                    TriangleBilliard newbilliard = node.cbilliard.getNext(false);
+                    int32_t leftSwap = 3 - node.cbilliard.side - newbilliard.side;
+ 
+                    Node child = node;
+                    child.sideSum.sub(leftSwap);
+                    child.code.emplace_back(leftSwap);
+                    child.specMin = node.specMin;
+                    child.specMax = std::min(specialAngle, node.specMax);
+                    child.cbilliard = newbilliard;
+                    child.depth = node.depth + 1;
+ 
+                    nextFrontier.push_back(std::move(child));
+                }
+            }
+ 
+            frontier = std::move(nextFrontier);
+            depth++;
+        }
+ 
+        // ---------- Phase 2: one DFS task per surviving frontier node ----------
+        for (auto& node : frontier) {
+            boost::asio::post(pool, [node, min, max, initPosition,
+                                      &codesFound, &codesFoundMutex, &allowed,
+                                      &inflight, MAX_INFLIGHT, &pool]() mutable {
+ 
+                // Identical algorithm to the original DFS, scoped to this
+                // branch's own local stack / sideSum / code — no shared state
+                // with sibling branches running in other pool threads.
+                struct Frame {
+                    float64_t specMin;
+                    float64_t specMax;
+                    int32_t swapValue;
+                    TriangleBilliard cbilliard;
+                    bool leftTried = false;
+                    bool rightTried = false;
+                    bool goLeft = false;
+                };
+ 
+                std::vector<Frame> stack;
+                stack.reserve(std::max(0, (max - node.depth)) * 2 + 1);
+                int32_t depth = node.depth;
+ 
+                SideSum localSideSum = node.sideSum;
+                std::vector<int32_t> localCode = node.code;
+ 
+                stack.push_back(Frame{node.specMin, node.specMax, 0, node.cbilliard, false, false, false});
+ 
+                while (!stack.empty()) {
+                    if (cancel_flag().load(std::memory_order_relaxed)) {
+                        return;
+                    }
+ 
+                    Frame& frame = stack.back();
+ 
+                    if (depth >= max) {
+                        if (!localCode.empty()) localCode.pop_back();
+                        depth--;
+                        frame.goLeft ? localSideSum.sub(frame.swapValue) : localSideSum.add(frame.swapValue);
+                        stack.pop_back();
+                        continue;
+                    }
+ 
+                    float64_t specialAngle = frame.cbilliard.getSpecialAngle();
+ 
+                    if (!frame.leftTried && !frame.rightTried) {
+                        if (depth > min) {
+                            if (std::abs(localSideSum.sum()) < OFFSET && frame.cbilliard.side == 2 &&
+                                frame.cbilliard.orient == 1) {
+ 
+                                float64_t perfectAngle = std::atan2(
+                                    frame.cbilliard.vertexA.y,
+                                    frame.cbilliard.vertexA.x + initPosition);
+ 
+                                if (frame.specMax > perfectAngle && perfectAngle > frame.specMin) {
+                                    std::vector<int32_t> code2 = localCode;
+ 
+                                    while (inflight >= MAX_INFLIGHT) {
+                                        std::this_thread::sleep_for(std::chrono::microseconds(100));
+                                    }
+                                    inflight.fetch_add(1, std::memory_order_relaxed);
+									boost::optional<CodeType> codeType = getCodeType(code2);
+									if (codeType && is_code_type_in_list(codeType.get(), allowed)) {
 										std::lock_guard<std::mutex> lock(codesFoundMutex);
 										codesFound.push_back(code2);
 									}
-
-
-
-
-										inflight.fetch_sub(1, std::memory_order_relaxed);
-									});
+									inflight.fetch_sub(1, std::memory_order_relaxed);
 							}
-						}
-					}
-
-
-					frame.leftTried = true;
-
-					if (frame.specMax > specialAngle){
-						TriangleBilliard newbilliard = frame.cbilliard.getNext(true);
-						int32_t rightSwap = 3 - frame.cbilliard.side - newbilliard.side;
-											
-						sideSum.add(rightSwap);
-						code.emplace_back(rightSwap);
-						stack.push_back(Frame{
-							std::max(specialAngle, frame.specMin), frame.specMax,
-							rightSwap, newbilliard,
-							false, false, true
-						});
-						depth++;
-						continue;
-					}
-				}
-
-				if (!frame.rightTried ) {
-					frame.rightTried = true;
-
-					if (frame.specMin < specialAngle){
-						TriangleBilliard newbilliard = frame.cbilliard.getNext(false);
-						int32_t leftSwap = 3 - frame.cbilliard.side - newbilliard.side;;
-
-						sideSum.sub(leftSwap);
-						code.emplace_back(leftSwap);
-						stack.push_back(Frame{
-							frame.specMin, std::min(specialAngle, frame.specMax),
-							leftSwap, newbilliard,
-							false,false,false
-						});
-						depth++;
-						continue;
-					}
-				}
-				// Both directions done — backtrack
-				if (!code.empty()) code.pop_back();  // safeguard
-				depth--;
-				frame.goLeft? sideSum.sub(frame.swapValue) : sideSum.add(frame.swapValue);
-				// billiard.getNextReverse(frame.goLeft);  // reverse the correct direction
-				stack.pop_back();
-				
-		}
-			pool.join();
-
-     
-	}catch (const std::exception& ex){
-		std::cerr << "Exception caught: " << ex.what() << '\n';
-	}
+                            }
+                        }
+ 
+                        frame.leftTried = true;
+ 
+                        if (frame.specMax > specialAngle) {
+                            TriangleBilliard newbilliard = frame.cbilliard.getNext(true);
+                            int32_t rightSwap = 3 - frame.cbilliard.side - newbilliard.side;
+ 
+                            localSideSum.add(rightSwap);
+                            localCode.emplace_back(rightSwap);
+                            stack.push_back(Frame{
+                                std::max(specialAngle, frame.specMin), frame.specMax,
+                                rightSwap, newbilliard,
+                                false, false, true
+                            });
+                            depth++;
+                            continue;
+                        }
+                    }
+ 
+                    if (!frame.rightTried) {
+                        frame.rightTried = true;
+ 
+                        if (frame.specMin < specialAngle) {
+                            TriangleBilliard newbilliard = frame.cbilliard.getNext(false);
+                            int32_t leftSwap = 3 - frame.cbilliard.side - newbilliard.side;
+ 
+                            localSideSum.sub(leftSwap);
+                            localCode.emplace_back(leftSwap);
+                            stack.push_back(Frame{
+                                frame.specMin, std::min(specialAngle, frame.specMax),
+                                leftSwap, newbilliard,
+                                false, false, false
+                            });
+                            depth++;
+                            continue;
+                        }
+                    }
+ 
+                    // Both directions done — backtrack
+                    if (!localCode.empty()) localCode.pop_back();
+                    depth--;
+                    frame.goLeft ? localSideSum.sub(frame.swapValue) : localSideSum.add(frame.swapValue);
+                    stack.pop_back();
+                }
+            });
+        }
+ 
+        pool.join();
+ 
+    } catch (const std::exception& ex) {
+        std::cerr << "Exception caught: " << ex.what() << '\n';
+    }
 }
 
 

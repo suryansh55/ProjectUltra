@@ -3,7 +3,10 @@ package billiards.viewer;
 import billiards.codeseq.CodeTypeCollection;
 import billiards.geometry.ConvexPolygon;
 import billiards.geometry.Rectangle;
+import billiards.geometry.Vector2;
 
+import org.eclipse.collections.api.list.MutableList;
+import org.eclipse.collections.impl.list.mutable.FastList;
 
 import java.util.Optional;
 

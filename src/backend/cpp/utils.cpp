@@ -2,6 +2,15 @@
 #include "utils.hpp"
 #include "conversion.hpp"
 
+// Nick Shan, July, 2026
+std::unordered_map<std::string, CodeType> stringToCodeType = {
+    {"oso", CodeType::OSO},
+    {"osno", CodeType::OSNO},
+    {"ons", CodeType::ONS},
+    {"cs", CodeType::CS},
+    {"cns", CodeType::CNS}
+};
+
 
 
 /*
@@ -47,12 +56,6 @@ boost::optional<ClassifiedCodeSequence> convert(const std::vector<int>& codeList
         const ClassifiedCodeSequence& codeSequence = *boost::get<ClassifiedCodeSequence>(&either);
         ClassifiedCodeSequence classCodeSeq(codeSequence);
 
-    auto code_numbers = classCodeSeq.codeSequence->numbers();
-    auto code_angles = classCodeSeq.codeSequence->angles(XYZ::X, XYZ::Y);
-
-    auto code_angles_eta = falgo::transform(code_angles, xyz_to_xyeta);
-    auto code_angles_pi = falgo::transform(code_angles, xyz_to_xypi);
-
         return classCodeSeq;
     } else {
         return boost::none;
@@ -80,7 +83,7 @@ std::string standard(ClassifiedCodeSequence code, const int count) {
 Jul 31 2025 Marco Mai
 checking if such code type valid sequence, return code type
 */
-boost::optional<CodeType> getCodeType(std::vector<int32_t>& codeList) {
+boost::optional<CodeType> getCodeType(const std::vector<int32_t>& codeList) {
     std::vector<int32_t> newCode = codeList;
     int32_t len = static_cast<int32_t>(newCode.size());
     int32_t count = 0;

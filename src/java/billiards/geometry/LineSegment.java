@@ -2,7 +2,7 @@ package billiards.geometry;
 
 import org.eclipse.collections.api.list.ImmutableList;
 
-import java.util.Objects;
+
 
 // Directed line segment from start -> end
 public final class LineSegment implements Project {
@@ -83,7 +83,7 @@ public final class LineSegment implements Project {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.start, this.end);
+        return 31 * this.start.hashCode() + this.end.hashCode();
     }
 
     @Override

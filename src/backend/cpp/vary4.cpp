@@ -32,6 +32,7 @@ void iterateFireAway4(
     };
 
     std::vector<Frame> stack;
+    stack.reserve(max * 2);
     int32_t depth = 0;
 
     stack.push_back(Frame{0,billiard,false,false,false});
@@ -139,21 +140,18 @@ void iterateFireAway4(
 // since it the limit 8000 depth to out of memory in Java
 // in current comsumer computer 8000 cores not yet exist
 
-std::vector<TriangleStart> makeStarts(
+void makeStarts(
     TriangleBilliard4& billiard,
     int32_t depth,
     int32_t maxDepth,
     std::vector<int32_t>& code,
-    SideSum& sideSum)
+    SideSum& sideSum,
+    std::vector<TriangleStart>& starts)
 {
     if (depth >= maxDepth) {
-        std::vector<int32_t> codeCopy = code;
-        std::vector<std::tuple<TriangleBilliard4, std::vector<int32_t>, SideSum>> rec;
-        rec.emplace_back(billiard, codeCopy, sideSum.copy());
-        return rec;
+        starts.emplace_back(billiard, code, sideSum.copy());
+        return;
     }
-
-    std::vector<std::tuple<TriangleBilliard4, std::vector<int32_t>, SideSum>> starts;
 
     auto optLeft = billiard.getNext(true);
     if (optLeft) {
@@ -163,8 +161,7 @@ std::vector<TriangleStart> makeStarts(
         sideSum.add(leftSwap);
         code.push_back(leftSwap);
 
-        auto leftStarts = makeStarts(leftBilliard, depth + 1, maxDepth, code, sideSum);
-        starts.insert(starts.end(), leftStarts.begin(), leftStarts.end());
+        makeStarts(leftBilliard, depth + 1, maxDepth, code, sideSum, starts);
 
         code.pop_back();
         sideSum.sub(leftSwap);
@@ -178,21 +175,17 @@ std::vector<TriangleStart> makeStarts(
         sideSum.sub(rightSwap);
         code.push_back(rightSwap);
 
-        auto rightStarts = makeStarts(rightBilliard, depth + 1, maxDepth, code, sideSum);
-        starts.insert(starts.end(), rightStarts.begin(), rightStarts.end());
+        makeStarts(rightBilliard, depth + 1, maxDepth, code, sideSum, starts);
 
         code.pop_back();
         sideSum.add(rightSwap);
     }
-
-    return starts;
 }
 
-std::vector<TriangleStart> lazySort(std::vector<TriangleStart> array) {
+void lazySort(std::vector<TriangleStart>& array) {
     std::sort(array.begin(), array.end(), [](const TriangleStart& a, const TriangleStart& b) {
         return std::get<0>(a).interval() < std::get<0>(b).interval();
     });
-    return array;
 }
 
 
@@ -206,9 +199,10 @@ std::vector<std::vector<int32_t>> fireAway4(const int32_t movesMin, const int32_
     SideSum sideSum = SideSum::create(xAngle, yAngle);
     std::vector<int32_t> startCode ;
 
-    std::vector<TriangleStart> starts = makeStarts(startBilliard,movesMax, cores, startCode, sideSum);
+    std::vector<TriangleStart> starts;
+    makeStarts(startBilliard, movesMax, cores, startCode, sideSum, starts);
     
-    auto sortStarts = lazySort(std::move(starts));
+    lazySort(starts);
 
      std::vector<std::vector<int32_t>> allCodes;
     std::mutex codesMutex;
@@ -219,7 +213,7 @@ std::vector<std::vector<int32_t>> fireAway4(const int32_t movesMin, const int32_
     // Optional: limit inflight to reduce memory pressure
     const int MAX_INFLIGHT = cores;
 
-    for (const auto& T : sortStarts) {
+    for (const auto& T : starts) {
         // Suryansh Ankur, 2026
         if (cancel_flag().load(std::memory_order_relaxed)) {
             pool.stop();

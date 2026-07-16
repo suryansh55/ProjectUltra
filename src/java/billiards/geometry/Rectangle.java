@@ -3,7 +3,7 @@ package billiards.geometry;
 import org.eclipse.collections.api.list.MutableList;
 import org.eclipse.collections.impl.list.mutable.FastList;
 
-import java.util.Objects;
+
 
 public final class Rectangle implements Project {
     public final Interval intervalX;
@@ -124,8 +124,7 @@ public final class Rectangle implements Project {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.intervalX, this.intervalY);
-        
+        return 31 * this.intervalX.hashCode() + this.intervalY.hashCode();
     }
 
     @Override

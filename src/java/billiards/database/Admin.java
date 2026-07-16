@@ -22,6 +22,25 @@ public final class Admin {
 
     public static final String databaseDir = System.getProperty("user.home") + "/billiard-databases";
 
+    private static String getProgramDir() {
+        try {
+            final java.net.URL location = Admin.class.getProtectionDomain().getCodeSource().getLocation();
+            java.io.File file = new java.io.File(location.toURI());
+            if (file.isFile()) {
+                return file.getParent();
+            }
+            while (file != null) {
+                if (new java.io.File(file, "settings.gradle").isFile()) {
+                    return file.getAbsolutePath();
+                }
+                file = file.getParentFile();
+            }
+        } catch (final Exception e) {
+            // fall through
+        }
+        return System.getProperty("user.dir");
+    }
+
     public static String getDatabasePath(final String dbName) {
         return String.format("%s/%s.sqlite", databaseDir, dbName);
     }

@@ -83,7 +83,7 @@ class Newton final {
         // we return the approximation.
         // Can't be 1e-45 for 1 1 48 1 1 150 1 2 1 55 1 1 156 1 1 52 1 1 154 1 1 52 1 1 156 1 1 55 1 2 1 150
         // (At least at 50 digits of precision)
-        const Real eps{"1e-40"};
+        const Real eps{"1e-25"};
 
         constexpr uint64_t max_iters = 100;
 
@@ -97,9 +97,6 @@ class Newton final {
         while (!within_eps) {
 
             gnewton_iterate(x, dx);
-            //std::cout << x << std::endl;
-            //std::cout << dx << std::endl;
-            //std::cout << std::endl;
 
             if (test_delta(dx, eps)) {
                 within_eps = true;
@@ -110,6 +107,12 @@ class Newton final {
                 throw std::runtime_error("maximum iterations exceeded in newton's method");
             }
         }
+
+#ifdef PROFILE_NEWTON
+        if (iters > 20) {
+            // std::cout << "[CPP]   newton iters=" << iters << std::endl;
+        }
+#endif
 
         /*
         std::cout << eq0.equation << '\n'

@@ -1,5 +1,7 @@
 #include "evaluator.hpp"
 
+#include <memory>
+
 struct FreeCache {
 
     ~FreeCache() {
@@ -205,6 +207,16 @@ Evaluator::~Evaluator() {
 
     mpfr_clear(half_pi_d);
     mpfr_clear(half_pi_u);
+}
+
+Evaluator& Evaluator::thread_local_instance(const uint32_t prec) {
+    thread_local std::unique_ptr<Evaluator> instance;
+    thread_local uint32_t instance_prec = 0;
+    if (!instance || instance_prec != prec) {
+        instance.reset(new Evaluator(prec));
+        instance_prec = prec;
+    }
+    return *instance;
 }
 
 template <template <typename> class Trig>

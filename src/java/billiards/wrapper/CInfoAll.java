@@ -25,6 +25,10 @@ public final class CInfoAll extends Structure {
 
     @Override
     public List<String> getFieldOrder() {
-        return FastList.newListWith("initial_angles", "points", "equations", "left_rights", "code_seq_lr","sinEquations","cosEquations","vectorX","vectorY");
+        // Must match C struct order in wrapper.hpp
+        return FastList.newListWith("initial_angles", "points", "equations",
+                                    "sinEquations", "cosEquations",
+                                    "left_rights", "code_seq_lr",
+                                    "vectorX", "vectorY");
     }
 }

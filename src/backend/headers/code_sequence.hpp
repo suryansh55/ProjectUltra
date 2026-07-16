@@ -20,6 +20,11 @@ class CodeSequence final {
     using value_type = typename decltype(code_numbers)::value_type;
     using const_iterator = typename decltype(code_numbers)::const_iterator;
 
+  private:
+    mutable boost::optional<CodeType> cached_type_;
+
+  public:
+
     // Don't call any non-static functions within the constructor,
     // because they might access fields that haven't been initialzed yet.
     explicit CodeSequence(const std::vector<CodeNumber>& code_numbers_);

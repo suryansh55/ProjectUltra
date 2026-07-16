@@ -258,6 +258,7 @@ public class CodeAndPatternLookupWindow {
     private void lookUpIterPat(int limit, int offset) {
         isLoading = true;
         final ExecutorService executor = Executors.newSingleThreadExecutor();
+        try {
         executor.execute(() -> {
             final String selectPatternQuery = "SELECT code_sequence,iter_pattern FROM main.iteration_pattern ORDER BY last_used DESC LIMIT ? OFFSET ?;";
 
@@ -285,9 +286,10 @@ public class CodeAndPatternLookupWindow {
                 javafx.application.Platform.runLater(() -> isLoading = false);
                 throw new RuntimeException(e);
             }
-
-            executor.shutdown();
         });
+        } finally {
+            executor.shutdown();
+        }
     }
 
     private ScrollBar getVerticalScrollbar(TableView<?> tableView) {

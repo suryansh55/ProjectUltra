@@ -187,6 +187,8 @@ public class Vary {
 		final MutableSet<ClassifiedCodeSequence> codeSeqs = new UnifiedSet<>();
 
 		final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
+
+		try{
 		if (types.isCSOnly()) {
 			// run the CS-specific code
 
@@ -220,8 +222,9 @@ public class Vary {
 			final MutableList<ClassifiedCodeSequence> future = Vary4.fireAway(min, max, xRad, yRad, types.toString());
 			codeSeqs.addAll(future);
 		}
-
-		executor.shutdown();
+		} finally {
+			executor.shutdownNow(); // Ensure the executor is shut down even if an exception occurs
+		}
 		return codeSeqs;
 	}
 

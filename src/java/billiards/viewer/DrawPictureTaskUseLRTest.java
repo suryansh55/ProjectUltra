@@ -117,6 +117,8 @@ public final class DrawPictureTaskUseLRTest extends Task<Array<Storage>> {
     protected Array<Storage> call() {
         final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
+        try {
+
         final Array<Future<Either<String, Storage>>> futures =
                 this.tasks.map(task -> executor.submit(task));
 
@@ -167,14 +169,16 @@ public final class DrawPictureTaskUseLRTest extends Task<Array<Storage>> {
             }
         }
 
-        // TODO This does not cancel futures that are currently running
-        // (like when we hit cancel). Should we wait for them to finish?
-        executor.shutdown();
-
         if (except.isPresent()) {
             throw new RuntimeException(except.get());
         }
 
         return Array.ofAll(storages);
+
+        } finally {
+            // TODO This does not cancel futures that are currently running
+            // (like when we hit cancel). Should we wait for them to finish?
+            executor.shutdown();
+        }
     }
 }

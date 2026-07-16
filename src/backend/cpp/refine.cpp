@@ -5,6 +5,8 @@
 #include "intersection.hpp"
 #include "linear_derivative.hpp"
 
+#include <chrono>
+
 // It seems our assumption is broken here. The gradient of the curve
 // and the gradient of one of the side equations are parallel.
 // In that case, what do we do? I think we will skip the equation
@@ -384,12 +386,13 @@ struct ZeroInfo final {
 
 struct Corner final {
 
-    Sign corner_sign;
-    boost::optional<ZeroInfo> zero_info; // if the sign is 0, we have extra information here
+    Sign corner_sign = Sign::NEG;
+    boost::optional<ZeroInfo> zero_info = boost::none;
 
-    // For Sign::POS and Sign::NEG
+    Corner() = default;
+
     explicit Corner(const Sign corner_sign_)
-        : corner_sign{corner_sign_}, zero_info{boost::none} {}
+        : corner_sign{corner_sign_} {}
 
     explicit Corner(const Sign corner_sign_, const ZeroInfo& zero_info_)
         : corner_sign{corner_sign_}, zero_info{zero_info_} {}
@@ -455,58 +458,42 @@ std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& c
 
     auto size = polygon.size();
 
-    std::vector<Corner> corners;
-    for (size_t i = 0; i < size; ++i) {
-        auto& int_pair = polygon.at(i);
-        auto curve_sign = curve_sign_at_point(curve, int_pair.point);
+    std::vector<Corner> corners(size);
 
-        //std::cout << curve << ", " << int_pair.point.coord0.str() << ", " << int_pair.point.coord1.str() << ", ";
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, size), [&](const tbb::blocked_range<size_t>& r) {
+        for (size_t i = r.begin(); i != r.end(); ++i) {
+            auto& int_pair = polygon.at(i);
+            auto curve_sign = curve_sign_at_point(curve, int_pair.point);
 
-        if (curve_sign == Sign::NEG) {
-            corners.emplace_back(Sign::NEG);
-        } else if (curve_sign == Sign::ZERO) {
-            // (i - 1) % size won't work!
-            auto& prev_int_pair = i == 0 ? polygon.at(size - 1) : polygon.at(i - 1);
+            if (curve_sign == Sign::NEG) {
+                corners[i] = Corner(Sign::NEG);
+            } else if (curve_sign == Sign::ZERO) {
+                auto& prev_int_pair = i == 0 ? polygon.at(size - 1) : polygon.at(i - 1);
 
-            // The gradient of a function f(x, y) at any location (x, y) points in the direction
-            // of greatest increase of the function (so it pulls you towards local maximums).
-            // For points on the level set f(x, y) = 0, the gradient is perpendicular to the level set.
-            // Now, the level set separates the positive region of the function from the negative regions,
-            // but does the gradient point toward the positive or negative side? I believe it points toward
-            // the positive side, since the function would be increasing in that direction. Then, we just
-            // rotate the gradient accordingly and off we go.
+                auto prev_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, prev_int_pair.equation);
+                auto next_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, int_pair.equation);
 
-            // TODO in theory, we only need to factor out the line that goes through the point, not
-            // all of them. But we will see
-            // TODO we could also cache the fully factored version too
-            // Have to think about that
-            // When we get a zero gradient, then there is a line going through the point. We need
-            // to factor out that line to find the gradient information
-            // TODO when this happens, should we remember the equation, and continue refining
-            // with others hoping that the troublesome point gets cut out?
-            auto prev_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, prev_int_pair.equation);
-            auto next_gradient = boost::apply_visitor(GradientVariant{int_pair.point}, int_pair.equation);
+                Vector2<Interval> prev_dir{-prev_gradient[1], prev_gradient[0]};
+                Vector2<Interval> next_dir{next_gradient[1], -next_gradient[0]};
 
-            Vector2<Interval> prev_dir{-prev_gradient[1], prev_gradient[0]}; // rotate 90 CCW
-            Vector2<Interval> next_dir{next_gradient[1], -next_gradient[0]}; // rotate 90 CW
+                EquationGradient<XY, T> eq_grad{curve};
+                auto curve_gradient = gradient(eq_grad, int_pair.point);
 
-            EquationGradient<XY, T> eq_grad{curve};
-            auto curve_gradient = gradient(eq_grad, int_pair.point);
+                auto prev_dot = prev_dir.dot(curve_gradient);
+                auto next_dot = next_dir.dot(curve_gradient);
 
-            auto prev_dot = prev_dir.dot(curve_gradient);
-            auto next_dot = next_dir.dot(curve_gradient);
+                auto prev_sign = sign(prev_dot);
+                auto next_sign = sign(next_dot);
 
-            auto prev_sign = sign(prev_dot);
-            auto next_sign = sign(next_dot);
+                corners[i] = Corner(Sign::ZERO, ZeroInfo{prev_sign, next_sign});
 
-            corners.emplace_back(Sign::ZERO, ZeroInfo{prev_sign, next_sign});
-
-        } else if (curve_sign == Sign::POS) {
-            corners.emplace_back(Sign::POS);
-        } else {
-            throw std::runtime_error(invalid_enum_value("Sign", curve_sign));
+            } else if (curve_sign == Sign::POS) {
+                corners[i] = Corner(Sign::POS);
+            } else {
+                throw std::runtime_error(invalid_enum_value("Sign", curve_sign));
+            }
         }
-    }
+    });
 
     correct_zeros(corners);
 
@@ -519,14 +506,53 @@ std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& c
 template <typename T>
 boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, const T& curve) {
 
+    const auto t_start = std::chrono::steady_clock::now();
+
     // Deal with zero curves right here, since they are rather odd and could mess up
     // the assumptions of the refining algorithm.
     if (curve.is_zero()) {
         return boost::none;
     }
 
+    // Fast bounding-box check: evaluate curve sign over the entire polygon
+    // bounding box. If the curve is strictly positive or negative everywhere,
+    // we can skip the expensive per-vertex corner evaluation and edge processing.
+    {
+        Real x_low = boost::multiprecision::lower(polygon[0].point[0]);
+        Real x_high = boost::multiprecision::upper(polygon[0].point[0]);
+        Real y_low = boost::multiprecision::lower(polygon[0].point[1]);
+        Real y_high = boost::multiprecision::upper(polygon[0].point[1]);
+
+        for (const auto& pair : polygon) {
+            const auto& x = pair.point[0];
+            const auto& y = pair.point[1];
+            const Real xl = boost::multiprecision::lower(x);
+            const Real xh = boost::multiprecision::upper(x);
+            const Real yl = boost::multiprecision::lower(y);
+            const Real yh = boost::multiprecision::upper(y);
+            if (xl < x_low)  x_low = xl;
+            if (xh > x_high) x_high = xh;
+            if (yl < y_low)  y_low = yl;
+            if (yh > y_high) y_high = yh;
+        }
+
+        const Interval x_interval{x_low, x_high};
+        const Interval y_interval{y_low, y_high};
+        const Vector2<Interval> bb_point{x_interval, y_interval};
+
+        const auto bb_sign = curve_sign_at_point(curve, bb_point);
+
+        if (bb_sign == Sign::POS) {
+            return polygon;
+        }
+        if (bb_sign == Sign::NEG) {
+            return boost::none;
+        }
+    }
+
     auto corners = calculate_corners(polygon, curve);
-    //std::cout << corners << std::endl;
+
+    const auto t_corners_end = std::chrono::steady_clock::now();
 
     IntervalPolygon new_polygon{};
 
@@ -738,16 +764,78 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
         }
     }
 
+    const auto t_edges_end = std::chrono::steady_clock::now();
+
     // TODO have examples where it is 0 and 1
     if (new_polygon.size() < 2) {
         // Reduced to empty polygon
         return boost::none;
     } else if (new_polygon.size() == 2) {
         throw std::runtime_error("size 2 MRR polygon");
-    } else {
-        return new_polygon;
     }
+
+    const auto t_end = std::chrono::steady_clock::now();
+    const auto total_us = std::chrono::duration_cast<std::chrono::microseconds>(t_end - t_start).count();
+    if (total_us > 200000) {
+        const auto corners_us = std::chrono::duration_cast<std::chrono::microseconds>(t_corners_end - t_start).count();
+        const auto edges_us = std::chrono::duration_cast<std::chrono::microseconds>(t_edges_end - t_corners_end).count();
+        // std::cout << "[CPP]   refine_polygon verts=" << polygon.size() << "->" << new_polygon.size()
+        //           << " corners=" << (corners_us / 1000) << "ms"
+        //           << " edges=" << (edges_us / 1000) << "ms"
+        //           << " total=" << (total_us / 1000) << "ms" << std::endl;
+    }
+
+    return new_polygon;
 }
 
 template boost::optional<IntervalPolygon> refine_polygon<Equation<Sin>>(const IntervalPolygon& polygon, const Equation<Sin>& curve);
 template boost::optional<IntervalPolygon> refine_polygon<Equation<Cos>>(const IntervalPolygon& polygon, const Equation<Cos>& curve);
+template boost::optional<IntervalPolygon> refine_polygon<LinComArrZ<XYEta>>(const IntervalPolygon& polygon, const LinComArrZ<XYEta>& curve);
+
+namespace {
+// Nick Shan, July, 2026
+struct RefineWithEquation final : public boost::static_visitor<boost::optional<IntervalPolygon>> {
+    const IntervalPolygon& poly;
+
+    explicit RefineWithEquation(const IntervalPolygon& p) : poly{p} {}
+
+    boost::optional<IntervalPolygon> operator()(const EquationGradient<XY, LinComArrZ<XYEta>>& eq_grad) const {
+        return refine_polygon(poly, eq_grad.equation);
+    }
+
+    boost::optional<IntervalPolygon> operator()(const EquationGradient<XY, LinComMapZ<Sin<LinComArrZ<XY>>>>& eq_grad) const {
+        return refine_polygon(poly, eq_grad.equation);
+    }
+
+    boost::optional<IntervalPolygon> operator()(const EquationGradient<XY, LinComMapZ<Cos<LinComArrZ<XY>>>>& eq_grad) const {
+        return refine_polygon(poly, eq_grad.equation);
+    }
+};
+
+} // anonymous namespace
+
+static boost::optional<IntervalPolygon> intersect_one_way(const IntervalPolygon& subject, const IntervalPolygon& clip) {
+    auto result = subject;
+    for (const auto& pair : clip) {
+        const auto maybe = boost::apply_visitor(RefineWithEquation{result}, pair.equation);
+        if (!maybe) {
+            return boost::none;
+        }
+        result = std::move(*maybe);
+    }
+    return result;
+}
+
+boost::optional<IntervalPolygon> intersect_polygons(const IntervalPolygon& a, const IntervalPolygon& b) {
+    if (a.empty() || b.empty()) {
+        return boost::none;
+    }
+
+    // Clip the polygon with fewer edges against the one with more edges.
+    // This minimizes the number of refine_polygon calls, each of which is O(vertices).
+    if (a.size() <= b.size()) {
+        return intersect_one_way(a, b);
+    } else {
+        return intersect_one_way(b, a);
+    }
+}

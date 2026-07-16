@@ -2,8 +2,6 @@ package billiards.geometry;
 
 import org.apache.commons.math3.util.FastMath;
 
-import java.util.Objects;
-
 // This class is immutable
 public final class Vector2 {
     public final double x;
@@ -79,7 +77,8 @@ public final class Vector2 {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.x, this.y);
+        long bits = Double.doubleToLongBits(this.x) * 31 + Double.doubleToLongBits(this.y);
+        return (int)(bits ^ (bits >>> 32));
     }
 
     @Override

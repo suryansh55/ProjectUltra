@@ -1,7 +1,5 @@
 package billiards.geometry;
 
-import java.util.Objects;
-
 // A sorted interval between two points a and b
 // We assume this is an open interval, since our polygons are open sets
 public final class Interval {
@@ -39,7 +37,8 @@ public final class Interval {
 
     @Override
     public int hashCode() {
-        return Objects.hash(this.min, this.max);
+        long bits = Double.doubleToLongBits(this.min) * 31 + Double.doubleToLongBits(this.max);
+        return (int)(bits ^ (bits >>> 32));
     }
 
     @Override

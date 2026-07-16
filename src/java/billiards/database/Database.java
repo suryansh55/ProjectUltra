@@ -29,7 +29,15 @@ import java.sql.*;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 public final class Database {
 
@@ -306,23 +314,96 @@ public final class Database {
         return storage;
     }
 
+    // Limit concurrent C++ computations to prevent native memory exhaustion
+    // GMP/MPFR multi-precision arithmetic allocates from system heap (not bounded by -Xmx)
+    private static final Semaphore COMPUTE_SEMAPHORE = new Semaphore(Math.max(1, Runtime.getRuntime().availableProcessors() / 4));
+
+    // In-memory LRU cache to avoid redundant C++ computes when the same code sequence
+    // appears at multiple coordinates within the same session (e.g. CS (348, 3684)
+    // at coord 6 and coord 14 of the same hole).
+    private static final int CACHE_MAX_SIZE = 1000;
+    private static final Map<ClassifiedCodeSequence, Optional<Storage>> STORAGE_CACHE =
+        Collections.synchronizedMap(new LinkedHashMap<ClassifiedCodeSequence, Optional<Storage>>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            protected boolean removeEldestEntry(final Map.Entry<ClassifiedCodeSequence, Optional<Storage>> eldest) {
+                return size() > CACHE_MAX_SIZE;
+            }
+        });
+
+    // Periodic progress heartbeat for long-running C++ computes
+    private static final ScheduledExecutorService HEARTBEAT_SCHEDULER =
+        Executors.newSingleThreadScheduledExecutor(r -> {
+            final Thread t = new Thread(r, "compute-heartbeat");
+            t.setDaemon(true);
+            return t;
+        });
+
     // In the future, if we were to switch to Bezier curves, we would simply
     // return the string containing the SVG path, nothing more
     // That would be uber nice
     // But right now we can't do that.
     public static Optional<Storage> loadStorage(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {
 
-        final Optional<Picture> opt = Wrapper.loadPicture(codeSeq, pool);
-
-        if (!opt.isPresent()) {
-            return Optional.empty();
+        // Check cache first (outside semaphore to avoid blocking on cache hits)
+        synchronized (STORAGE_CACHE) {
+            if (STORAGE_CACHE.containsKey(codeSeq)) {
+                return STORAGE_CACHE.get(codeSeq);
+            }
         }
 
-        final Picture picture = opt.get();
+        COMPUTE_SEMAPHORE.acquireUninterruptibly();
+        try {
+            // Double-check after acquiring semaphore to handle race:
+            // another thread may have computed this code while we were waiting
+            synchronized (STORAGE_CACHE) {
+                if (STORAGE_CACHE.containsKey(codeSeq)) {
+                    return STORAGE_CACHE.get(codeSeq);
+                }
+            }
 
-        final Storage storage = convertToStorage(codeSeq, picture.initialAngles, picture.points, picture.equations);
+            final long startMs = System.currentTimeMillis();
+            //System.out.println("[CPP] Starting compute: " + codeSeq.codeType
+            //    + " (length=" + codeSeq.codeLength + ", sum=" + codeSeq.codeSum + ")");
 
-        return Optional.of(storage);
+            final ScheduledFuture<?> heartbeat = HEARTBEAT_SCHEDULER.scheduleAtFixedRate(() -> {
+                final long elapsed = System.currentTimeMillis() - startMs;
+                //System.out.println("[CPP] Still computing: " + codeSeq.codeType
+                //    + " (length=" + codeSeq.codeLength + ", sum=" + codeSeq.codeSum
+                //    + ", " + elapsed / 1000 + "s elapsed)");
+            }, 30, 30, TimeUnit.SECONDS);
+
+            try {
+                final Optional<Picture> opt = Wrapper.loadPicture(codeSeq, pool);
+
+                if (!opt.isPresent()) {
+                    //System.out.println("[CPP] Compute returned empty: " + codeSeq.codeType
+                    //    + " (length=" + codeSeq.codeLength + ") ");
+                    synchronized (STORAGE_CACHE) {
+                        STORAGE_CACHE.put(codeSeq, Optional.empty());
+                    }
+                    return Optional.empty();
+                }
+
+                final Picture picture = opt.get();
+
+                final Storage storage = convertToStorage(codeSeq, picture.initialAngles, picture.points, picture.equations);
+
+                synchronized (STORAGE_CACHE) {
+                    STORAGE_CACHE.put(codeSeq, Optional.of(storage));
+                }
+
+                final long totalSec = (System.currentTimeMillis() - startMs) / 1000;
+                //System.out.println("[CPP] Finished compute: " + codeSeq.codeType
+                //    + " (length=" + codeSeq.codeLength + ", sum=" + codeSeq.codeSum + ", " + totalSec + "s)");
+
+                return Optional.of(storage);
+            } finally {
+                heartbeat.cancel(false);
+            }
+        } finally {
+            COMPUTE_SEMAPHORE.release();
+        }
     }
 
     public static Optional<Tuple2<Storage, ImmutableList<LeftRight>>> loadStorageShowLR(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {

@@ -387,7 +387,8 @@ CodeInfo calculate_all_vector(const CodeSequence& code_sequence, const InitialAn
     std::set<Equation<Cos>> cos_set {};
     std::set<std::pair<Equation<Sin>, Equation<Cos>>> vector_set =  unfold.get_all_vectors();
 
-    for(std::pair<Equation<Sin>, Equation<Cos>> pair : vector_set){
+	// Nick Shan, July, 2026 (Made this a const reference)
+    for(const std::pair<Equation<Sin>, Equation<Cos>>& pair : vector_set){
         sin_set.insert(pair.first);
         cos_set.insert(pair.second);
     }

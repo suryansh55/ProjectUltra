@@ -373,7 +373,6 @@ public class BoyanMenu {
 				final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
 
 				final MutableSortedSet<ClassifiedCodeSequence> allCodes = varyTriangles(4, executor);
-
 				printCodes(allCodes, "garbage.txt", true, false, allCodes.size());
 			}
 			final long endTime = System.currentTimeMillis();

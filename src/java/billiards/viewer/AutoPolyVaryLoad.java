@@ -301,17 +301,13 @@ public class AutoPolyVaryLoad {
 		numToPrintTextField.setPrefColumnCount(3);
 		numToPrintTextField.setText("2");
 
-		return new HBox(10, regularModeRadioButton, middleModeRadioButton, firstMidLastModeRadioButton,
-				numToPrintTextField);
+		return new HBox(10, regularModeRadioButton, middleModeRadioButton, firstMidLastModeRadioButton, numToPrintTextField);
 	}
 
 	public int getMode() {
-		if (regularModeRadioButton.isSelected())
-			return 0;
-		if (middleModeRadioButton.isSelected())
-			return 1;
-		if (firstMidLastModeRadioButton.isSelected())
-			return 2;
+		if (regularModeRadioButton.isSelected()) return 0;
+		if (middleModeRadioButton.isSelected()) return 1;
+		if (firstMidLastModeRadioButton.isSelected()) return 2;
 		return -1;
 	}
 

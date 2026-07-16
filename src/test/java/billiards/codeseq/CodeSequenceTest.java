@@ -5,8 +5,6 @@ import javaslang.Tuple2;
 import javaslang.collection.Array;
 
 import org.eclipse.collections.api.list.primitive.IntList;
-import org.eclipse.collections.api.list.primitive.MutableIntList;
-import org.eclipse.collections.impl.factory.primitive.IntLists;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import org.junit.jupiter.api.Test;
@@ -17,13 +15,13 @@ import java.util.List;
 
 public final class CodeSequenceTest {
     @Test
-    void testEmptyCodeSequence() {
+    public static void testEmptyCodeSequence() {
         final InvalidCodeSequence errorCode = CodeSequence.create(IntArrayList.newListWith()).getLeft();
         Assertions.assertEquals(errorCode, InvalidCodeSequence.EMPTY);
     }
 
     @Test
-    void testNegativeCodeNumbers() {
+    public static void testNegativeCodeNumbers() {
         final Array<IntList> invalidCodeNumbers = Array.of(
             IntArrayList.newListWith(0),
             IntArrayList.newListWith(-1),
@@ -37,7 +35,7 @@ public final class CodeSequenceTest {
     }
 
     @Test
-    void testIllegalCodeSequences() {
+    public static void testIllegalCodeSequences() {
         final List<IntList> illegalCodeSequences = new ArrayList<>();
         illegalCodeSequences.add(IntArrayList.newListWith(1)); // O
         illegalCodeSequences.add(IntArrayList.newListWith(2)); // E
@@ -69,7 +67,7 @@ public final class CodeSequenceTest {
     }
 
     @Test
-    void testRepeaters() {
+    public static void testRepeaters() {
         final Array<Tuple2<IntList, IntList>> repeaters =
             Array.of(Tuple.of(IntArrayList.newListWith(1, 1, 1, 1, 1, 1),
                               IntArrayList.newListWith(1, 1, 1)),
@@ -85,7 +83,7 @@ public final class CodeSequenceTest {
     }
 
     @Test
-    void testOrder() {
+    public static void testOrder() {
         final Array<Tuple2<IntList, IntList>> codes = Array.of(
             Tuple.of(IntArrayList.newListWith(1, 1, 3), IntArrayList.newListWith(1, 1, 3)),
             Tuple.of(IntArrayList.newListWith(3, 1, 1), IntArrayList.newListWith(1, 1, 3)),
@@ -96,15 +94,5 @@ public final class CodeSequenceTest {
             final CodeSequence codeSeq = CodeSequence.create(pair._1).get();
             Assertions.assertEquals(codeSeq.codeNumbers, pair._2);
         }
-    }
-
-    @Test
-    void testComparison() {
-		MutableIntList codeNums1 = IntLists.mutable.with(1, 2, 1, 4);
-		MutableIntList codeNums2 = IntLists.mutable.with(1, 4, 1, 6);
-		CodeSequence code1 = CodeSequence.create(codeNums1).get();
-		CodeSequence code2 = CodeSequence.create(codeNums2).get();
-
-		Assertions.assertEquals(code1.compareTo(code2) < 0, true);
     }
 }

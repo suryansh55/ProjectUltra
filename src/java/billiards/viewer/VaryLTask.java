@@ -141,6 +141,7 @@ public final class VaryLTask extends Task<ObservableList<Storage>> {
                 return this.partialResults.get();
             } else {
                 System.err.println("Terminating because of uncaught exception when finding codeSet");
+				shotExecutor.shutdownNow();
                 throw e;
             }
         }

@@ -243,14 +243,22 @@ public final class CoverStuff {
             final String str = tokens.next();
             final int index = Integer.parseInt(str);
 
-            final ClassifiedCodeSequence stable = stables.get(index);
-            stableCover.put(square, stable);
+            if (index >= 0 && index < stables.size()) {
+                final ClassifiedCodeSequence stable = stables.get(index);
+                stableCover.put(square, stable);
+            } else {
+                System.err.println("Warning: cover.txt references stable index " + index + " but stables.txt has only " + stables.size() + " entries. Skipping.");
+            }
         } else if (token.equals("T")) {
             final String str = tokens.next();
             final int index = Integer.parseInt(str);
 
-            final Triple triple = triples.get(index);
-            tripleCover.put(square, triple);
+            if (index >= 0 && index < triples.size()) {
+                final Triple triple = triples.get(index);
+                tripleCover.put(square, triple);
+            } else {
+                System.err.println("Warning: cover.txt references triple index " + index + " but triples.txt has only " + triples.size() + " entries. Skipping.");
+            }
         }
          else if (token.equals("D")) {
 

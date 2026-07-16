@@ -160,6 +160,8 @@ public final class SmallCoverWindow {
             if (mrr) {
                 final ArrayList<ConvexPolygon> newSmallCoverAreas = new ArrayList<>();
                 smallCoverAreas.clear();  // Clear old ones before adding new ones
+                coverWindow.appendStablesInfo("// Small Cover");
+                coverWindow.appendTriplesInfo("// Small Cover");
                 String[] squares = polygonString.split("\n");
 
                 for (int i = 0; i < squares.length; i++) {
@@ -226,7 +228,7 @@ public final class SmallCoverWindow {
         inputHBox.setSpacing(10);
         inputHBox.setAlignment(Pos.CENTER);
 
-        topText.setPromptText("Squares, represented as lower x bound, upper x bound, lower y bound, upper x bound. Each number should be a fractional value of Pi/2. \nFor example, 0 1 0 1 covers then entire viewer.");
+        topText.setPromptText("Squares, represented as lower x bound, upper x bound, lower y bound, upper x bound. Each number should be a fractional value of Pi. \nFor example, 0 1 0 1 covers then entire viewer.");
         topText.setPrefColumnCount(60);
         topText.setPrefRowCount(10);
         topText.setWrapText(true);
@@ -422,7 +424,7 @@ public final class SmallCoverWindow {
         this.stage.toFront();
     }
 
-    void replacePolygons(String newPolygons) {
-        this.topText.setText(newPolygons.trim());
+    void addPolygons(String newPolygons) {
+        this.topText.setText(newPolygons.trim() + "\n" + topText.getText());
     }
 }

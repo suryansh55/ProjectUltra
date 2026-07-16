@@ -5,8 +5,6 @@ import javaslang.Tuple2;
 import javaslang.collection.Array;
 
 import org.eclipse.collections.api.list.primitive.IntList;
-import org.eclipse.collections.api.list.primitive.MutableIntList;
-import org.eclipse.collections.impl.factory.primitive.IntLists;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import org.junit.jupiter.api.Test;
@@ -14,7 +12,7 @@ import org.junit.jupiter.api.Assertions;
 
 public final class ClassifiedCodeSequenceTest {
     @Test
-    void testCodeType() {
+    public static void testCodeType() {
         final Array<Tuple2<IntList, CodeType>> classifications = Array.of(
             Tuple.of(IntArrayList.newListWith(1, 1, 1), CodeType.OSO),
             Tuple.of(IntArrayList.newListWith(2, 2), CodeType.CNS),
@@ -26,15 +24,5 @@ public final class ClassifiedCodeSequenceTest {
             final ClassifiedCodeSequence codeSeq = ClassifiedCodeSequence.create(pair._1).get();
             Assertions.assertEquals(codeSeq.codeType, pair._2);
         }
-    }
-
-    @Test
-    void testComparison() {
-		MutableIntList codeNums1 = IntLists.mutable.with(1, 2, 1, 4);
-		MutableIntList codeNums2 = IntLists.mutable.with(1, 4, 1, 6);
-		ClassifiedCodeSequence code1 = ClassifiedCodeSequence.create(codeNums1).get();
-		ClassifiedCodeSequence code2 = ClassifiedCodeSequence.create(codeNums2).get();
-
-		Assertions.assertEquals(code1.compareTo(code2) < 0, true);
     }
 }

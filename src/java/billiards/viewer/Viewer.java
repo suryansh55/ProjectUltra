@@ -128,6 +128,7 @@ import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextArea;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -370,6 +371,7 @@ public final class Viewer {
 	final TextField expandoElements = new TextField();
 	// caculate expando button
 	final Button expandoCalculateButton = new Button();
+    final Button loadHolesBtn = new Button();
 
 	final GridPane iterationsGridPane = new GridPane();
 
@@ -1887,6 +1889,14 @@ public final class Viewer {
 		btnGo.setText("Go");
 		btnGo.setTooltip(Utils.toolTip("Go to the line in the OBO file specified"));
 		Utils.colorButton(btnGo, Color.SKYBLUE, clickColor);
+	
+
+		// Nick Shan, July, 2026
+		// Load Holes button
+        loadHolesBtn.setText("Load Holes");
+        loadHolesBtn.setTooltip(Utils.toolTip("Load hole coordinates from tmp/holes.txt"));
+        Utils.colorButton(loadHolesBtn, Color.LIGHTPINK, clickColor);
+        loadHolesBtn.setOnAction(e -> loadHolesFromFile());
 
 		btnGo.setOnAction(event -> {
 			final String indexString = lineNumberTxt.getText();
@@ -4037,7 +4047,7 @@ public final class Viewer {
 		// Replaced "Load Directory" with "LiCover"
 		// boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn,
 		// btnLoadFile, compareCheckBox, saveV3Btn);
-		boyanMenuExtra.getChildren().addAll(smallCoverButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+		boyanMenuExtra.getChildren().addAll(smallCoverButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn, loadHolesBtn);
 
 		// coverExtraHBox.getChildren().addAll(halfTripleBtn, cornerBtn, unstableBtn);
 		zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
@@ -5031,7 +5041,6 @@ public final class Viewer {
 		}
 
 		final Array<ClassifiedCodeSequence> classCodeSeqs = Array.ofAll(allCodes);
-
 		if (drawPictureCheckBox.isSelected()) {
 			final ExecutorService drawExecutor = Executors.newFixedThreadPool(Utils.numThreads);
 			final DrawPictureTask task = new DrawPictureTask(classCodeSeqs, pool, drawExecutor, false, false);
@@ -6963,6 +6972,66 @@ public final class Viewer {
 			}
 		}
 	}
+
+	public void loadHolesFromFile() {
+        final Path path = Paths.get("tmp/holes.txt");
+        if (!Files.exists(path)) {
+            final Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Load Holes");
+            alert.setHeaderText("File Not Found");
+            alert.setContentText("tmp/holes.txt does not exist. Run a cover calculation first.");
+            alert.showAndWait();
+            return;
+        }
+
+        final ArrayList<String> lines;
+        try {
+            lines = new ArrayList<>(Files.readAllLines(path));
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+
+		lines.removeIf(line -> line == null || line.trim().isEmpty());
+
+        final int maxLines = lines.size();
+		final TextInputDialog dialog = new TextInputDialog(String.valueOf(maxLines));
+        dialog.setTitle("Load Holes");
+        dialog.setHeaderText("How many holes to load?");
+        dialog.setContentText("How many holes to load? (max " + maxLines + "):");
+
+        final Optional<String> result = dialog.showAndWait();
+        result.ifPresent(input -> {
+            try {
+                final int n = Math.min(Integer.parseInt(input.trim()), maxLines);
+                final StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < n; i++) {
+                    sb.append(lines.get(i)).append('\n');
+                }
+                loadHolesAsOBO(sb.toString());
+            } catch (final NumberFormatException e) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("Load Holes");
+                alert.setHeaderText("Invalid Number");
+                alert.setContentText("Please enter a valid integer.");
+                alert.showAndWait();
+            }
+        });
+    }
+
+    public void loadHolesAsOBO(final String coords) {
+        final Path path = Paths.get("tmp/holes_obo.txt");
+        try {
+            Files.write(path, coords.getBytes());
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        fileCodeSequences = parseOBOFile(path);
+        if (!fileCodeSequences.isEmpty()) {
+            lineNumberTxt.setText("1");
+            setOBO(0, pool, executorService);
+        }
+    }
 
 	public static ArrayList<String> parseOBOFile(final Path path) {
 		final ArrayList<String> list = new ArrayList<>();

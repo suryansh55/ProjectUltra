@@ -7,10 +7,13 @@ apply plugin: TestingModelBasePlugin
 // At top level of build.gradle
 def currentOs = org.gradle.internal.os.OperatingSystem.current()
 def currentArch = System.getProperty("os.arch")
-def isWindows = currentOs.isWindows()
-def isLinux = currentOs.isLinux()
+def osName = org.gradle.internal.os.OperatingSystem.current()
+def platform = org.gradle.internal.os.OperatingSystem.current().isMacOsX() ? 'mac-aarch64' :
+               org.gradle.internal.os.OperatingSystem.current().isLinux() ? 'linux' : 'win'
+def isLinux = org.gradle.internal.os.OperatingSystem.current().isLinux()
 def isMac = currentOs.isMacOsX()
-def platform  = isWindows ? "win" : (isMac ? (currentArch.contains("aarch64") || currentArch.contains("arm64") ? "mac-aarch64" : "mac-x64") : "linux")
+def isWindows = currentOs.isWindows()
+def javafxVersion = '21.0.1'
 ext.requestedTasks = gradle.startParameter.taskNames;
 ext.isBuild = requestedTasks.any { it == 'build' || it.endsWith(':build') }
 
@@ -69,6 +72,10 @@ dependencies {
     implementation 'org.apache.commons:commons-lang3:3.7'  // can remove this now I think?
     implementation 'org.apache.commons:commons-io:1.3.2'
     implementation 'io.javaslang:javaslang:2.0.5'
+    implementation "org.openjfx:javafx-base:${javafxVersion}:${platform}"
+    implementation "org.openjfx:javafx-controls:${javafxVersion}:${platform}"
+    implementation "org.openjfx:javafx-graphics:${javafxVersion}:${platform}"
+    implementation "org.openjfx:javafx-fxml:${javafxVersion}:${platform}"
     implementation 'org.xerial:sqlite-jdbc:3.41.2.2'
     implementation 'net.java.dev.jna:jna:5.13.0'
     implementation 'org.fxmisc.richtext:richtextfx:0.10.4'
@@ -309,7 +316,7 @@ model {
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (platform == "mac-aarch64" ) {
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system','-lboost_unit_test_framework'
+                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_unit_test_framework'
                 } else if (platform == "mac-x64" ) {
                     linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt','-lboost_unit_test_framework'
                 } else if (isWindows) {
