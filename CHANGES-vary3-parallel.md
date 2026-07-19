@@ -241,6 +241,75 @@ diff the sorted non-`//` output as a final on-cluster equivalence check.
 
 ---
 
+# Rorqual deployment notes — 2026-07-19
+
+Hard-won facts from actually building this on rorqual.alliancecan.ca (Alliance Canada /
+Calcul Québec; account `tokarsky`, project `def-pass`). Written down so the next deploy
+takes 10 minutes instead of an evening.
+
+## Where things live
+
+- Code: branch **`suryansh-vary3-parallel-dfs`** on **github.com/suryansh55/ProjectUltra**
+  (private → clone with GitHub username + personal access token). Two commits: the quick wins +
+  parallel DFS, and the Makefile `-std=c++23` fix. The branch was briefly on BlitzWrecker's repo
+  and was moved.
+- Cluster clone: `~/projects/def-pass/tokarsky/BilliardsEverything-parallel` (next to `4A-scripts`).
+- Deploy target: `4A-scripts/common/remote/bin/` (`vary3cmd` + `libbackend.so`; July-12 versions
+  kept as `*.bak-jul12`).
+
+## Build recipe that works
+
+```bash
+module load StdEnv/2023 gcc/14.3 boost/1.88.0 mpfi/1.5.4 eigen/3.4.0 tbb/2021.10.0
+cd BilliardsEverything-parallel
+nohup bash build_backend.sh > build.log 2>&1 &   # per-file g++ loop; survives disconnects, resumable
+# ends with: DONE -> build/libs/backend/shared/libbackend.so
+cp build/libs/backend/shared/libbackend.so src/scripts/
+cd src/scripts && make                            # needs gcc 14.3 in PATH (check: which g++)
+```
+
+`build_backend.sh` (in the clone) compiles each backend .cpp to `build/obj/` then links, with the
+Gradle Linux flags + `-DCOMPUTE_CANADA` (the flag switches `<eigen3/Eigen/Dense>` →
+`<Eigen/Dense>`; Alliance modules don't use the `eigen3/` prefix — general.hpp:11).
+
+## Traps (each one cost us a failed attempt)
+
+1. **Gradle is effectively unusable on the login nodes.** Its daemon registry, checksum cache,
+   and file locks all fail on the network filesystems (home/project/scratch), and the JVM sizes
+   thread pools for the node's 192 cores → "unable to create native threads" against the per-user
+   ulimit. Workarounds exist (`GRADLE_USER_HOME=/tmp/...`, `--no-daemon`,
+   `-XX:ActiveProcessorCount=4`) but the per-file g++ script sidesteps all of it. Don't fight it.
+2. **The saved module collection `cover` is not trustworthy** — it was written with typos
+   (`mdoule load java...`, `ipykernal`), so `module restore cover` silently skips lines. Load the
+   six modules explicitly. Every new SSH session needs them again.
+3. **The committed Makefile said `-std=c++17`** — the `-std=c++23` fix (needed for `std::views` /
+   `std::ranges::to` in vary3cmd.cpp/vary.cpp) was an uncommitted local edit in Khuu's folder.
+   Now committed on the branch. GCC **14** is required either way (`ranges::to` is GCC-14-only);
+   the default/gentoo `g++` is 12 — `which g++` must NOT show `.../gentoo/.../gcc-bin/12/g++`.
+4. **rsync paths are home-relative**: `user@host:projects/...` created a literal `~/projects` dir
+   when the real project space is `~/links/projects`. Git clone into the right place avoids this.
+5. Long builds on flaky connections: run under `nohup` (or tmux) — a dropped SSH session
+   otherwise kills the compile.
+
+## Smoke test (login node, ~30s)
+
+```bash
+cd src/scripts/build
+./vary3cmd 40.3 59.6 0 1500 4 1 0 0 0 1 REGULAR | tail -6
+```
+
+Must print `// vary3 parallel dfs: ... subtrees across 4 shots ...` and end at code **1158**
+(the validated Mac result — cross-platform correctness gate).
+
+## First real job
+
+`coords.txt`: `0.114189 13.1082`; `coords_settings.toml`: `max=39999` to match Jeff's 2026-07-19
+baseline (restore 53999 after), `cpus=32`. Submit with `python3 4A-scripts/vary3/remote/dispatch.py`.
+Baseline to beat: **1h 20m 49s at ~52% CPU on 16 threads**; expected ~20–25 min on 32 CPUs.
+Validate: OSO/OSNO output lines must match Jeff's `.out` exactly; check `seff <jobid>`.
+
+---
+
 ## Next step (IMPLEMENTED 2026-07-19 — see section above)
 
 Subtree-split parallelization of the DFS: expand each shot's tree breadth-first to a shallow
