@@ -348,7 +348,6 @@ model {
             binaries.all {
 
                 cppCompiler.define "NDEBUG"
-		cppCompiler.define "COMPUTE_CANADA"
                 cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'
                 // Aug,8 2025 Marco,Mai
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
@@ -405,7 +404,7 @@ model {
                 // for Aplle Arm platnorm there is an instruction to use java17 natively
                 if (platform == "mac-aarch64" ) {
                     cppCompiler.args '-I/opt/homebrew/include'
-                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_system','-lboost_unit_test_framework'
+                    linker.args '-L/opt/homebrew/lib', '-L/opt/homebrew/opt/', '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread', '-lboost_unit_test_framework' // boost_system is header-only since Boost 1.69 (same fix as the shared-lib link)
                 } else if (platform == "mac-x64" ) {
                     linker.args  '-lgmp', '-lmpfr', '-lmpfi', '-lsqlite3', '-ltbb', '-lboost_thread-mt', '-lboost_system-mt','-lboost_unit_test_framework'
                 } else if (isWindows) {

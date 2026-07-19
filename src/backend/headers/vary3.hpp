@@ -50,5 +50,16 @@ void iterateFireAway3(
 
 std::vector<std::vector<int32_t>> fireAway3(const int32_t movesMin, const int32_t movesMax,const float64_t xAngle, const float64_t yAngle,const float64_t pos, const std::string reqType);
 
+// Parallel variant of fireAway3 for multi-shot runs: expands each position's
+// search tree breadth-first to a frontier and runs every subtree as a task on
+// ONE shared thread pool, so speed scales with cores instead of capping at
+// ~shots. Returns one code list per position; each list holds the same codes
+// fireAway3 would return for that position (order may differ).
+std::vector<std::vector<std::vector<int32_t>>> fireAway3Parallel(
+    int32_t movesMin, int32_t movesMax,
+    float64_t xAngle, float64_t yAngle,
+    const std::vector<float64_t>& positions,
+    const std::string& reqType);
+
 #endif // VARY3_HPP
 

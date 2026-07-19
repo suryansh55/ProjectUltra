@@ -77,15 +77,14 @@ void iterateFireAwayCS2(
 
     // parallel code verify
     std::atomic<int> inflight{0};
-    // setting limit for submition to the memory
-    float usage = 0.4;
-    if (max >30000){usage = 0.04;}
-    else if (max >25000){usage=0.08;}
-    else if (max >15000){usage=0.1;}
-    else if (max >10000){usage=0.2;}
-    else if (max >6000){usage = 0.3;};
-    const int MAX_INFLIGHT = compute_max_inflight(usage, 16384);  // tune based on memory
-    unsigned int cores = std::thread::hardware_concurrency();
+    // SLURM-aware core count: hardware_concurrency() reports the whole node,
+    // not this job's allocation.
+    const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
+    unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
+    // Each queued task captures a code vector copy (2*max * 4 bytes).
+    // Cap at cores*8 to prevent OOM from thousands of queued lambda closures
+    // (same fix as vary3.cpp; the old memory-fraction limit allowed 10^5+).
+    const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
     std::mutex codesFoundMutex;
 
     try{
@@ -122,6 +121,7 @@ void iterateFireAwayCS2(
 
                             // detect if hitting limit, if yes wait
                             while (inflight >= MAX_INFLIGHT) {
+                                if (cancel_flag().load(std::memory_order_relaxed)) break;
                                 std::this_thread::sleep_for(std::chrono::microseconds(100));  // or use condition_variable
                             }
                             inflight.fetch_add(1, std::memory_order_relaxed);
