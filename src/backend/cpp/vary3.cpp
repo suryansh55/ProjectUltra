@@ -65,13 +65,18 @@ void iterateFireAway3(
     const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
     unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
     if (cores == 0) cores = 1;
+    
+    // More aggressive CPU usage for HPC clusters
+    if (cores > 16) {
+        cores = std::min(cores, static_cast<unsigned int>(std::thread::hardware_concurrency()));
+    }
 
     std::mutex codesFoundMutex;
 
     // Never try to BFS deeper than the traversal itself goes.
     // breadthDepth = (breadthDepth <= 0) ? max : std::min(breadthDepth, max);
     int32_t breadthDepth = 16;
-    int32_t tasksPerCore = 4;
+    int32_t tasksPerCore = 8;  // Increased from 4 to better utilize multiple cores
 
     // Stop expanding once the frontier has enough independent branches to give
     // every core a few tasks to steal from — not just one each, since branch
@@ -185,108 +190,117 @@ void iterateFireAway3(
             }
 
             // ---------- Phase 2: one work-stealing task per surviving branch ----------
-            for (auto& node : frontier) {
-                tg.run([node, min, max, initPosition, &codesFound, &codesFoundMutex, &allowed]() {
-                    if (cancel_flag().load(std::memory_order_relaxed)) return;
+            // Optimize for HPC clusters by reducing task overhead and using more threads
+            const size_t branchCount = frontier.size();
+            if (branchCount > 0) {
+                // Use all available cores for processing the frontier branches
+                std::size_t actualCores = std::min(cores, static_cast<unsigned int>(branchCount));
+                tbb::task_arena largeArena(actualCores);
+                largeArena.execute([&] {
+                    for (auto& node : frontier) {
+                        tg.run([node, min, max, initPosition, &codesFound, &codesFoundMutex, &allowed]() {
+                            if (cancel_flag().load(std::memory_order_relaxed)) return;
 
-                    // Identical algorithm to the original DFS, scoped to this
-                    // branch's own local stack / sideSum / code — no shared
-                    // state with sibling branches on other worker threads.
-                    struct Frame {
-                        float64_t specMin;
-                        float64_t specMax;
-                        int32_t swapValue;
-                        TriangleBilliard cbilliard;
-                        bool leftTried = false;
-                        bool rightTried = false;
-                        bool goLeft = false;
-                    };
+                            // Identical algorithm to the original DFS, scoped to this
+                            // branch's own local stack / sideSum / code — no shared
+                            // state with sibling branches on other worker threads.
+                            struct Frame {
+                                float64_t specMin;
+                                float64_t specMax;
+                                int32_t swapValue;
+                                TriangleBilliard cbilliard;
+                                bool leftTried = false;
+                                bool rightTried = false;
+                                bool goLeft = false;
+                            };
 
-                    std::vector<Frame> stack;
-                    stack.reserve(std::max(0, (max - node.depth)) * 2 + 1);
-                    int32_t depth = node.depth;
+                            std::vector<Frame> stack;
+                            stack.reserve(std::max(0, (max - node.depth)) * 2 + 1);
+                            int32_t depth = node.depth;
 
-                    SideSum localSideSum = node.sideSum;
-                    std::vector<int32_t> localCode = node.code;
+                            SideSum localSideSum = node.sideSum;
+                            std::vector<int32_t> localCode = node.code;
 
-                    stack.push_back(Frame{node.specMin, node.specMax, 0, node.cbilliard, false, false, false});
+                            stack.push_back(Frame{node.specMin, node.specMax, 0, node.cbilliard, false, false, false});
 
-                    while (!stack.empty()) {
-                        if (cancel_flag().load(std::memory_order_relaxed)) return;
+                            while (!stack.empty()) {
+                                if (cancel_flag().load(std::memory_order_relaxed)) return;
 
-                        Frame& frame = stack.back();
+                                Frame& frame = stack.back();
 
-                        if (depth >= max) {
-                            if (!localCode.empty()) localCode.pop_back();
-                            depth--;
-                            frame.goLeft ? localSideSum.sub(frame.swapValue) : localSideSum.add(frame.swapValue);
-                            stack.pop_back();
-                            continue;
-                        }
+                                if (depth >= max) {
+                                    if (!localCode.empty()) localCode.pop_back();
+                                    depth--;
+                                    frame.goLeft ? localSideSum.sub(frame.swapValue) : localSideSum.add(frame.swapValue);
+                                    stack.pop_back();
+                                    continue;
+                                }
 
-                        float64_t specialAngle = frame.cbilliard.getSpecialAngle();
+                                float64_t specialAngle = frame.cbilliard.getSpecialAngle();
 
-                        if (!frame.leftTried && !frame.rightTried) {
-                            if (depth > min) {
-                                if (std::abs(localSideSum.sum()) < OFFSET && frame.cbilliard.side == 2 &&
-                                    frame.cbilliard.orient == 1) {
+                                if (!frame.leftTried && !frame.rightTried) {
+                                    if (depth > min) {
+                                        if (std::abs(localSideSum.sum()) < OFFSET && frame.cbilliard.side == 2 &&
+                                            frame.cbilliard.orient == 1) {
 
-                                    float64_t perfectAngle = std::atan2(
-                                        frame.cbilliard.vertexA.y,
-                                        frame.cbilliard.vertexA.x + initPosition);
+                                            float64_t perfectAngle = std::atan2(
+                                                frame.cbilliard.vertexA.y,
+                                                frame.cbilliard.vertexA.x + initPosition);
 
-                                    if (frame.specMax > perfectAngle && perfectAngle > frame.specMin) {
-                                        boost::optional<CodeType> codeType = getCodeType(localCode);
-                                        if (codeType && is_code_type_in_list(codeType.get(), allowed)) {
-                                            std::lock_guard<std::mutex> lock(codesFoundMutex);
-                                            codesFound.push_back(localCode);
+                                            if (frame.specMax > perfectAngle && perfectAngle > frame.specMin) {
+                                                boost::optional<CodeType> codeType = getCodeType(localCode);
+                                                if (codeType && is_code_type_in_list(codeType.get(), allowed)) {
+                                                    std::lock_guard<std::mutex> lock(codesFoundMutex);
+                                                    codesFound.push_back(localCode);
+                                                }
+                                            }
                                         }
                                     }
+
+                                    frame.leftTried = true;
+
+                                    if (frame.specMax > specialAngle) {
+                                        TriangleBilliard newbilliard = frame.cbilliard.getNext(true);
+                                        int32_t rightSwap = 3 - frame.cbilliard.side - newbilliard.side;
+
+                                        localSideSum.add(rightSwap);
+                                        localCode.emplace_back(rightSwap);
+                                        stack.push_back(Frame{
+                                            std::max(specialAngle, frame.specMin), frame.specMax,
+                                            rightSwap, newbilliard,
+                                            false, false, true
+                                        });
+                                        depth++;
+                                        continue;
+                                    }
                                 }
+
+                                if (!frame.rightTried) {
+                                    frame.rightTried = true;
+
+                                    if (frame.specMin < specialAngle) {
+                                        TriangleBilliard newbilliard = frame.cbilliard.getNext(false);
+                                        int32_t leftSwap = 3 - frame.cbilliard.side - newbilliard.side;
+
+                                        localSideSum.sub(leftSwap);
+                                        localCode.emplace_back(leftSwap);
+                                        stack.push_back(Frame{
+                                            frame.specMin, std::min(specialAngle, frame.specMax),
+                                            leftSwap, newbilliard,
+                                            false, false, false
+                                        });
+                                        depth++;
+                                        continue;
+                                    }
+                                }
+
+                                // Both directions done — backtrack
+                                if (!localCode.empty()) localCode.pop_back();
+                                depth--;
+                                frame.goLeft ? localSideSum.sub(frame.swapValue) : localSideSum.add(frame.swapValue);
+                                stack.pop_back();
                             }
-
-                            frame.leftTried = true;
-
-                            if (frame.specMax > specialAngle) {
-                                TriangleBilliard newbilliard = frame.cbilliard.getNext(true);
-                                int32_t rightSwap = 3 - frame.cbilliard.side - newbilliard.side;
-
-                                localSideSum.add(rightSwap);
-                                localCode.emplace_back(rightSwap);
-                                stack.push_back(Frame{
-                                    std::max(specialAngle, frame.specMin), frame.specMax,
-                                    rightSwap, newbilliard,
-                                    false, false, true
-                                });
-                                depth++;
-                                continue;
-                            }
-                        }
-
-                        if (!frame.rightTried) {
-                            frame.rightTried = true;
-
-                            if (frame.specMin < specialAngle) {
-                                TriangleBilliard newbilliard = frame.cbilliard.getNext(false);
-                                int32_t leftSwap = 3 - frame.cbilliard.side - newbilliard.side;
-
-                                localSideSum.sub(leftSwap);
-                                localCode.emplace_back(leftSwap);
-                                stack.push_back(Frame{
-                                    frame.specMin, std::min(specialAngle, frame.specMax),
-                                    leftSwap, newbilliard,
-                                    false, false, false
-                                });
-                                depth++;
-                                continue;
-                            }
-                        }
-
-                        // Both directions done — backtrack
-                        if (!localCode.empty()) localCode.pop_back();
-                        depth--;
-                        frame.goLeft ? localSideSum.sub(frame.swapValue) : localSideSum.add(frame.swapValue);
-                        stack.pop_back();
+                        });
                     }
                 });
             }
