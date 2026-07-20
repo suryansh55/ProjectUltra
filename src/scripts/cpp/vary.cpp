@@ -201,7 +201,7 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
 
     if(args.searchFor.cs) {
         // Each phase needs its own pool: boost::asio::thread_pool cannot be
-        // reused after join() � work posted afterwards silently never runs.
+        // reused after join() — work posted afterwards silently never runs.
         boost::asio::thread_pool csPool(numThreads);
 
         float64_t xAngle = xRad;
@@ -235,13 +235,56 @@ std::set<ClassifiedCodeSequence> findCodesVary3(const Vary3Args& args) {
     const float64_t increment = base / (args.shots + 1);
 
     if(args.searchFor.oso || args.searchFor.cns || args.searchFor.ons || args.searchFor.osno) {
+        // Default path: BFS-frontier subtree parallelization. Every shot's DFS
+        // tree is split into many subtree tasks on one shared pool, so the run
+        // scales with cores instead of capping at ~shots single-threaded
+        // traversals. BILLIARDS_PARALLEL_DFS=0 restores one task per shot.
+        const char* pdEnv = std::getenv("BILLIARDS_PARALLEL_DFS");
+        const bool parallelDfs = !(pdEnv && pdEnv[0] == '0');
+
+        if(parallelDfs) {
+            std::vector<float64_t> positions;
+            positions.reserve(args.shots);
+            for(int count = 1; count <= args.shots; ++count) {
+                positions.push_back(increment * count);
+            }
+
+            const auto phaseStart = std::chrono::steady_clock::now();
+
+            const int32_t maxSideSum = std::holds_alternative<int32_t>(args.maxSideSum) ? std::get<int32_t>(args.maxSideSum) : std::max(std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).oso, std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).osno);
+            const std::vector<std::vector<std::vector<int32_t>>> perShot =
+                fireAway3Parallel(args.minSideSum, maxSideSum, xRad, yRad, positions,
+                    getReqTypesStr(args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno));
+
+            for(size_t s = 0; s < perShot.size(); ++s) {
+                for(const auto& code : perShot[s]) {
+                    if(boost::optional<ClassifiedCodeSequence> seq = convert(code)) {
+                        codeSeqs.insert(seq.get());
+                    }
+                }
+                std::cout << "// shot " << (s + 1) << "/" << args.shots << ": "
+                          << perShot[s].size() << " raw codes" << std::endl;
+            }
+            const std::chrono::duration<double> elapsed = std::chrono::steady_clock::now() - phaseStart;
+            std::cout << "// vary3 phase done in " << elapsed.count() << "s" << std::endl;
+
+            return codeSeqs;
+        }
+
         boost::asio::thread_pool pool(numThreads);
+
+        // One task per shot over the full side-sum range. The former
+        // subdivision by side-sum chunks did not partition the search:
+        // fireAway3 always traverses from the root up to its max, so the chunk
+        // ending at maxSideSum re-walked the whole tree while the shallow
+        // chunks duplicated its prefix — and depths exactly on a chunk
+        // boundary were emitted by neither side (emission requires
+        // min < depth < max).
         for(int count = 1; count <= args.shots; ++count) {
             const float64_t pos = increment * count;
             boost::asio::post(pool, [xRad, yRad, pos, count, &codeSeqs, &codeSeqsMutex, &args]() {
                 const auto shotStart = std::chrono::steady_clock::now();
-                const int32_t maxSideSum = std::holds_alternative<int32_t>(args.maxSideSum) ? std::get<int32_t>(args.maxSideSum) 
-                    : std::max(std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).oso, std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).osno);
+                const int32_t maxSideSum = std::holds_alternative<int32_t>(args.maxSideSum) ? std::get<int32_t>(args.maxSideSum) : std::max(std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).oso, std::get<CodeTypeCollection<int32_t>>(args.maxSideSum).osno);
                 std::vector<std::vector<int32_t>> foundCodes = fireAway3(args.minSideSum, maxSideSum,
                     xRad, yRad, pos, getReqTypesStr(args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno));
                 std::set<ClassifiedCodeSequence> local;
@@ -282,7 +325,7 @@ std::set<ClassifiedCodeSequence> findCodesVary4(const Vary4Args& args) {
 
     if(args.searchFor.cs) {
         // Dedicated pool: a boost::asio::thread_pool cannot be reused after
-        // join() � work posted afterwards silently never runs.
+        // join() — work posted afterwards silently never runs.
         boost::asio::thread_pool csPool(numThreads);
 
         float64_t xAngle = xRad;
@@ -312,7 +355,7 @@ std::set<ClassifiedCodeSequence> findCodesVary4(const Vary4Args& args) {
     }
 
     if(args.searchFor.oso || args.searchFor.cns || args.searchFor.ons || args.searchFor.osno) {
-        // Single vary4 job � run it inline; a pool with one task adds nothing.
+        // Single vary4 job — run it inline; a pool with one task adds nothing.
         std::vector<std::vector<int32_t>> foundCodes = fireAway4(args.minSideSum, args.maxSideSum,
             xRad, yRad, getReqTypesStr(args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno));
         for(const auto& code : foundCodes) {
@@ -361,9 +404,9 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
             int32_t osnoMaxSideSum = args.maxOSNOSideSum.value_or(args.maxSideSum);
             std ::cout << "// Inspecting Point (" << x << ", " << y << ")" << std::endl;
             Vary3Args CS = Vary3Args{x, y, args.minSideSum, csMaxSideSum, args.shots,
-                CodeTypeSet{false, args.searchFor.cs, false, false, false}};
+                false, args.searchFor.cs, false, false, false};
             Vary3Args nonCS = Vary3Args{x, y, args.minSideSum, std::max(osoMaxSideSum, osnoMaxSideSum), args.shots,
-                CodeTypeSet{args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno}};
+                args.searchFor.oso, false, args.searchFor.cns, args.searchFor.ons, args.searchFor.osno};
 
             std::set<ClassifiedCodeSequence> csCodes = findCodesVary3(CS);
             std::set<ClassifiedCodeSequence> nonCSCodes = findCodesVary3(nonCS);
@@ -418,4 +461,3 @@ std::vector<std::set<ClassifiedCodeSequence>> findCodesPolyVary(const VaryAutoPo
 
     return codes;
 }
-
