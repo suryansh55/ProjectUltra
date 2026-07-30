@@ -24,13 +24,13 @@ import java.util.Arrays;
 
 public class StablesWindow {
 
-    private static String topStablesString = Utils.readFromFile(Viewer.tmpDir + "/stables_topStables.txt");
+    private String topStablesString;
 
-    private static String unStablesString = Utils.readFromFile(Viewer.tmpDir + "/stables_unstables.txt");
+    private String unStablesString;
 
-    private static String bottomStablesString = Utils.readFromFile(Viewer.tmpDir + "/stables_bottomStables.txt");
+    private String bottomStablesString;
 
-    private static String fullTriplesString = Utils.readFromFile(Viewer.tmpDir + "/triples_full.txt");
+    private String fullTriplesString;
     private ConnectionPool pool = null;
     private final Color buttonShowColor = Color.MAGENTA;
     private final Color buttonClickColor = Color.GOLD;
@@ -66,6 +66,8 @@ public class StablesWindow {
         //Setting the stage and title
         stage.setScene(scene);
         stage.setTitle("Stables Window");
+
+        loadFromFile();
 
         //Setting the three text boxes
         topStablesText.setPromptText("Stables");
@@ -130,6 +132,15 @@ public class StablesWindow {
         generalLayoutBox.setSpacing(10);
         generalLayoutBox.setPadding(new Insets(10));
         generalLayoutBox.setOnMouseExited(event -> saveToFile());//Saves to file when the window is closed
+    }
+
+    private void loadFromFile() {
+        // Keep these text buffers scoped to this window. Static initialization made the values stale if files changed
+        // while the app was running or if another StablesWindow instance saved different text.
+        topStablesString = Utils.readFromFile(Viewer.tmpDir + "/stables_topStables.txt");
+        unStablesString = Utils.readFromFile(Viewer.tmpDir + "/stables_unstables.txt");
+        bottomStablesString = Utils.readFromFile(Viewer.tmpDir + "/stables_bottomStables.txt");
+        fullTriplesString = Utils.readFromFile(Viewer.tmpDir + "/triples_full.txt");
     }
 
     public void setConnectionPool(final ConnectionPool pool){
@@ -540,6 +551,12 @@ public class StablesWindow {
     public void show() {
         this.stage.show();
         this.stage.toFront();
+    }
+
+    public void close() {
+        // The normal close hook is mouse-exit based, so main-window shutdown must save the current text directly.
+        saveToFile();
+        this.stage.close();
     }
 
     private static Tuple2<String, String> cleanHalfTriples(final String string, final ConnectionPool pool) {

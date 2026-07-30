@@ -7,6 +7,7 @@ import billiards.wrapper.Wrapper;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
@@ -63,17 +64,20 @@ public final class Main extends Application {
 
     @Override
     public void stop() {
-        // Zhao Yu Li, Sept 20, 2025.
-        // Shuts down the scheduled executors in iterationToLimitWindow
-        if (viewerSelected) {
-            if (viewer != null)
-                viewer.shutdown();
-        }
+
+        // Stop Java work before releasing the native DB pool. Many background
+        // tasks borrow SQLite connections through this pool, so destroying it
+        // first can turn an ordinary close into a native use-after-free.
+        executor.shutdownNow();
+        final boolean executorStopped = Utils.safeShutdownExecutor(executor, 30, TimeUnit.SECONDS);
 
         if (pool != null) {
-            pool.destroy();
+            if (executorStopped) {
+                pool.destroy();
+                pool = null;
+            } else {
+                System.err.println("Skipping native pool destroy because worker threads are still active");
+            }
         }
-
-        executor.shutdown();
     }
 }

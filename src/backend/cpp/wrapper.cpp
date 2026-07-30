@@ -25,11 +25,14 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include "sqlite.hpp"
 #include "trig_identities.hpp"
 #include "trim.hpp"
+#include "utils.hpp"
 #include "verify.hpp"
 #include "wrapper.hpp"
 #include "vary_cs.hpp"
 #include "vary3.hpp"
 #include "vary4.hpp"
+#include <exception>
+#include <stdexcept>
 #include <boost/optional/optional_io.hpp>
 // Suryansh Ankur, 2026
 
@@ -59,67 +62,140 @@ static char* to_cstr(const std::string& str) {
     return c_str;
 }
 
+namespace {
+
+thread_local std::string backend_error_message;
+
+void clear_backend_error() {
+    backend_error_message.clear();
+}
+
+void remember_backend_error(const char* const operation, const std::exception& except) {
+    backend_error_message = std::string(operation) + " failed: " + except.what();
+    std::cerr << backend_error_message << std::endl;
+}
+
+void remember_unknown_backend_error(const char* const operation) {
+    backend_error_message = std::string(operation) + " failed: unknown native exception";
+    std::cerr << backend_error_message << std::endl;
+}
+
+}
+
+const char* backend_last_error() {
+    return backend_error_message.c_str();
+}
+
 void sqlite_error_logging() {
     sqlite::error_logging();
 }
 
 void database_create(const char* const db_path) {
-    database::create(db_path);
+    clear_backend_error();
+    try {
+        if (db_path == nullptr) {
+            throw std::invalid_argument("database path is null");
+        }
+        database::create(db_path);
+    } catch (const std::exception& except) {
+        remember_backend_error("database_create", except);
+    } catch (...) {
+        remember_unknown_backend_error("database_create");
+    }
 }
 
 void database_clear(const char* const db_path) {
-    database::clear(db_path);
+    clear_backend_error();
+    try {
+        if (db_path == nullptr) {
+            throw std::invalid_argument("database path is null");
+        }
+        database::clear(db_path);
+    } catch (const std::exception& except) {
+        remember_backend_error("database_clear", except);
+    } catch (...) {
+        remember_unknown_backend_error("database_clear");
+    }
 }
 
 sqlite::ConnectionPool* create_connection_pool(const char* const db_path, const int32_t pool_size) {
-
-    const std::string path = db_path;
-
-    const auto lambda = [&] {
-        constexpr auto flags = sqlite::Open::Readwrite | sqlite::Open::Fullmutex;
-
-        // TODO are there extra flags we want to open the database with,
-        // or some other pragmas we want to execute?
-        sqlite::Database db{path, flags};
-
-        // A prepare only prepares the first statement in the string
-        std::string journal_mode{};
-        db.prepare("pragma journal_mode = wal;").bind().exec(journal_mode);
-
-        if (journal_mode != "wal") {
-            throw std::runtime_error("unable to set wal; journal mode = " + journal_mode);
+    clear_backend_error();
+    try {
+        if (db_path == nullptr) {
+            throw std::invalid_argument("database path is null");
+        }
+        if (pool_size <= 0) {
+            throw std::invalid_argument("connection pool size must be positive");
         }
 
-        db.prepare("pragma synchronous = full;").bind().exec();
+        const std::string path = db_path;
 
-        int64_t synchronous{};
-        db.prepare("pragma synchronous;").bind().exec(synchronous);
+        const auto lambda = [&] {
+            constexpr auto flags = sqlite::Open::Readwrite | sqlite::Open::Fullmutex;
 
-        if (synchronous != 2) {
-            throw std::runtime_error("unable to set full; synchronous = " + std::to_string(synchronous));
-        }
+            // TODO are there extra flags we want to open the database with,
+            // or some other pragmas we want to execute?
+            sqlite::Database db{path, flags};
 
-        return db;
-    };
+            // A prepare only prepares the first statement in the string
+            std::string journal_mode{};
+            db.prepare("pragma journal_mode = wal;").bind().exec(journal_mode);
 
-    sqlite::ConnectionPool* pool = new sqlite::ConnectionPool{lambda, boost::numeric_cast<size_t>(pool_size)};
+            if (journal_mode != "wal") {
+                throw std::runtime_error("unable to set wal; journal mode = " + journal_mode);
+            }
 
-    return pool;
+            db.prepare("pragma synchronous = full;").bind().exec();
+
+            int64_t synchronous{};
+            db.prepare("pragma synchronous;").bind().exec(synchronous);
+
+            if (synchronous != 2) {
+                throw std::runtime_error("unable to set full; synchronous = " + std::to_string(synchronous));
+            }
+
+            return db;
+        };
+
+        // This exported function is called from JNA. Never let C++
+        // exceptions cross that ABI boundary; Java checks null and reads
+        // backend_last_error() for the detailed reason.
+        sqlite::ConnectionPool* pool = new sqlite::ConnectionPool{lambda, boost::numeric_cast<size_t>(pool_size)};
+
+        return pool;
+    } catch (const std::exception& except) {
+        remember_backend_error("create_connection_pool", except);
+        return nullptr;
+    } catch (...) {
+        remember_unknown_backend_error("create_connection_pool");
+        return nullptr;
+    }
 }
 
 void destroy_connection_pool(const sqlite::ConnectionPool* const pool) {
-    std::cout << "Started with "<< pool->start_size() << " DB connections\n";
-    std::cout << "Ending with " << pool->curr_size() << " DB connections" << std::endl;
-    delete pool;
+    clear_backend_error();
+    try {
+        if (pool == nullptr) {
+            return;
+        }
+
+        std::cout << "Started with "<< pool->start_size() << " DB connections\n";
+        std::cout << "Ending with " << pool->curr_size() << " DB connections" << std::endl;
+        delete pool;
+    } catch (const std::exception& except) {
+        remember_backend_error("destroy_connection_pool", except);
+    } catch (...) {
+        remember_unknown_backend_error("destroy_connection_pool");
+    }
 }
 
 // -1 failure
 // 0 on not a cover
 // 1 means a cover
-const char* cover_wrapper(const char* const poly_str,
+int32_t cover_wrapper(const char* const poly_str,
                       const char* const codes_str, const char* const unstables_str,
                       const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool) {
+                      const int32_t mrr, sqlite::ConnectionPool* const pool, CString* const result) {
 
     try {
 
@@ -127,23 +203,27 @@ const char* cover_wrapper(const char* const poly_str,
         const std::string codes{codes_str};
         const std::string unstables{unstables_str};
 
-        const auto covered = check_cover(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, *pool);
+        const auto covered = check_cover(poly, codes, unstables, 
+            boost::numeric_cast<uint32_t>(digits), 
+            boost::numeric_cast<uint32_t>(subdivide), 
+            boost::numeric_cast<size_t>(empty), mrr, *pool);
 
-        return covered;
+        result->string = to_cstr(covered);
+        return 1;
     } catch (const std::runtime_error& except) {
         std::cerr << "calculation of cover failed with error:\n"
                   << except.what() << std::endl;
-        return "";
+        return -1;
     }
 }
 
 // -1 failure
 // 0 on not a cover
 // 1 means a cover
-const char* small_cover_wrapper(const char* const poly_str,
+int32_t small_cover_wrapper(const char* const poly_str,
                       const char* const codes_str, const char* const unstables_str,
                       const int32_t digits, const int32_t subdivide, const int32_t empty,
-                      const int32_t mrr, sqlite::ConnectionPool* const pool, const bool printInfo) {
+                      const int32_t mrr, sqlite::ConnectionPool* const pool, const bool printInfo, CString* const result) {
 
     try {
 
@@ -153,33 +233,38 @@ const char* small_cover_wrapper(const char* const poly_str,
 
         const auto covered = check_small_cover(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, *pool, printInfo);
 
-        return covered;
+        result->string = to_cstr(covered);
+        return 1;
     } catch (const std::runtime_error& except) {
         std::cerr << "calculation of cover failed with error:\n"
                   << except.what() << std::endl;
-        return "";
+        return -1;
     }
 }
 
-const char* getNotFilledCoordinates(const char* const poly_str,
+int32_t get_not_filled_coordinates(const char* const poly_str,
     const char* const codes_str, const char* const unstables_str,
     const int32_t digits, const int32_t subdivide, const int32_t empty,
-    const int32_t mrr, sqlite::ConnectionPool* const pool, const bool is_last_cycle) {
-
+    const int32_t mrr, sqlite::ConnectionPool* const pool, const bool is_last_cycle, CString* const result) {
+    
     try {
 
         const std::string poly{poly_str};
         const std::string codes{codes_str};
         const std::string unstables{unstables_str};
 
-        const char* result = getEmpties(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, *pool, is_last_cycle);
+        const auto empties = getEmpties(poly, codes, unstables,
+            boost::numeric_cast<uint32_t>(digits), 
+            boost::numeric_cast<uint32_t>(subdivide), 
+            boost::numeric_cast<size_t>(empty), mrr, *pool, is_last_cycle);
 
-        return result;
+        result->string = to_cstr(empties);
+        return 1;
 
     } catch (const std::runtime_error& except) {
         std::cerr << "calculation of cover failed with error:\n"
                   << except.what() << std::endl;
-        return "";
+        return -1;
     }
 }
 
@@ -220,7 +305,10 @@ int32_t cover_wrapper_half_duplicate_stables(const char* const poly_str,
         std::set<std::pair<CodeSequence, std::string>> sequence_init_angles{};
         std::set<std::pair<CodeSequence, std::string>> sequence_points{};
 
-        const auto covered = check_cover_half_duplicate_stables(poly, codes, unstables, boost::numeric_cast<uint32_t>(digits), boost::numeric_cast<uint32_t>(subdivide), boost::numeric_cast<size_t>(empty), mrr, sequence_equations, *pool);
+        const auto covered = check_cover_half_duplicate_stables(poly, codes, unstables, 
+            boost::numeric_cast<uint32_t>(digits), 
+            boost::numeric_cast<uint32_t>(subdivide), 
+            boost::numeric_cast<size_t>(empty), mrr, sequence_equations, *pool);
         if(covered){
             return 1;
         } else {
@@ -350,6 +438,8 @@ int32_t save_to_database(const int32_t* const code_numbers_ptr,
                          const int32_t code_numbers_len,
                          sqlite::ConnectionPool* const pool) {
 
+    clear_backend_error();
+
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
 
     // We throw runtime_errors to indicate problems with the program. When this happens,
@@ -370,8 +460,7 @@ int32_t save_to_database(const int32_t* const code_numbers_ptr,
         return in;
 
     } catch (const std::runtime_error& except) {
-        std::cerr << "Calculation of " << code_numbers << " failed with error:\n"
-                  << except.what() << std::endl;
+        remember_backend_error("save_to_database", except);
 
         return -1;
     }
@@ -465,22 +554,24 @@ static bool save_to_database(const std::vector<LeftRight>& left_rights, const Co
 
 static void copy_to_cpicture(const Picture& picture, CPicture* const cpicture) {
 
-    char* ia = nullptr;
-    char* pts = nullptr;
-    char* eq = nullptr;
+    char* initial_angles = nullptr;
+    char* points = nullptr;
+    char* equations = nullptr;
     try {
-        ia = to_cstr(picture.initial_angles);
-        pts = to_cstr(picture.points);
-        eq = to_cstr(picture.equations);
+        initial_angles = to_cstr(picture.initial_angles);
+        points = to_cstr(picture.points);
+        equations = to_cstr(picture.equations);
     } catch (...) {
-        delete[] ia;
-        delete[] pts;
-        delete[] eq;
+        // Roll back partial native ownership if a later allocation fails.
+        delete[] initial_angles;
+        delete[] points;
+        delete[] equations;
         throw;
     }
-    cpicture->initial_angles = ia;
-    cpicture->points = pts;
-    cpicture->equations = eq;
+
+    cpicture->initial_angles = initial_angles;
+    cpicture->points = points;
+    cpicture->equations = equations;
 }
 
 // -1 means error doing calculation
@@ -490,6 +581,8 @@ int32_t load_picture(const int32_t* const code_numbers_ptr,
                      const int32_t code_numbers_len,
                      CPicture* const cpicture,
                      sqlite::ConnectionPool* const pool) {
+
+    clear_backend_error();
 
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
 
@@ -504,8 +597,11 @@ int32_t load_picture(const int32_t* const code_numbers_ptr,
 
         const auto code_type = code_sequence.type();
 
-        // Step 1: Quick check if already in DB (short-lived connection)
-        bool already_in_db;
+        // Keep database ownership separate from the expensive geometry work.
+        // AutoVary can run many storage jobs at once, and holding a pooled
+        // SQLite connection while calculate_stable/calculate_unstable runs can
+        // starve unrelated UI/database reads for seconds or minutes.
+        bool already_in_db = false;
         {
             sqlite::PooledConnection conn{*pool};
             already_in_db = database::in(code_sequence, code_type, conn.db);
@@ -544,8 +640,7 @@ int32_t load_picture(const int32_t* const code_numbers_ptr,
         return 1;
 
     } catch (const std::runtime_error& except) {
-        std::cerr << "Calculation of " << code_numbers << " failed with error:\n"
-                  << except.what() << std::endl;
+        remember_backend_error("load_picture", except);
 
         return -1;
     }
@@ -559,6 +654,7 @@ void cleanup_cpicture(const CPicture* const cpicture) {
 
 int32_t load_picture_lr_expando(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
                         CPicture* const cpicture, sqlite::ConnectionPool* const pool, const char* const lr) {
+    clear_backend_error();
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
 
     // We throw runtime_errors to indicate problems with the program. When this happens,
@@ -644,7 +740,8 @@ int32_t load_picture_lr_expando(const int32_t* const code_numbers_ptr, const int
         return 1;
 
     } catch (const std::runtime_error& except) {
-        return 0;
+        remember_backend_error("load_picture_lr_expando", except);
+        return -1;
     }
 }
 
@@ -654,6 +751,7 @@ int32_t load_picture_lr_expando(const int32_t* const code_numbers_ptr, const int
 int32_t load_picture_lr(const int32_t* const base_code_numbers_ptr, const int32_t base_code_numbers_len,
                         const int32_t* const code_numbers_ptr, const int32_t code_numbers_len,
                         CPicture* const cpicture, sqlite::ConnectionPool* const pool) {
+    clear_backend_error();
     const std::vector<CodeNumber> base_code_numbers{base_code_numbers_ptr,
                                                     base_code_numbers_ptr + base_code_numbers_len};
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
@@ -672,7 +770,7 @@ int32_t load_picture_lr(const int32_t* const base_code_numbers_ptr, const int32_
 
         // Step 1: Load base_lr and check if code exists (short-lived connection)
         std::vector<LeftRight> base_lr;
-        bool already_in_db;
+        bool already_in_db = false;
         {
             sqlite::PooledConnection conn{*pool};
             base_lr = database::load_left_rights(base_code_sequence, base_code_type, conn.db);
@@ -722,6 +820,7 @@ int32_t load_picture_lr(const int32_t* const base_code_numbers_ptr, const int32_
         return 1;
 
     } catch (const std::runtime_error& except) {
+        remember_backend_error("load_picture_lr", except);
         return -1;
     }
 }
@@ -854,6 +953,8 @@ static void copy_to_cinfo(const Info& info, CInfo* const cinfo) {
 // 1 means non empty set
 int32_t load_info(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfo* const cinfo, sqlite::ConnectionPool* const pool) {
 
+    clear_backend_error();
+
     const std::vector<CodeNumber> code_numbers{code_numbers_ptr, code_numbers_ptr + code_numbers_len};
 
     // We throw runtime_errors to indicate problems with the program. When this happens,
@@ -879,24 +980,54 @@ int32_t load_info(const int32_t* const code_numbers_ptr, const int32_t code_numb
         return in;
 
     } catch (const std::runtime_error& except) {
-        std::cerr << "Calculation of " << code_numbers << " failed with error:\n"
-                  << except.what() << std::endl;
+        remember_backend_error("load_info", except);
 
         return -1;
     }
 }
 
 static void copy_to_cinfoAll_2(const CodeInfo& info, CInfoAll* const cinfoAll) {
-    cinfoAll->sinEquations = to_cstr("");
-    cinfoAll->cosEquations = to_cstr("");
-    cinfoAll->initial_angles = to_cstr("");
-    cinfoAll->points = to_cstr("");
-    cinfoAll->equations = to_cstr("");
-    cinfoAll->left_rights = to_cstr("");
-    cinfoAll->code_seq_lr =to_cstr("");
-    cinfoAll->vectorX = to_cstr(database::serialize(info.sin_equations));
-    cinfoAll->vectorY = to_cstr(database::serialize(info.cos_equations));
+    char* sin_equations = nullptr;
+    char* cos_equations = nullptr;
+    char* initial_angles = nullptr;
+    char* points = nullptr;
+    char* equations = nullptr;
+    char* left_rights = nullptr;
+    char* code_seq_lr = nullptr;
+    char* vector_x = nullptr;
+    char* vector_y = nullptr;
+    try {
+        sin_equations = to_cstr("");
+        cos_equations = to_cstr("");
+        initial_angles = to_cstr("");
+        points = to_cstr("");
+        equations = to_cstr("");
+        left_rights = to_cstr("");
+        code_seq_lr = to_cstr("");
+        vector_x = to_cstr(database::serialize(info.sin_equations));
+        vector_y = to_cstr(database::serialize(info.cos_equations));
+    } catch (...) {
+        delete[] sin_equations;
+        delete[] cos_equations;
+        delete[] initial_angles;
+        delete[] points;
+        delete[] equations;
+        delete[] left_rights;
+        delete[] code_seq_lr;
+        delete[] vector_x;
+        delete[] vector_y;
+        throw;
+    }
 
+    cinfoAll->sinEquations = sin_equations;
+    cinfoAll->cosEquations = cos_equations;
+    cinfoAll->initial_angles = initial_angles;
+    cinfoAll->points = points;
+    cinfoAll->equations = equations;
+    cinfoAll->left_rights = left_rights;
+    cinfoAll->code_seq_lr = code_seq_lr;
+    cinfoAll->vectorX = vector_x;
+    cinfoAll->vectorY = vector_y;
 }
 
 int32_t load_slope_info(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool) {
@@ -930,7 +1061,7 @@ void cleanup_cinfo(const CInfo* const cinfo) {
     delete[] cinfo->code_seq_lr;
 }
 
-void cleanup_cinfoAll(const CInfoAll* const cinfoAll) {
+void cleanup_cinfo_all(const CInfoAll* const cinfoAll) {
     delete[] cinfoAll->initial_angles;
     delete[] cinfoAll->points;
     delete[] cinfoAll->equations;
@@ -1361,7 +1492,9 @@ float64_t calculate_gradient(const char* const equation_cstr, float64_t x_value,
 }
 
 void cleanup_string(const CString* const cstring) {
-    delete[] cstring->string;
+    if (cstring != nullptr) {
+        delete[] cstring->string;
+    }
 }
 
 /* jul 31 2025 Marco Mai

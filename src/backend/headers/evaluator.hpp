@@ -32,6 +32,10 @@ class Evaluator {
 
     ~Evaluator();
 
+    // Cover recursion calls Evaluator-backed sign checks for many adjacent
+    // squares. Reusing one evaluator per worker thread preserves MPFR/MPFI
+    // scratch-state isolation while avoiding repeated heap allocation of the
+    // same temporaries inside hot cover paths.
     static Evaluator& thread_local_instance(const uint32_t prec);
 
     template <template <typename> class Trig>

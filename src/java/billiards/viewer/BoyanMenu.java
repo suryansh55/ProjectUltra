@@ -560,6 +560,8 @@ public class BoyanMenu {
 				progress.close();
 			});
 			varyTask.setOnFailed(fail -> {
+				System.out.println(fail);
+				fail.getSource().getException().printStackTrace();
 				System.out.println("// " + title + " failed");
 				executor.shutdown();
 				progress.close();

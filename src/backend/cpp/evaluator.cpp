@@ -210,12 +210,19 @@ Evaluator::~Evaluator() {
 }
 
 Evaluator& Evaluator::thread_local_instance(const uint32_t prec) {
+    // The cover code runs through TBB and Java-triggered worker threads. A
+    // process-global Evaluator would race because mpfr_t/mpq_t members are
+    // mutable scratch registers, but rebuilding those registers per square is
+    // expensive. Keep one evaluator per thread and rebuild only when precision
+    // changes.
     thread_local std::unique_ptr<Evaluator> instance;
     thread_local uint32_t instance_prec = 0;
+
     if (!instance || instance_prec != prec) {
         instance.reset(new Evaluator(prec));
         instance_prec = prec;
     }
+
     return *instance;
 }
 

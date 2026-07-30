@@ -22,14 +22,17 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.Math;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.Collection;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
 import javafx.application.Platform;
@@ -249,6 +252,23 @@ public final class Utils {
 		}
 	}
 
+
+	/**
+	 * <b>Jeff Khuu</b><br>
+	 * <b>July 29, 2026</b>
+	 * <p>
+	 * Attempts to copy a given string to the system clipboard. Does not return any value.
+	 * </p>
+	 * 
+	 * @param text The string to copy to the clipboard
+	 */
+	public static void copyToClipboard(final String text) {
+		final javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+		final javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+		content.putString(text);
+		clipboard.setContent(content);
+	}
+
 	// Copy each element of source into dest, overriding the current values
 	public static void copyInto(final MutableIntList dest, final IntList source) {
 		for (int i = 0; i < dest.size(); ++i) {
@@ -353,6 +373,62 @@ public final class Utils {
 		}
 		return Optional.empty();
 	}
+	
+    // Same shutdown sequence as above, but with a caller-selected timeout for
+    // app shutdown paths where a 20 minute JavaFX-thread wait is worse than a
+    // reported incomplete shutdown.
+    public static boolean safeShutdownExecutor(ExecutorService executor, long timeout, TimeUnit unit) {
+        executor.shutdown(); // Prevent further submissions
+        try {
+            if(!executor.awaitTermination(timeout, unit)) {
+                // Attempt cancellation again, if necessary
+                executor.shutdownNow();
+                if(!executor.awaitTermination(timeout, unit)) {
+                    System.err.println("Warning: Executor not terminated after " + timeout + " " + unit);
+                    return false;
+                }
+            }
+            return true;
+        } catch(InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    // JavaFX event handlers run on the application thread. Use this helper from
+    // callbacks so Windows/macOS/Linux UIs do not hang while a native/database
+    // worker is draining or timing out during shutdown.
+    public static void shutdownExecutorAsync(final ExecutorService executor) {
+        if (executor == null) {
+            return;
+        }
+
+        final Thread shutdownThread = new Thread(
+                () -> safeShutdownExecutor(executor, 30, TimeUnit.SECONDS),
+                "executor-shutdown");
+        shutdownThread.setDaemon(true);
+        shutdownThread.start();
+    }
+
+	
+	// Cancel queued and running futures with interruption. The native backend is
+    // not guaranteed to stop a long GMP/MPFR calculation immediately, but this
+    // prevents queued database/native work from continuing after a user cancel.
+    public static void cancelFutures(final Iterable<? extends Future<?>> futures) {
+        for (final Future<?> future : futures) {
+            future.cancel(true);
+        }
+    }
+
+    // User-facing Cancel is supposed to save progress. This variant prevents
+    // not-yet-started futures from beginning, but lets already-running
+    // database/native work finish and return its Storage if it can.
+    public static void cancelQueuedFutures(final Iterable<? extends Future<?>> futures) {
+        for (final Future<?> future : futures) {
+            future.cancel(false);
+        }
+    }
 
 	// this gives a neat string of the code with information about it
 	public static String standard(final ClassifiedCodeSequence code, final int count) {

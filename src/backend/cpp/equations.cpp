@@ -615,17 +615,27 @@ boost::optional<Unstable> calculate_unstable(const CodeSequence& code_sequence, 
     const auto code_angles_eta = falgo::transform(code_angles, xyz_to_xyeta);
     const auto code_angles_pi = falgo::transform(code_angles, xyz_to_xypi);
 
+    // Note: it is possible that we could calculate the bounding polygon first to
+    // check if it is empty. This way, we can return an empty optional without
+    // finding the unfolding
+
     const Unfolding unfold{code_numbers, code_angles};
 
+    // Some of the generated equations are duplicates, so we put them into a std::set
+    // first. Order matters, because I want the order on which the polygon is
+    // reduced to be deterministic.
     CurvesLR curves{};
+    // george jun11th 2021 to print the shooting vector, uncomment the lines with label_shooting_vector
     if (code_type == CodeType::CNS) {
 
         const auto shooting_vector = shooting_vector_closed(code_sequence, code_angles_eta);
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second);
 
     } else if (code_type == CodeType::ONS) {
 
         const auto shooting_vector = unfold.shooting_vector_general();
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second);
 
     } else {
@@ -655,23 +665,34 @@ boost::optional<Stable> calculate_stable(const CodeSequence& code_sequence, cons
     const auto code_angles_eta = falgo::transform(code_angles, xyz_to_xyeta);
     const auto code_angles_pi = falgo::transform(code_angles, xyz_to_xypi);
 
+    // Note: it is possible that we could calculate the bounding polygon first to
+    // check if it is empty. This way, we can return an empty optional without
+    // finding the unfolding
+
     const Unfolding unfold{code_numbers, code_angles};
 
     CurvesLR curves{};
 
+    // george jun11th 2021 to print the shooting vector, uncomment the lines with label_shooting_vector
     if (code_type == CodeType::OSO) {
 
         const auto shooting_vector = shooting_vector_open(code_sequence, code_angles_pi);
+        // Passing the left_rights is the only difference
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second, left_rights);
 
     } else if (code_type == CodeType::CS) {
 
         const auto shooting_vector = shooting_vector_closed(code_sequence, code_angles_eta);
+        // Passing the left_rights is the only difference
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second, left_rights);
 
     } else if (code_type == CodeType::OSNO) {
 
         const auto shooting_vector = unfold.shooting_vector_general();
+        // Passing the left_rights is the only difference
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second, left_rights);
 
     } else {
@@ -702,18 +723,29 @@ boost::optional<Unstable> calculate_unstable(const CodeSequence& code_sequence, 
     const auto code_angles_eta = falgo::transform(code_angles, xyz_to_xyeta);
     const auto code_angles_pi = falgo::transform(code_angles, xyz_to_xypi);
 
+    // Note: it is possible that we could calculate the bounding polygon first to
+    // check if it is empty. This way, we can return an empty optional without
+    // finding the unfolding
+
     const Unfolding unfold{code_numbers, code_angles};
 
+    // Some of the generated equations are duplicates, so we put them into a std::set
+    // first. Order matters, because I want the order on which the polygon is
+    // reduced to be deterministic.
     CurvesLR curves{};
-
+    // george jun11th 2021 to print the shooting vector, uncomment the lines with label_shooting_vector
     if (code_type == CodeType::CNS) {
 
         const auto shooting_vector = shooting_vector_closed(code_sequence, code_angles_eta);
+        // Passing the left_rights is the only difference
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second, left_rights);
 
     } else if (code_type == CodeType::ONS) {
 
         const auto shooting_vector = unfold.shooting_vector_general();
+        // Passing the left_rights is the only difference
+        //std::cout << shooting_vector.first << " , " << shooting_vector.second << std::endl; //label_shooting_vector
         curves = unfold.generate_curves_lr(shooting_vector.first, shooting_vector.second, left_rights);
 
     } else {

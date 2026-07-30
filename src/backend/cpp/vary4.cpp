@@ -124,7 +124,7 @@ void iterateFireAway4(
 				// Both directions done — backtrack
 				if (!code.empty()) code.pop_back();  // safeguard
 				depth--;
-				frame.goLeft? sideSum.sub(frame.swapValue) : sideSum.add(frame.swapValue);
+				frame.goLeft ? sideSum.sub(frame.swapValue) : sideSum.add(frame.swapValue);
 				stack.pop_back();
 				
 			}
@@ -132,6 +132,7 @@ void iterateFireAway4(
 
 	}catch (const std::exception& ex){
 		std::cerr << "Exception caught: " << ex.what() << '\n';
+        throw;
 	}
 }
 

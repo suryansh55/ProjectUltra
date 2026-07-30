@@ -1,6 +1,6 @@
 package billiards.database;
 
-
+import java.util.Objects;
 
 public final class LeftRight {
 
@@ -40,9 +40,6 @@ public final class LeftRight {
 
     @Override
     public int hashCode() {
-        return Integer.rotateLeft(this.leftNumber, 1)
-             ^ Integer.rotateLeft(this.leftBranch, 5)
-             ^ Integer.rotateLeft(this.rightNumber, 17)
-             ^ Integer.rotateLeft(this.rightBranch, 23);
+        return Objects.hash(this.leftNumber, this.leftBranch, this.rightNumber, this.rightBranch);
     }
 }

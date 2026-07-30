@@ -29,7 +29,13 @@ import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 
 import java.util.*;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Zhao Yu Li, Jun 06, 2025.
@@ -580,7 +586,7 @@ public class IterateToLimitWindow {
         // We are done. Set the results, and notify the observer.
         running = false;
         this.results = results;
-        this.finish.set(true);
+        markFinishedIfPresent(this.finish);
 
         return true;
     }
@@ -634,6 +640,21 @@ public class IterateToLimitWindow {
 
     public void toFront() {
         this.stage.toFront();
+    }
+
+    public void close() {
+        // This window can be created as an AutoVary result sink without execute(),
+        // so no finish observer necessarily exists during main-window shutdown.
+        this.results = null;
+        markFinishedIfPresent(this.finish);
+        saveContentsToFile();
+        this.stage.close();
+    }
+
+    static void markFinishedIfPresent(final SimpleBooleanProperty finish) {
+        if (finish != null) {
+            finish.set(true);
+        }
     }
 
     private Alert getInfoAlertDialogue(String header, String content) {
@@ -850,6 +871,11 @@ public class IterateToLimitWindow {
                 if (line.trim().isEmpty()) continue;
 
                 String[] codeAndPattern = line.split("&");
+
+                if(line.startsWith("//")) {
+                    newContent.append(line).append("\n");
+                    continue;
+                }
 
                 if (codeAndPattern.length > 1) {
                     newContent.append(line).append("\n");

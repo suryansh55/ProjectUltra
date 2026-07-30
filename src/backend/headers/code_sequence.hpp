@@ -14,14 +14,15 @@
 // - to prevent mutability. This class must remain constant to prevent modification
 class CodeSequence final {
   private:
+    // CodeSequence is immutable after construction, so its mathematical type
+    // can be cached safely once calculated. The type path may compute closure
+    // and stability, which can be much more expensive than returning this value.
+    mutable boost::optional<CodeType> cached_type_;
 
   public:
     std::vector<CodeNumber> code_numbers;
     using value_type = typename decltype(code_numbers)::value_type;
     using const_iterator = typename decltype(code_numbers)::const_iterator;
-
-  private:
-    mutable boost::optional<CodeType> cached_type_;
 
   public:
 

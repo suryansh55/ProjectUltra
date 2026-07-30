@@ -38,19 +38,20 @@ import javafx.stage.Stage;
 import static billiards.utils.Polygon.cleanPolygon;
 
 public final class CoverWindow {
-
+    
+    // Package mutable state
     // ------------------------------------------------------------
-    private static String polygonString = Utils.readFromFile(Viewer.tmpDir + "/cover_polygon.txt");
-    static String stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
-    static String triplesString = Utils.readFromFile(Viewer.tmpDir + "/cover_triples.txt");
-    static String digitsString = Utils.readFromFile(Viewer.tmpDir + "/cover_digits.txt");
-    private static String emptyString = Utils.readFromFile(Viewer.tmpDir + "/cover_empty.txt");
-    static String magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
+    static String polygonString;
+    static String stablesString;
+    static String triplesString;
+    static String digitsString;
+    static String emptyString;
+    static String magnificationsString;
     //private static String halfTripleString = Utils.readFromFile(Viewer.tmpDir + "/cover_half_triples.txt");
  
-    // WARNING: Global mutable state
-    // Other classes which need to synchronize their polygon with the cover should listen to this property
-    public static SimpleObjectProperty<String> polyStringProperty = new SimpleObjectProperty<>(polygonString);
+    // Intentional shared notification channel: vary windows listen here so their polygon text follows the active
+    // cover polygon. The actual saved text now lives on each CoverWindow instance instead of static mutable fields.
+    public static SimpleObjectProperty<String> polyStringProperty = new SimpleObjectProperty<>("");
 
     // ------------------------------------------------------------
 
@@ -91,6 +92,8 @@ public final class CoverWindow {
         stage.setOnCloseRequest(event -> saveToFile());
 
         base.setOnMouseExited(event -> saveToFile());
+
+        loadFromFile();
 
         topText.setText(polygonString);
         bottomText.setText(stablesString);
@@ -172,11 +175,15 @@ public final class CoverWindow {
             cover.mkdir();
 
             if (mrr) {
+
                 final String cleanedPolygon = cleanPolygon(polygonString);
                 final boolean addToSmallCover = viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected();
 
                 calcBtn.setDisable(true);
 
+                // Cover can spend minutes in native GMP/MPFR work. Run that
+                // work off the JavaFX Application Thread so the window can
+                // repaint and the OS does not mark the app as unresponsive.
                 final javafx.concurrent.Task<String> task = new javafx.concurrent.Task<String>() {
                     @Override
                     protected String call() {
@@ -185,16 +192,15 @@ public final class CoverWindow {
                         final String cleanedTriples = cleanedTriplesPre._1;
                         final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 
-                        //System.out.println("DEBUG JAVA: before coverWrapper call");
-                        String res = Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, true, pool);
-                        //System.out.println("DEBUG JAVA: after coverWrapper call, result empty=" + res.isEmpty());
-                        return res;
+                        return Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples,
+                                digits, magnifications, empty, true, pool);
                     }
                 };
 
                 task.setOnSucceeded(e -> {
                     calcBtn.setDisable(false);
-                    String res = task.getValue();
+                    final String res = task.getValue();
+
                     if (addToSmallCover) {
                         //System.out.println("DEBUG JAVA: adding polygons to smallCoverWindow");
                         viewer.smallCoverWindow.addPolygons(res);
@@ -203,12 +209,7 @@ public final class CoverWindow {
 
                     //System.out.println("DEBUG JAVA: before loadCover.run()");
                     loadCover.run();
-                    //System.out.println("DEBUG JAVA: after loadCover.run()");
-
-                    //System.out.println("DEBUG JAVA: before println title");
-                    //System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
-
-                    //System.out.println("DEBUG JAVA: before saveToFile");
+                    System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
                     saveToFile();
                     //System.out.println("DEBUG JAVA: after saveToFile");
 
@@ -223,14 +224,20 @@ public final class CoverWindow {
 
                 task.setOnFailed(e -> {
                     calcBtn.setDisable(false);
-                    System.err.println("Cover calculation failed: " + task.getException().getMessage());
-                    task.getException().printStackTrace();
+                    final Throwable failure = task.getException();
+                    final Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("Cover Failed");
+                    alert.setHeaderText("Cover calculation failed");
+                    alert.setContentText(failure == null ? "Unknown cover error" : failure.getMessage());
+                    alert.show();
+                    if (failure != null) {
+                        failure.printStackTrace();
+                    }
                 });
 
-                final Thread thread = new Thread(task);
+                final Thread thread = new Thread(task, "cover-calculation");
                 thread.setDaemon(true);
                 thread.start();
-
             } else {
                 //System.out.println("DEBUG JAVA: ALL branch selected");
                 final DirectoryChooser chooser = new DirectoryChooser();
@@ -239,12 +246,15 @@ public final class CoverWindow {
                 final File dir = chooser.showDialog(stage);
 
                 if (dir == null) {
+                    // User did not select a directory, so just cancel
                     return;
                 }
 
                 final String dirPath = dir.getPath();
                 calcBtn.setDisable(true);
 
+                // The all-cover path is also native-heavy, so it gets the same
+                // JavaFX Task treatment as the normal MRR cover calculation.
                 final javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<Void>() {
                     @Override
                     protected Void call() {
@@ -278,11 +288,18 @@ public final class CoverWindow {
 
                 task.setOnFailed(e -> {
                     calcBtn.setDisable(false);
-                    System.err.println("Cover calculation failed: " + task.getException().getMessage());
-                    task.getException().printStackTrace();
+                    final Throwable failure = task.getException();
+                    final Alert alert = new Alert(AlertType.ERROR);
+                    alert.setTitle("Cover Failed");
+                    alert.setHeaderText("Cover calculation failed");
+                    alert.setContentText(failure == null ? "Unknown cover error" : failure.getMessage());
+                    alert.show();
+                    if (failure != null) {
+                        failure.printStackTrace();
+                    }
                 });
 
-                final Thread thread = new Thread(task);
+                final Thread thread = new Thread(task, "cover-all-calculation");
                 thread.setDaemon(true);
                 thread.start();
             }
@@ -360,13 +377,36 @@ public final class CoverWindow {
         String currentText = triplesText.getText().toString();
         triplesText.setText(triple + "\n" + currentText);
     }
-    
-    // Allows other classes to update the list of stables 
+
+    public boolean containsTripleInfo(final String triple) {
+        return containsLine(triplesText.getText(), triple);
+    }
+
+    // Allows other classes to update the list of stables
     public void appendStablesInfo(String stable) {
         String currentText = bottomText.getText().toString();
         bottomText.setText(stable + "\n" + currentText);
     }
-    
+
+    public boolean containsStableInfo(final String stable) {
+        return containsLine(bottomText.getText(), stable);
+    }
+
+    private static boolean containsLine(final String text, final String target) {
+        final String normalizedTarget = target.trim();
+        if (normalizedTarget.isEmpty()) {
+            return false;
+        }
+
+        for (final String line : text.split("\\R")) {
+            if (line.trim().equals(normalizedTarget)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public void saveToFile() {
 
         polygonString = topText.getText().trim();
@@ -387,6 +427,34 @@ public final class CoverWindow {
         Utils.writeToFile(Viewer.tmpDir + "/cover_empty.txt", emptyString);
         //Utils.writeToFile(Viewer.tmpDir + "/cover_half_triples.txt", halfTripleString);
 
+    }
+
+    private void loadFromFile() {
+        // Load per window construction instead of class initialization so a cwd/path change or external file edit is
+        // reflected the next time the cover window is created.
+        polygonString = Utils.readFromFile(Viewer.tmpDir + "/cover_polygon.txt");
+        stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
+        triplesString = Utils.readFromFile(Viewer.tmpDir + "/cover_triples.txt");
+        digitsString = Utils.readFromFile(Viewer.tmpDir + "/cover_digits.txt");
+        emptyString = Utils.readFromFile(Viewer.tmpDir + "/cover_empty.txt");
+        magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
+        polyStringProperty.setValue(polygonString);
+    }
+
+    String getStablesString() {
+        return stablesString;
+    }
+
+    String getTriplesString() {
+        return triplesString;
+    }
+
+    String getDigitsString() {
+        return digitsString;
+    }
+
+    String getMagnificationsString() {
+        return magnificationsString;
     }
 
     static Tuple2<String, String> cleanTriples(final String string, final ConnectionPool pool) {
@@ -838,9 +906,15 @@ public final class CoverWindow {
                                Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
         final StringBuilder postInfo = new StringBuilder();
 
+        // cover/info.txt can contain thousands of lines. Build the annotation
+        // lookup once so redoInfo is linear in the number of pre-info and info
+        // rows instead of rescanning every pre-info row for every output row.
         final Map<String, String> preInfoMap = new HashMap<>();
         for (final String preLine : preInfo.split("\\r?\\n")) {
             final String trimmed = Utils.tripleTrimmer(preLine.split("#")[0].trim());
+            if (trimmed.isEmpty()) {
+                continue;
+            }
             if (preLine.contains("#")) {
                 preInfoMap.put(trimmed, preLine.split("#")[1].trim());
             } else {
@@ -875,6 +949,13 @@ public final class CoverWindow {
     void show() {
         this.stage.show();
         this.stage.toFront();
+    }
+
+    void close() {
+        // Programmatic Stage.close() does not run the close-request handler, so save explicitly when the main window
+        // is closing this child stage on behalf of the user.
+        saveToFile();
+        this.stage.close();
     }
 
     /*

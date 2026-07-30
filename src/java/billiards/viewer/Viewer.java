@@ -590,6 +590,7 @@ public final class Viewer {
 	VaryWindowL middleVaryWindow = null;
 	AutoPolyVaryLoad autoPolyVaryWindow = null;
 	SuperPolyVaryLoad superPolyVaryWindow = null;
+	HoleFinderWindow holeFinderWindow = null;
 	TetraBar tetraBar = null;
 
 	// Zhao Yu Li, Jul 7, 2025.
@@ -2181,63 +2182,73 @@ public final class Viewer {
 		lineEndField.setPrefWidth(60);
 
         findPointsBtn.setText("Find Holes");
-        findPointsBtn.setTooltip(Utils.toolTip("Searches for empty holes in the cover polygon by finding white pixels on the viewer."));
+        findPointsBtn.setTooltip(Utils.toolTip(""));
 		findPointsBtn.setOnAction(event -> {
-			ConvexPolygon polygon;
-			int subdivisions;
-			// Clean and create a polygon using the polygon in cover
-			try{
-				String polyString = cleanPolygon(readFromFile(tmpDir + "cover_polygon.txt"));
-				polygon = createConvexPolygon(polyString);
-			} catch (RuntimeException e) {
-				final Alert alert = new Alert(AlertType.ERROR);
-				alert.setTitle("Find Holes");
-				alert.setHeaderText("An invalid polygon was found in Cover");
-				alert.setContentText(e.toString());
-				alert.showAndWait();
+			if(holeFinderWindow == null)
+				this.holeFinderWindow = new HoleFinderWindow(tmpDir + "cover_polygon.txt", this);
+
+			if(holeFinderWindow.stage.isShowing()) {
+				holeFinderWindow.stage.toFront();
 				return;
+			} else {
+				holeFinderWindow.show();
 			}
 
-			// Check for a loaded OBO file so we can determine start, step and end
-			if (fileCodeSequences.isEmpty()) {
-				final Alert alert = new Alert(AlertType.ERROR);
-				alert.setTitle("Find Holes");
-				alert.setHeaderText("No OBO File Loaded");
-				alert.setContentText(
-						"Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
-				alert.showAndWait();
-				return;
-			}
-			Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd();
+			// ConvexPolygon polygon;
+			// int subdivisions;
+			// // Clean and create a polygon using the polygon in cover
+			// try{
+			// 	String polyString = cleanPolygon(readFromFile(tmpDir + "cover_polygon.txt"));
+			// 	polygon = createConvexPolygon(polyString);
+			// } catch (RuntimeException e) {
+			// 	final Alert alert = new Alert(AlertType.ERROR);
+			// 	alert.setTitle("Find Holes");
+			// 	alert.setHeaderText("An invalid polygon was found in Cover");
+			// 	alert.setContentText(e.toString());
+			// 	alert.showAndWait();
+			// 	return;
+			// }
 
-			try{
-				subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
-			} catch (NumberFormatException e) {
-				final Alert alert = new Alert(AlertType.ERROR);
-				alert.setTitle("Find Holes");
-				alert.setHeaderText("Unable to parse subdivisions");
-				alert.setContentText("The number of subdivisions could not be determined. " + e);
-				alert.showAndWait();
-				return;
-			}
+			// // Check for a loaded OBO file so we can determine start, step and end
+			// if (fileCodeSequences.isEmpty()) {
+			// 	final Alert alert = new Alert(AlertType.ERROR);
+			// 	alert.setTitle("Find Holes");
+			// 	alert.setHeaderText("No OBO File Loaded");
+			// 	alert.setContentText(
+			// 			"Either your OBO file is empty, or you did not load one in the first place. Use the 'Load One By One File' button.");
+			// 	alert.showAndWait();
+			// 	return;
+			// }
+			// Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd();
 
-			FileChooser fileChooser = new FileChooser();
-			fileChooser.setTitle("Save Found Holes");
-			fileChooser.setInitialFileName("holes.txt");
-			fileChooser.getExtensionFilters().addAll(
-				new FileChooser.ExtensionFilter("Text Files (*.txt)", "*.txt"),
-				new FileChooser.ExtensionFilter("All Files", "*.*")
-			);
-			File selectedFile = fileChooser.showSaveDialog(primaryStage);
+			// try{
+			// 	subdivisions = Integer.parseInt(boyanMenu.autoCycleText.getText());
+			// } catch (NumberFormatException e) {
+			// 	final Alert alert = new Alert(AlertType.ERROR);
+			// 	alert.setTitle("Find Holes");
+			// 	alert.setHeaderText("Unable to parse subdivisions");
+			// 	alert.setContentText("The number of subdivisions could not be determined. " + e);
+			// 	alert.showAndWait();
+			// 	return;
+			// }
 
-			System.out.println("+------------------------------ Finding Holes ------------------------------+");
-			findAllPoints(polygon, subdivisions, startStepEnd._1-1, startStepEnd._2, startStepEnd._3, selectedFile.getPath());
-			System.out.println("+------------------------------ Finding Holes Finished ------------------------------+");
-			final Alert alert = new Alert(AlertType.INFORMATION);
-			alert.setTitle("Find Holes");
-			alert.setHeaderText("All points found");
-			alert.setContentText("Found points have been printed to the console and saved to file.");
-			alert.showAndWait();
+			// FileChooser fileChooser = new FileChooser();
+			// fileChooser.setTitle("Save Found Holes");
+			// fileChooser.setInitialFileName("holes.txt");
+			// fileChooser.getExtensionFilters().addAll(
+			// 	new FileChooser.ExtensionFilter("Text Files (*.txt)", "*.txt"),
+			// 	new FileChooser.ExtensionFilter("All Files", "*.*")
+			// );
+			// File selectedFile = fileChooser.showSaveDialog(primaryStage);
+
+			// System.out.println("+------------------------------ Finding Holes ------------------------------+");
+			// findAllPoints(polygon, subdivisions, startStepEnd._1-1, startStepEnd._2, startStepEnd._3, selectedFile.getPath());
+			// System.out.println("+------------------------------ Finding Holes Finished ------------------------------+");
+			// final Alert alert = new Alert(AlertType.INFORMATION);
+			// alert.setTitle("Find Holes");
+			// alert.setHeaderText("All points found");
+			// alert.setContentText("Found points have been printed to the console and saved to file.");
+			// alert.showAndWait();
 		});
 
 		// autoPolyVaryBtn.setText("AutoPolyVary");

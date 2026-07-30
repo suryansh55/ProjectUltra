@@ -400,10 +400,18 @@ Jul 31 2025 Marco Mai
 transfer from Java
 */
 void CodeSequence::rotateLeft(std::vector<int32_t>& list){
-	// Nick Shan, July, 2026
-    if (!list.empty()){
-        std::rotate(list.begin(), list.begin() + 1, list.end());
-    }
+
+        if (!list.empty()) {
+            int32_t first = list[0];
+            for (size_t i = 1; i < list.size(); i++) {
+                list[i - 1] = list[i];
+            }
+            list[list.size() - 1] = first;
+        }
+    // c++ build in rotate method
+    // if (!list.empty()){
+    //     std::rotate(list.begin(), list.begin() + 1, list.end());
+    // }
 }
 
 /*

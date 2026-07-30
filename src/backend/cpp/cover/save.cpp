@@ -19,6 +19,10 @@ void cover::save_square(const std::string& dir, const ClosedRectangleQ& square) 
 }
 
 void cover::save_holes(const std::string& dir, const std::vector<ClosedRectangleQ>& not_filled, size_t empties) {
+    (void)dir;
+
+    // The UI expects the newest uncovered-square centers in tmp/holes.txt so
+    // it can load them as one-by-one coordinate probes after any cover run.
     auto file = open_file_write("tmp/holes.txt");
 
     const size_t num_to_print = std::min(not_filled.size(), empties);

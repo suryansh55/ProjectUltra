@@ -211,20 +211,30 @@ N bound(const LinComMapZ<Cos<LinComArrZ<XY>>>& equation) {
     return sum;
 }
 
-inline LinComMapZ<Cos<LinComArrZ<XY>>> multiply_square(const LinComMapZ<Cos<LinComArrZ<XY>>>& equation) {
-    return multiply_lin_com(equation, equation);
+static LinComMapZ<Cos<LinComArrZ<XY>>> multiply_square(const LinComMapZ<Cos<LinComArrZ<XY>>>& equation) {
+
+    const auto& result =multiply_lin_com(equation, equation);
+    return result;
 }
 
-inline LinComMapZ<Cos<LinComArrZ<XY>>> multiply_cubic(const LinComMapZ<Cos<LinComArrZ<XY>>>& equation) {
-    auto inter = multiply_lin_com(equation, equation);
-    return multiply_lin_com(equation, std::move(inter));
+static LinComMapZ<Cos<LinComArrZ<XY>>> multiply_cubic(const LinComMapZ<Cos<LinComArrZ<XY>>>& equation) {
+
+    const auto& inter =multiply_lin_com(equation, equation);
+    const auto& result = multiply_lin_com(equation, inter);
+
+    return result;
 }
 
-inline LinComMapZ<Cos<LinComArrZ<XY>>> multiply_square(const LinComMapZ<Sin<LinComArrZ<XY>>>& equation) {
-    return multiply_lin_com(equation, equation);
+static LinComMapZ<Cos<LinComArrZ<XY>>> multiply_square(const LinComMapZ<Sin<LinComArrZ<XY>>>& equation) {
+
+    const auto& result =multiply_lin_com(equation, equation);
+    return result;
 }
 
-inline LinComMapZ<Sin<LinComArrZ<XY>>> multiply_cubic(const LinComMapZ<Sin<LinComArrZ<XY>>>& equation) {
-    auto inter = multiply_lin_com(equation, equation);
-    return multiply_lin_com(std::move(inter), equation);
+static LinComMapZ<Sin<LinComArrZ<XY>>> multiply_cubic(const LinComMapZ<Sin<LinComArrZ<XY>>>& equation) {
+
+    const auto& inter =multiply_lin_com(equation, equation);
+    const auto& result = multiply_lin_com( inter,equation);
+
+    return result;
 }

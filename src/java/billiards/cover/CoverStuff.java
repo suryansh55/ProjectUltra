@@ -243,6 +243,10 @@ public final class CoverStuff {
             final String str = tokens.next();
             final int index = Integer.parseInt(str);
 
+            // cover.txt stores indexes into the companion stables/triples files.
+            // Stale or hand-edited cover artifacts can reference entries that no
+            // longer exist, so skip only that square instead of failing to load
+            // the whole cover view.
             if (index >= 0 && index < stables.size()) {
                 final ClassifiedCodeSequence stable = stables.get(index);
                 stableCover.put(square, stable);

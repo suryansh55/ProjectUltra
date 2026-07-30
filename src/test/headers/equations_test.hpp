@@ -4,12 +4,21 @@
 
 #include <equations.hpp>
 #include <parse.hpp>
+#include <utils.hpp>
+
+#include <cstdlib>
+#include <cstdint>
+#include <iomanip>
+#include <sstream>
 
 static std::vector<CodeSequence> parse_file(const std::string& path) {
 
     std::vector<CodeSequence> code_seqs{};
 
     std::ifstream infile{path};
+    if (!infile.is_open()) {
+        throw std::runtime_error("missing MRR test fixture: " + path);
+    }
 
     // This reads through all the lines of the file
     std::string line{};
@@ -40,18 +49,14 @@ static std::vector<CodeSequence> parse_file(const std::string& path) {
 BOOST_AUTO_TEST_CASE(test_calculate_empty) {
 
     const auto code_seqs = parse_file("src/test/resources/empty_codes_to_15.txt");
+    BOOST_REQUIRE(!code_seqs.empty());
 
     for (const auto& code_seq : code_seqs) {
         const auto code_type = code_seq.type();
-        try {
-            if (is_stable(code_type)) {
-                BOOST_TEST(!calculate_stable(code_seq, code_type));
-            } else {
-                BOOST_TEST(!calculate_unstable(code_seq, code_type));
-            }
-        } catch (const std::runtime_error& e) {
-            std::cout << "code sequence failed: " << code_seq << std::endl;
-            std::cout << e.what() << std::endl;
+        if (is_stable(code_type)) {
+            BOOST_TEST(!calculate_stable(code_seq, code_type));
+        } else {
+            BOOST_TEST(!calculate_unstable(code_seq, code_type));
         }
     }
 }
@@ -59,18 +64,14 @@ BOOST_AUTO_TEST_CASE(test_calculate_empty) {
 BOOST_AUTO_TEST_CASE(test_calculate_nonempty) {
 
     const auto code_seqs = parse_file("src/test/resources/nonempty_codes_to_15.txt");
+    BOOST_REQUIRE(!code_seqs.empty());
 
     for (const auto& code_seq : code_seqs) {
         const auto code_type = code_seq.type();
-        try {
-            if (is_stable(code_type)) {
-                BOOST_TEST(calculate_stable(code_seq, code_type));
-            } else {
-                BOOST_TEST(calculate_unstable(code_seq, code_type));
-            }
-        } catch (const std::runtime_error& e) {
-            std::cout << "code sequence failed: " << code_seq << std::endl;
-            std::cout << e.what() << std::endl;
+        if (is_stable(code_type)) {
+            BOOST_TEST(calculate_stable(code_seq, code_type));
+        } else {
+            BOOST_TEST(calculate_unstable(code_seq, code_type));
         }
     }
 }

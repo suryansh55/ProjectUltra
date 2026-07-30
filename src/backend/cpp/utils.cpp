@@ -56,6 +56,12 @@ boost::optional<ClassifiedCodeSequence> convert(const std::vector<int>& codeList
         const ClassifiedCodeSequence& codeSequence = *boost::get<ClassifiedCodeSequence>(&either);
         ClassifiedCodeSequence classCodeSeq(codeSequence);
 
+    auto code_numbers = classCodeSeq.codeSequence->numbers();
+    auto code_angles = classCodeSeq.codeSequence->angles(XYZ::X, XYZ::Y);
+
+    auto code_angles_eta = falgo::transform(code_angles, xyz_to_xyeta);
+    auto code_angles_pi = falgo::transform(code_angles, xyz_to_xypi);
+
         return classCodeSeq;
     } else {
         return boost::none;
