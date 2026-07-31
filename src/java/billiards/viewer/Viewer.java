@@ -82,6 +82,7 @@ import org.eclipse.collections.api.list.primitive.MutableIntList;
 import org.eclipse.collections.api.map.MutableMap;
 import org.eclipse.collections.api.set.sorted.MutableSortedSet;
 import org.eclipse.collections.impl.bimap.mutable.HashBiMap;
+import org.eclipse.collections.impl.factory.Lists;
 import org.eclipse.collections.impl.list.mutable.FastList;
 import org.eclipse.collections.impl.list.mutable.primitive.IntArrayList;
 import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
@@ -247,6 +248,7 @@ public final class Viewer {
 	Optional<ConvexPolygon> coverPolyBound1 = Optional.empty();
 	Optional<ConvexPolygon> coverPolyBound2 = Optional.empty();
 	Optional<ConvexPolygon> coverArea = Optional.empty();
+	ArrayList<ConvexPolygon> patchAreas = new ArrayList<>();
 	Optional<ConvexPolygon> autoVaryArea = Optional.empty();
 
 	// Zhao Yu Li, Aug 13, 2025.
@@ -533,6 +535,7 @@ public final class Viewer {
 	final CheckBox autoFillerCheckBox = new CheckBox();
 	final TextField labelMainWindow = new TextField();
 	final Button coverBtn = new Button();
+	final Button patchBtn = new Button();
 	// final Button halfTripleBtn = new Button();
 	// final Button unstableBtn = new Button();
 	// final Button cornerBtn = new Button();
@@ -585,6 +588,7 @@ public final class Viewer {
 	final Button smallCoverButton = new Button("LiCover");
 	final SmallCoverWindow smallCoverWindow;
 	final CoverWindow coverWindow;
+	final PatchWindow patchWindow;
 
 	VaryWindowL varyWindow = null;
 	VaryWindowL middleVaryWindow = null;
@@ -616,6 +620,8 @@ public final class Viewer {
 		final String windowTitle = String.format("Billiards Everything %s (%s)", version, dbName);
 
 		queryStage = new QueryStage(windowTitle, pool, this);
+
+		patchWindow = new PatchWindow();
 
 		coverWindow = new CoverWindow(
 				String.format("Cover %s", version), pool,
@@ -2739,6 +2745,10 @@ public final class Viewer {
 		Utils.colorButton(lookAtMeButton, Color.LIGHTPINK, clickColor);
 		lookAtMeButton.setOnAction(event -> new LookAtMeWindow(windowTitle).show());
 
+		patchBtn.setText("Patch");
+		patchBtn.setTooltip(Utils.toolTip("Brings up a window that will allow you to patch additional polygons into the current cover"));
+		patchBtn.setOnAction(e -> patchWindow.show());
+
 		coverBtn.setText("Cover");
 		coverBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
 				+ " sequences cover a specified polygon. See instructions for details"));
@@ -4052,7 +4062,7 @@ public final class Viewer {
 		backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
 		clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
 		twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton);
-		boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
+		boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField, patchBtn);
 
 		// Zhao Yu Li, Aug 18, 2025.
 		// Replaced "Load Directory" with "LiCover"
@@ -6117,6 +6127,9 @@ public final class Viewer {
 		}
 		for (final ConvexPolygon poly : outerPolyBounds) {
 			renderPolygon(poly, boundsImage, polyBoundColor);
+		}
+		for(final ConvexPolygon poly : patchAreas) {
+			renderPolygon(poly, boundsImage, Color.RED);
 		}
 		coverArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
 		smallCoverAreas.forEach(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
