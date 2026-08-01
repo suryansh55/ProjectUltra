@@ -1,0 +1,18 @@
+# Build outputs and caches
+build
+build-java8
+bin
+.gradle
+
+# Cover data (large; generated / distributed separately)
+coversfolder
+
+# IDE
+.idea
+.settings
+.classpath
+.project
+
+# macOS / JVM crash dumps
+.DS_Store
+*.hprof

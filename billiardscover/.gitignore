@@ -1,0 +1,5 @@
+# Local test JDK (Zulu 8 + JavaFX) installed for running the viewer on this machine.
+# Not part of the project; the professor builds with their own JDK 8.
+jdk8/
+
+.DS_Store

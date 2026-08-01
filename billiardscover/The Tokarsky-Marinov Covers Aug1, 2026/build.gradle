@@ -1,0 +1,139 @@
+apply plugin: 'application'
+apply plugin: 'cpp'
+//apply plugin: 'findbugs'
+
+mainClassName = 'billiards.viewer.Main'
+
+repositories {
+      mavenCentral()
+      google()
+    //jcenter()
+}
+
+dependencies {
+    compile 'org.eclipse.collections:eclipse-collections-api:9.2.0'
+    compile 'org.eclipse.collections:eclipse-collections:9.2.0'
+    compile 'com.google.guava:guava:25.1-jre'
+    compile 'org.apache.commons:commons-math3:3.6.1'
+    compile 'org.apache.commons:commons-lang3:3.7'
+    compile 'io.javaslang:javaslang:2.0.5'
+    //compile 'net.java.dev.jna:jna:4.5.1'//july24,2026 changed to the next line
+    implementation files('libs/jna-4.5.1.jar')
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.2.0'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.2.0'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+compileJava {
+    options.compilerArgs << '-Xlint' << '-Werror'
+}
+
+jar {
+    baseName = 'billiard-viewer'
+
+    duplicatesStrategy(DuplicatesStrategy.EXCLUDE)
+    from {
+        configurations.runtime.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+        configurations.compile.collect {
+            it.isDirectory() ? it : zipTree(it)
+        }
+    }
+    exclude 'META-INF/*.RSA', 'META-INF/*.SF','META-INF/*.DSA'
+    manifest.attributes 'Main-Class': 'billiards.viewer.Main'
+}
+
+sourceSets {
+    main {
+        java {
+            srcDir 'src/java'
+        }
+
+        resources {
+            srcDir 'build/dists'
+        }
+    }
+}
+
+
+applicationDefaultJvmArgs = ['-server', '-Djna.library.path=./build/libs/backend/shared']
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+model {
+
+    components {
+
+        backend(NativeLibrarySpec) {
+
+            binaries.all {
+
+                cppCompiler.define "NDEBUG"
+                cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'//,'-I/usr/local/include'
+                linker.args '-lgmp', '-lmpfr', '-ltbb'
+
+                if (toolChain in Clang) {
+                    cppCompiler.args  '-Werror',//'-Weverything' //marco mai aug 28 2025 change this part3
+                                     '-Wno-padded', '-Wno-comma',
+                                     '-Wno-exit-time-destructors', '-Wno-global-constructors',
+                                     '-Wno-c++98-compat', '-Wno-c++98-compat-pedantic',
+                                     '-std=c++14'
+
+                } else if (toolChain in Gcc) {
+                    cppCompiler.args '-Wall', '-Wextra', '-Wpedantic', '-Werror',
+                                     '-Wno-c++11-compat', '-Wno-c++14-compat',
+                                     '-std=c++14'
+                    linker.args '-lpthread', '-lgmp', '-lmpfr', '-lmpfi'
+                } else {
+                    println 'compiler unsupported; please use GCC or Clang'
+                }
+            }
+        }
+
+        cover(NativeExecutableSpec) {
+
+            sources.cpp {
+                lib library: 'backend', linkage: 'static'
+            }
+
+            binaries.all {
+
+                cppCompiler.define "NDEBUG"
+                cppCompiler.args '-O3', '-march=native', '-flto', '-ftrapv'//,'-I/usr/local/include'
+                linker.args  '-lgmp', '-lmpfr', '-ltbb'
+
+                if (toolChain in Clang) {
+                    cppCompiler.args '-Werror',//'-Weverything' //marco mai aug 28 2025 change this part3
+                                     '-Wno-padded', '-Wno-comma',
+                                     '-Wno-exit-time-destructors', '-Wno-global-constructors',
+                                     '-Wno-c++98-compat', '-Wno-c++98-compat-pedantic',
+                                     '-std=c++14'
+
+                } else if (toolChain in Gcc) {
+                    cppCompiler.args '-Wall', '-Wextra', '-Wpedantic', '-Werror',
+                                     '-Wno-c++11-compat', '-Wno-c++14-compat',
+                                     '-std=c++14'
+                    linker.args '-lpthread'
+                } else {
+                    println 'compiler unsupported; please use GCC or Clang'
+                }
+            }
+        }
+    }
+}
+
+// Make sure the C++ code is up to date when running the Java program
+run.dependsOn "backendSharedLibrary"
+run.dependsOn "coverExecutable"
+
+task createLibraryFolders {
+    if (!file('build/dists/linux-x86-64').exists()) {
+        file('build/dists/linux-x86-64').mkdirs()
+        file('build/dists/x86-64-win32').mkdirs()
+    }
+}
