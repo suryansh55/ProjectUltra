@@ -35,16 +35,9 @@ public final class Wrapper {
         Native.register("backend");
     }
 
-    // Suryansh Ankur, 2026
-    // Clears the backend cancel flag. Call once before launching a new vary run.
-    public static native void backend_reset_cancel();
-    // Peak process resident set size in bytes (JVM + native heap). For benchmarking.
-    public static native long backend_peak_rss_bytes();
-
     private static native void sqlite_error_logging();
     private static native void database_create(final String dbPath);
     private static native void database_clear(final String dbPath);
-    private static native Pointer backend_last_error();
 
     public static void errorLogging() {
         sqlite_error_logging();
@@ -52,12 +45,10 @@ public final class Wrapper {
 
     public static void createDatabase(final String dbPath) {
         database_create(dbPath);
-        throwIfBackendError("create database");
     }
 
     public static void clearDatabase(final String dbPath) {
         database_clear(dbPath);
-        throwIfBackendError("clear database");
     }
 
     private static native Pointer create_connection_pool(final String dbPath, final int poolSize);
@@ -65,50 +56,27 @@ public final class Wrapper {
 
 
     public static Pointer createConnectionPool(final String dbPath, final int poolSize) {
-        final Pointer pointer = create_connection_pool(dbPath, poolSize);
-        if (isNullPointer(pointer)) {
-            throw new RuntimeException("Failed to create native connection pool: " + backendLastError());
-        }
-        return pointer;
+        return create_connection_pool(dbPath, poolSize);
     }
 
     public static void destroyConnectionPool(final Pointer dbPtr) {
-        if (isNullPointer(dbPtr)) {
-            return;
-        }
         destroy_connection_pool(dbPtr);
     }
 
-    private static boolean isNullPointer(final Pointer pointer) {
-        return pointer == null || Pointer.nativeValue(pointer) == 0;
-    }
-
-    private static String backendLastError() {
-        final Pointer error = backend_last_error();
-        if (isNullPointer(error)) {
-            return "unknown native error";
-        }
-
-        final String message = error.getString(0);
-        return message == null || message.trim().isEmpty() ? "unknown native error" : message;
-    }
-
-    private static void throwIfBackendError(final String operation) {
-        final String message = backendLastError();
-        if (!"unknown native error".equals(message)) {
-            throw new RuntimeException("Failed to " + operation + ": " + message);
-        }
-    }
-
     public static native void backend_cancel();
+    // Suryansh Ankur, 2026
+    // Clears the backend cancel flag. Call once before launching a new vary run.
+    public static native void backend_reset_cancel();
 
-    private static native int cover_wrapper(String polygon, String codes, String unstables,
+    // Peak process resident set size in bytes (JVM + native heap). For benchmarking.
+    public static native long backend_peak_rss_bytes();
+    private static native String cover_wrapper(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
-                                            boolean mrr, Pointer pool, CString result);
+                                            boolean mrr, Pointer pool);
 
-    private static native int small_cover_wrapper(String polygon, String codes, String unstables,
+    private static native String small_cover_wrapper(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
-                                            boolean mrr, Pointer pool, boolean printInfo, CString result);
+                                            boolean mrr, Pointer pool, boolean printInfo);
 
     private static native int cover_wrapper_duplicate_stables(String polygon, String codes, String unstables,
                                             int digits, int subdivide, int empty,
@@ -124,33 +92,19 @@ public final class Wrapper {
                                        final int digits, final int subdivide, final int empty,
                                        final boolean mrr, final ConnectionPool pool) {
 
-        final CString result = new CString();
-        final int rval = cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer, result);
-        return stringResultOrEmpty(rval, result);
+        return cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer);
     }
 
     public static String smallCoverWrapper(final String polygon, final String codes, final String unstables,
                                        final int digits, final int subdivide, final int empty,
                                        final boolean mrr, final ConnectionPool pool, final boolean printInfo) {
 
-       final CString result = new CString();
-       final int rval = small_cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer, printInfo, result);
-       return stringResultOrEmpty(rval, result);
+       return small_cover_wrapper(polygon, codes, unstables, digits, subdivide, empty, mrr, pool.pointer, printInfo);
     }
 
-    private static native int get_not_filled_coordinates(String polygon, String codes, String unstables,
-                                                         int digits, int subdivide, int empty,
-                                                         boolean mrr, Pointer pool, boolean isLastCycle,
-                                                         CString result);
-
-    public static String getNotFilledCoordinates(String polygon, String codes, String unstables,
-                                                 int digits, int subdivide, int empty,
-                                                 boolean mrr, Pointer pool, boolean isLastCycle) {
-        final CString result = new CString();
-        final int rval = get_not_filled_coordinates(polygon, codes, unstables, digits, subdivide, empty,
-                mrr, pool, isLastCycle, result);
-        return stringResultOrEmpty(rval, result);
-    }
+    public static native String get_not_filled_coordinates(String polygon, String codes, String unstables,
+                                                        int digits, int subdivide, int empty,
+                                                        boolean mrr, Pointer pool, boolean isLastCycle);
     
     public static int coverWrapperDuplicateStables(final String polygon, final String codes, final String unstables,
                                        final int digits, final int subdivide, final int empty,
@@ -207,8 +161,6 @@ public final class Wrapper {
                                             CInfoAll cInfoAll, Pointer poolPtr);
     private static native int load_all_equations(int[] codeNumbers, int codeNumbersLength,
                                                 CInfoAll cInfoAll, Pointer poolPtr);
-    private static native void cleanup_cinfo_all(CInfoAll cInfoAll);
-
     public static Optional<InfoAll> loadAllEquation(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool ){
         final int[] codeNumbersArray = codeSeq.codeSequence.codeNumbers.toArray();
 
@@ -230,18 +182,21 @@ public final class Wrapper {
             }
             catch (NullPointerException e) {
                 return  Optional.empty();
-            } finally {
-                cleanup_cinfo_all(cinfoAll);
+            }finally {
+                cleanup_cinfoAll(cinfoAll);
             }
 
         } else if (rval == 0) {
             // empty set
+            cleanup_cinfoAll(cinfoAll);
             return Optional.empty();
         } else if (rval == -1) {
             System.err.println("Load all equation failed for " + codeSeq);
+            cleanup_cinfoAll(cinfoAll);
             // Empty normally means empty set, but in this case means calculation error
             return Optional.empty();
         } else {
+            cleanup_cinfoAll(cinfoAll);
             throw new RuntimeException("unknown return value " + rval);
         }
     }
@@ -268,18 +223,21 @@ public final class Wrapper {
             }
             catch (NullPointerException e) {
                 return  Optional.empty();
-            } finally {
-                cleanup_cinfo_all(cinfoAll);
+            }finally {
+                cleanup_cinfoAll(cinfoAll);
             }
 
         } else if (rval == 0) {
             // empty set
+            cleanup_cinfoAll(cinfoAll);
             return Optional.empty();
         } else if (rval == -1) {
             System.err.println("Load all failed for " + codeSeq);
+            cleanup_cinfoAll(cinfoAll);
             // Empty normally means empty set, but in this case means calculation error
             return Optional.empty();
         } else {
+            cleanup_cinfoAll(cinfoAll);
             throw new RuntimeException("unknown return value " + rval);
         }
     }
@@ -437,6 +395,7 @@ public final class Wrapper {
                                         CInfo cinfo, Pointer poolPtr);
 
     private static native void cleanup_cinfo(CInfo cinfo);
+    private static native void cleanup_cinfoAll(CInfoAll cinfo);
 
     public static Optional<Info> loadInfo(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {
 
@@ -490,27 +449,6 @@ public final class Wrapper {
 
     private static native void cleanup_string(CString cstring);
 
-    private static void cleanupStringIfPresent(final CString cstring) {
-        if (cstring.string != null) {
-            cleanup_string(cstring);
-            cstring.string = null;
-        }
-    }
-
-    private static String stringResultOrEmpty(final int rval, final CString result) {
-        if (rval == 1) {
-            try {
-                return result.string == null ? "" : result.string.getString(0);
-            } finally {
-                cleanupStringIfPresent(result);
-            }
-        } else if (rval == -1) {
-            return "";
-        } else {
-            throw new RuntimeException("unknown native string return value: " + rval);
-        }
-    }
-
     public static String search(final CodeType type, final int length, final ConnectionPool pool) {
 
         final CString cstring = new CString();
@@ -519,11 +457,11 @@ public final class Wrapper {
 
         if (rval == 1) {
 
-            try {
-                return cstring.string.getString(0);
-            } finally {
-                cleanupStringIfPresent(cstring);
-            }
+            final String str = cstring.string.getString(0);
+
+            cleanup_string(cstring);
+
+            return str;
 
         } else if (rval == -1) {
             throw new RuntimeException("searching failed");
@@ -540,11 +478,11 @@ public final class Wrapper {
 
         if (rval == 1) {
 
-            try {
-                return cstring.string.getString(0);
-            } finally {
-                cleanupStringIfPresent(cstring);
-            }
+            final String str = cstring.string.getString(0);
+
+            cleanup_string(cstring);
+
+            return str;
 
         } else if (rval == -1) {
             throw new RuntimeException("searching failed");
@@ -583,11 +521,11 @@ public final class Wrapper {
 
         if (rval == 1) {
 
-            try {
-                return cstring.string.getString(0);
-            } finally {
-                cleanupStringIfPresent(cstring);
-            }
+            final String str = cstring.string.getString(0);
+
+            cleanup_string(cstring);
+
+            return str;
         } else {
             throw new RuntimeException("bounding polygon failed");
         }
@@ -608,18 +546,22 @@ public final class Wrapper {
             }
             catch (NullPointerException e) {
                 return Optional.empty();
-            } finally {
-                cleanup_cinfo_all(cInfoAll);
+            }finally {
+                cleanup_cinfoAll(cInfoAll);
             }
         }
         else if (rval == 0) {
             // empty set
+
+            cleanup_cinfoAll(cInfoAll);
             return Optional.empty();
         } else if (rval == -1) {
             System.err.println("Load vector failed for " + codeSequence);
+            cleanup_cinfoAll(cInfoAll);
             // Empty normally means empty set, but in this case means calculation error
             return Optional.empty();
         } else {
+            cleanup_cinfoAll(cInfoAll);
             throw new RuntimeException("unknown return value " + rval);
         }
     }
@@ -633,12 +575,10 @@ public final class Wrapper {
         double y = Math.toRadians(Double.parseDouble(y_str));
         final double rval = calculate_gradient(euqation_str, x, y, from_database, cstring,cstring2);
         if (rval != -1) {
-            try {
-                return cstring.string.getString(0);
-            } finally {
-                cleanupStringIfPresent(cstring);
-                cleanupStringIfPresent(cstring2);
-            }
+            final String str = cstring.string.getString(0);
+            cleanup_string(cstring);
+            cleanup_string(cstring2);
+            return str;
         } else {
             throw new RuntimeException("calculating gradient failed");
         }
@@ -652,12 +592,9 @@ public final class Wrapper {
         double y = Math.toRadians(Double.parseDouble(y_str));
         final double rval = calculate_gradient(euqation_str, x, y, from_database, cstring,cstring2);
         if (rval != -1) {
-            try {
-                return cstring2.string.getString(0);
-            } finally {
-                cleanupStringIfPresent(cstring);
-                cleanupStringIfPresent(cstring2);
-            }
+            final String str = cstring2.string.getString(0);
+            cleanup_string(cstring);
+            return str;
         } else {
             throw new RuntimeException("unknown return value for calculateGradient: " + rval);
         }
@@ -669,41 +606,72 @@ public final class Wrapper {
     public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCpp(int movesMin, int movesMax, double xAngle,
             double yAngle, String reqTypes) {
         final CString result = new CString();
-        try {
-            final int rval = vary_cs_cpp(movesMin, movesMax, xAngle, yAngle, result, reqTypes);
-            if (rval > 0) {
-                String strseq = result.string.getString(0);
+        final int rval = vary_cs_cpp(movesMin, movesMax, xAngle, yAngle, result, reqTypes);
+        if (rval > 0) {
+            String strseq = result.string.getString(0);
 
-                // Estimate number of lines
-                int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
-                List<ClassifiedCodeSequence> tmp = Collections.synchronizedList(new ArrayList<>(estimatedLines));
+            // Estimate number of lines
+            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+            List<ClassifiedCodeSequence> tmp = Collections.synchronizedList(new ArrayList<>(estimatedLines));
 
-                String[] lines = strseq.split("\\R");
-                Arrays.stream(lines).parallel().forEach(line -> {
-                    String trimmed = line.trim();
-                    if (!trimmed.isEmpty()) {
-                        try {
-                            int[] dirty = Arrays.stream(trimmed.split("\\s+"))
-                                    .mapToInt(Integer::parseInt)
-                                    .toArray();
-                            IntList list = IntArrayList.newListWith(dirty);
-                            Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
-                            codeSeq.ifPresent(tmp::add); // now thread-safe
-                        } catch (Exception ignored) {
-                            // skip malformed
-                        }
+            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+                                .mapToInt(Integer::parseInt)
+                                .toArray();
+                        IntList list = IntArrayList.newListWith(dirty);
+                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+                        codeSeq.ifPresent(tmp::add); // now thread-safe
+                    } catch (Exception ignored) {
+                        // skip malformed
                     }
-                });
+                }
+            });
 
-                return Optional.of(Lists.mutable.ofAll(tmp));
+            return Optional.of(Lists.mutable.ofAll(tmp));
 
-            } else {
-                throw new RuntimeException("unknown return value for varyCSCpp: " + rval);
-            }
-        } finally {
-            cleanup_string(result);
+        } else {
+            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
         }
     }
+
+/*
+    public static Optional<MutableList<ClassifiedCodeSequence>> varyCSCppParallel(int movesMin, int movesMax, double xAngle,
+            double yAngle, String reqTypes) {
+        final CString result = new CString();
+        final int rval = vary_cs_cpp_parallel(movesMin, movesMax, xAngle, yAngle, result, reqTypes);
+        if (rval > 0) {
+            String strseq = result.string.getString(0);
+
+            // Estimate number of lines
+            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+            List<ClassifiedCodeSequence> tmp = Collections.synchronizedList(new ArrayList<>(estimatedLines));
+
+            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+                                .mapToInt(Integer::parseInt)
+                                .toArray();
+                        IntList list = IntArrayList.newListWith(dirty);
+                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+                        codeSeq.ifPresent(tmp::add); // now thread-safe
+                    } catch (Exception ignored) {
+                        // skip malformed
+                    }
+                }
+            });
+
+            return Optional.of(Lists.mutable.ofAll(tmp));
+
+        } else {
+            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
+        }
+    }
+*/
 
     private static native int vary_3_cpp(int int_movesMin, int int_movesMax, double db_initPosition, double db_xAngle,
             double db_yAngle, CString result, String reqTypes);
@@ -711,39 +679,65 @@ public final class Wrapper {
     public static Optional<MutableList<ClassifiedCodeSequence>> vary3Cpp(int movesMin, int movesMax,
             double initPosition, double xAngle, double yAngle, String reqTypes) {
         final CString result = new CString();
-        try {
-            final int rval = vary_3_cpp(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
-            if (rval > 0) {
-                String strseq = result.string.getString(0);
+        final int rval = vary_3_cpp(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
+        if (rval > 0) {
+            String strseq = result.string.getString(0);
 
-                // Estimate number of lines
-                int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
-                List<ClassifiedCodeSequence> tmp = Collections.synchronizedList(new ArrayList<>(estimatedLines));
+            // Estimate number of lines
+            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+            List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
 
-                String[] lines = strseq.split("\\R");
-                Arrays.stream(lines).parallel().forEach(line -> {
-                    String trimmed = line.trim();
-                    if (!trimmed.isEmpty()) {
-                        try {
-                            int[] dirty = Arrays.stream(trimmed.split("\\s+"))
-                                    .mapToInt(Integer::parseInt)
-                                    .toArray();
-                            IntList list = IntArrayList.newListWith(dirty);
-                            Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
-                            codeSeq.ifPresent(tmp::add);
-                        } catch (Exception ignored) {
-                            // skip malformed
-                        }
+            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+                                .mapToInt(Integer::parseInt)
+                                .toArray();
+                        IntList list = IntArrayList.newListWith(dirty);
+                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+                        codeSeq.ifPresent(tmp::add); // thread safety issue here, see below
+                    } catch (Exception ignored) {
+                        // skip malformed
                     }
-                });
-                return Optional.of(Lists.mutable.ofAll(tmp));
-            } else {
-                throw new RuntimeException("unknown return value for vary3Cpp: " + rval);
-            }
-        } finally {
-            cleanup_string(result);
+                }
+            });
+            return Optional.of(Lists.mutable.ofAll(tmp));
+        } else {
+            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
         }
     }
+//    public static Optional<MutableList<ClassifiedCodeSequence>> vary3CppParallel(int movesMin, int movesMax,
+//            double initPosition, double xAngle, double yAngle, String reqTypes) {
+//        final CString result = new CString();
+//        final int rval = vary_3_cpp_parallel(movesMin, movesMax, initPosition, xAngle, yAngle, result, reqTypes);
+//        if (rval > 0) {
+//            String strseq = result.string.getString(0);
+//
+//            // Estimate number of lines
+//            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+//            List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
+//
+//            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+//                String trimmed = line.trim();
+//                if (!trimmed.isEmpty()) {
+//                    try {
+//                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+//                                .mapToInt(Integer::parseInt)
+//                                .toArray();
+//                        IntList list = IntArrayList.newListWith(dirty);
+//                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+//                        codeSeq.ifPresent(tmp::add); // thread safety issue here, see below
+//                    } catch (Exception ignored) {
+//                        // skip malformed
+//                    }
+//                }
+//            });
+//            return Optional.of(Lists.mutable.ofAll(tmp));
+//        } else {
+//            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
+//        }
+//    }
 
     private static native int vary_4_cpp(int int_movesMin, int int_movesMax, double db_xAngle, double db_yAngle,
             CString result, String reqTypes);
@@ -751,72 +745,33 @@ public final class Wrapper {
     public static Optional<MutableList<ClassifiedCodeSequence>> vary4Cpp(int movesMin, int movesMax, double xAngle,
             double yAngle, String reqTypes) {
         final CString result = new CString();
-        try {
-            final int rval = vary_4_cpp(movesMin, movesMax, xAngle, yAngle, result, reqTypes);
-            if (rval > 0) {
-                String strseq = result.string.getString(0);
+        final int rval = vary_4_cpp(movesMin, movesMax, xAngle, yAngle, result, reqTypes);
+        if (rval > 0) {
+            String strseq = result.string.getString(0);
 
-                // Estimate number of lines
-                int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
-                List<ClassifiedCodeSequence> tmp = Collections.synchronizedList(new ArrayList<>(estimatedLines));
+            // Estimate number of lines
+            int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
+            List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
 
-                String[] lines = strseq.split("\\R");
-                Arrays.stream(lines).parallel().forEach(line -> {
-                    String trimmed = line.trim();
-                    if (!trimmed.isEmpty()) {
-                        try {
-                            int[] dirty = Arrays.stream(trimmed.split("\\s+"))
-                                    .mapToInt(Integer::parseInt)
-                                    .toArray();
-                            IntList list = IntArrayList.newListWith(dirty);
-                            Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
-                            codeSeq.ifPresent(tmp::add);
-                        } catch (Exception ignored) {
-                            // skip malformed
-                        }
+            Arrays.stream(strseq.split("\\R")).parallel().forEach(line -> {
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    try {
+                        int[] dirty = Arrays.stream(trimmed.split("\\s+"))
+                                .mapToInt(Integer::parseInt)
+                                .toArray();
+                        IntList list = IntArrayList.newListWith(dirty);
+                        Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
+                        codeSeq.ifPresent(tmp::add); // thread safety issue here, see below
+                    } catch (Exception ignored) {
+                        // skip malformed
                     }
-                });
-                return Optional.of(Lists.mutable.ofAll(tmp));
-            } else {
-                throw new RuntimeException("unknown return value for vary4Cpp: " + rval);
-            }
-        } finally {
-            cleanup_string(result);
-        }
-    }
-
-    private static MutableList<ClassifiedCodeSequence> parseNativeCodeSequences(final String strseq) {
-        final int estimatedLines = (int) strseq.chars().filter(c -> c == '\n').count() + 1;
-        final List<ClassifiedCodeSequence> tmp = new ArrayList<>(estimatedLines);
-        int badLines = 0;
-        int lineNumber = 0;
-
-        for (final String line : strseq.split("\\R")) {
-            lineNumber += 1;
-            final String trimmed = line.trim();
-            if (!trimmed.isEmpty()) {
-                try {
-                    final int[] dirty = Arrays.stream(trimmed.split("\\s+"))
-                            .mapToInt(Integer::parseInt)
-                            .toArray();
-                    final IntList list = IntArrayList.newListWith(dirty);
-                    final Optional<ClassifiedCodeSequence> codeSeq = Utils.convert(list);
-                    codeSeq.ifPresent(tmp::add);
-                } catch (final RuntimeException e) {
-                    // Native vary output is supposed to be one integer sequence
-                    // per line. Treat malformed lines as a visible backend bug
-                    // instead of silently dropping codes from the result set.
-                    badLines += 1;
-                    System.err.println("Failed to parse native vary output line " + lineNumber + ": " + trimmed);
                 }
-            }
+            });
+            return Optional.of(Lists.mutable.ofAll(tmp));
+        } else {
+            throw new RuntimeException("unknown return value for calculateGradient: " + rval);
         }
-
-        if (badLines > 0) {
-            throw new IllegalStateException("Failed to parse " + badLines + " native vary output line(s)");
-        }
-
-        return Lists.mutable.ofAll(tmp);
     }
 
 }

@@ -105,6 +105,7 @@ import billiards.geometry.Location;
 import billiards.geometry.Rectangle;
 import billiards.geometry.Vector2;
 import billiards.math.XYPi;
+import billiards.patch.CoverableRegion;
 import billiards.utils.BatchLoadStorage;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
@@ -184,7 +185,7 @@ public final class Viewer {
 	private static final boolean splitUp = true;
 
 	// the size of the square viewer window, should be 75% as tall as the screen?
-	private static final int SIDE = 600;
+	public static final int SIDE = 600;
 
 	private static final int BTNPADBOTTOM = 4;
 
@@ -249,6 +250,7 @@ public final class Viewer {
 	Optional<ConvexPolygon> coverPolyBound2 = Optional.empty();
 	Optional<ConvexPolygon> coverArea = Optional.empty();
 	ArrayList<ConvexPolygon> patchAreas = new ArrayList<>();
+	ArrayList<ConvexPolygon> coveredPatchAreas = new ArrayList<>();
 	Optional<ConvexPolygon> autoVaryArea = Optional.empty();
 
 	// Zhao Yu Li, Aug 13, 2025.
@@ -415,6 +417,7 @@ public final class Viewer {
 	final ImageView guideLinesImageView = new ImageView();
 	final ImageView regionsImageView = new ImageView();
 	final ImageView boundsImageView = new ImageView();
+	final ImageView patchImageView = new ImageView();
 
 	// the oboImageView is kept separate, because it allows us to redraw this
 	// one without redrawing everything else
@@ -621,7 +624,7 @@ public final class Viewer {
 
 		queryStage = new QueryStage(windowTitle, pool, this);
 
-		patchWindow = new PatchWindow();
+		patchWindow = new PatchWindow(pool, () -> drawPatch(tmpDir, executor), () -> loadPatch("cover", executor), this);
 
 		coverWindow = new CoverWindow(
 				String.format("Cover %s", version), pool,
@@ -2187,7 +2190,7 @@ public final class Viewer {
 		lineEndField.setPromptText("End");
 		lineEndField.setPrefWidth(60);
 
-        findPointsBtn.setText("Find Holes");
+        findPointsBtn.setText("JKFindHoles");
         findPointsBtn.setTooltip(Utils.toolTip(""));
 		findPointsBtn.setOnAction(event -> {
 			if(holeFinderWindow == null)
@@ -2745,7 +2748,7 @@ public final class Viewer {
 		Utils.colorButton(lookAtMeButton, Color.LIGHTPINK, clickColor);
 		lookAtMeButton.setOnAction(event -> new LookAtMeWindow(windowTitle).show());
 
-		patchBtn.setText("Patch");
+		patchBtn.setText("JKPatch");
 		patchBtn.setTooltip(Utils.toolTip("Brings up a window that will allow you to patch additional polygons into the current cover"));
 		patchBtn.setOnAction(e -> patchWindow.show());
 
@@ -2884,7 +2887,7 @@ public final class Viewer {
 		labelCodeWindow.textProperty().bindBidirectional(labelMainWindow.textProperty());
 
 		imageStack.getChildren().addAll(backgroundImageView, regionsImageView, guideLinesImageView,
-				boundsImageView, oboImageView, topImageView);
+				boundsImageView, oboImageView, patchImageView, topImageView);
 
 		reflectCheckBox.setText("Reflect");
 		reflectCheckBox.setTooltip(Utils.toolTip("Reflects the map into usual cartesian coordinates"));
@@ -2987,8 +2990,11 @@ public final class Viewer {
 			mrrBounds.clear();
 			coverArea = Optional.empty();
 			autoVaryArea = Optional.empty();
+			patchAreas.clear();
+			coveredPatchAreas.clear();
 			regionsImageView.setImage(new WritableImage(SIDE, SIDE));
 			boundsImageView.setImage(new WritableImage(SIDE, SIDE));
+			patchImageView.setImage(new WritableImage(SIDE, SIDE));
 
 			currentOBOStorage = null;
 			lineNumberTxt.setText("");
@@ -6129,7 +6135,7 @@ public final class Viewer {
 			renderPolygon(poly, boundsImage, polyBoundColor);
 		}
 		for(final ConvexPolygon poly : patchAreas) {
-			renderPolygon(poly, boundsImage, Color.RED);
+			renderPolygon(poly, boundsImage, coverAreaColor);
 		}
 		coverArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
 		smallCoverAreas.forEach(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
@@ -6150,11 +6156,28 @@ public final class Viewer {
 			renderRegion(currentOBOStorage, oboImage, currentOBOColor);
 		}
 
+		// Image 5: Render covered patch areas in gray
+		final WritableImage patchImage = new WritableImage(SIDE, SIDE);
+		for (final ConvexPolygon poly : coveredPatchAreas) {
+
+			final PixelWriter pixelWriter = patchImage.getPixelWriter();
+			for(int pixelX = 0; pixelX < SIDE; pixelX += 1) {
+				for(int pixelY = 0; pixelY < SIDE; pixelY += 1) {
+					final double rx = map.radianX(pixelX + 0.5);
+					final double ry = map.radianY(pixelY + 0.5);
+					if(poly.location(rx, ry).equals(Location.INSIDE)) {
+						pixelWriter.setColor(pixelX, pixelY, Color.GRAY);
+					}
+				}
+			}
+		}
+
 		// Update all the images at once to avoid jarring rendering.
 		guideLinesImageView.setImage(guideLinesImage);
 		regionsImageView.setImage(regionImage);
 		boundsImageView.setImage(boundsImage);
 		oboImageView.setImage(oboImage);
+		patchImageView.setImage(patchImage);
 	}
 
 	// use this when the length of the code numbers changes
@@ -8655,6 +8678,31 @@ public final class Viewer {
 
 	public void loadCover(final String dir, final ExecutorService executor) {
 		loadCover(dir, executor, false);
+	}
+
+	public void drawPatch(final String dir, final ExecutorService executor) {
+		final String patchString = readFromFile(dir + "/patches.txt").trim();
+		patchAreas = CoverableRegion.parsePatchPolygons(patchString);
+		renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+	}
+
+	public void loadPatch(final String dir, final ExecutorService executor) {
+		final String squareString = readFromFile(dir + "/square.txt").trim();
+		final String stablesString = readFromFile(dir + "/stables.txt").trim();
+		final String triplesString = readFromFile(dir + "/triples.txt").trim();
+		final String coverString = readFromFile(dir + "/cover.txt").trim();
+
+		final Rectangle square = CoverStuff.parseRectangle(squareString);
+		final List<ClassifiedCodeSequence> stables = CoverStuff.parseStables(stablesString);
+		final List<Triple> triples = CoverStuff.parseTriples(triplesString);
+
+		final Tuple2<MutableMap<Rectangle, ClassifiedCodeSequence>, MutableMap<Rectangle, Triple>> cover = CoverStuff
+				.parseCover(coverString, square, stables, triples);
+
+		mrrBounds.clear();
+		coverRects.addStables(cover._1, Color.BLACK);
+		coverRects.addTriples(cover._2, Color.BLACK);
+		renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
 	}
 
 	public void loadCover(final String dir, final ExecutorService executor, final boolean small) {

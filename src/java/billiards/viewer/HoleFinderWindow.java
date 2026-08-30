@@ -8,7 +8,10 @@ import org.fxmisc.flowless.VirtualizedScrollPane;
 import org.fxmisc.richtext.CodeArea;
 import org.fxmisc.richtext.LineNumberFactory;
 
+import billiards.patch.CoverableRegion;
 import billiards.wrapper.Wrapper;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.concurrent.Task;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
@@ -17,17 +20,26 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.stage.Stage;
+import javafx.util.StringConverter;
 import javaslang.Tuple2;
 
+/**
+ * <b>Jeff Khuu</b><br>
+ * <b>Aug 10, 2026</b>
+ * <p>
+ * <code>HoleFinderWindow</code> is a JavaFX window that allows users to find holes in a cover polygon based on the provided coordinates, stables, and triples. It provides a user interface for inputting parameters such as digits, magnifications, and empty squares, and displays the resulting coordinates in a code area. The window also allows users to copy, clear, or load the coordinates as OBO.
+ * </p>
+ */
 public class HoleFinderWindow {
-    // Global mutable state
-    public static String polygonString = "";
+    private static String polygonString = "";
+    private final ObservableList<CoverableRegion> coverableRegions = FXCollections.observableArrayList();
 
 	private final VBox root = new VBox(10);
 	public final Stage stage = new Stage();
@@ -39,16 +51,12 @@ public class HoleFinderWindow {
     private final TextField digitsTextField = new TextField("22");
     private final TextField emptySquaresTextField = new TextField("100");
     private final CodeArea coordinateCodeArea = new CodeArea();
+    private final ComboBox<CoverableRegion> polygonBox = new ComboBox<>(coverableRegions);
 
 
     public HoleFinderWindow(final String cover, final Viewer viewer) {
         this.viewer = viewer;
 
-        HoleFinderWindow.polygonString = Utils.readFromFile(cover);
-        // Sync the polygon with the cover polygon
-        CoverWindow.polyStringProperty.addListener((o, oldValue, newValue) -> {
-            polygonString = newValue;
-        });
 
         stage.setTitle("Hole Finder");
         stage.setScene(scene);
@@ -67,10 +75,33 @@ public class HoleFinderWindow {
         Utils.colorButton(findHolesButton, Color.LIGHTGRAY, Color.DARKGRAY);
         findHolesButton.setOnAction(this::onFindHolesAction);
 
+        refreshPolygonBox();
+        polygonBox.setConverter(new StringConverter<CoverableRegion>() {
+            @Override
+            public String toString(CoverableRegion object) {
+                return object.name;
+            }
+
+            @Override
+            public CoverableRegion fromString(String string) {
+                return coverableRegions.stream().filter(region -> region.name.equals(string)).findFirst().orElse(null);
+            }
+        });
+        polygonBox.getSelectionModel().selectFirst();
+        polygonBox.setOnAction(event -> {
+            CoverableRegion selectedRegion = polygonBox.getSelectionModel().getSelectedItem();
+            if (selectedRegion != null) {
+                HoleFinderWindow.polygonString = selectedRegion.polygon;
+            }
+        });
+
         root.setPrefHeight(400);
         root.setPrefWidth(800);
         root.setPadding(new Insets(10));
         root.getChildren().addAll(buildCoordinatesRow(), vsPane, buildButtonRow());
+
+
+        HoleFinderWindow.polygonString = polygonBox.getSelectionModel().getSelectedItem().polygon;
     }
 
     private void onFindHolesAction(ActionEvent event) {
@@ -102,7 +133,7 @@ public class HoleFinderWindow {
         final Task<String> task = new Task<String>() {
             @Override
             protected String call() throws Exception {
-                return Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, false);
+                return Wrapper.get_not_filled_coordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, false);
             }
         };
 
@@ -144,7 +175,7 @@ public class HoleFinderWindow {
 
 
         HBox buttonRow = new HBox(10);
-        buttonRow.getChildren().addAll(magnificationsLabel, magnificationsTextField, digitsLabel, digitsTextField, emptySquaresLabel, emptySquaresTextField, findHolesButton);
+        buttonRow.getChildren().addAll(digitsLabel, digitsTextField, magnificationsLabel, magnificationsTextField, emptySquaresLabel, emptySquaresTextField, findHolesButton);
         buttonRow.setAlignment(Pos.CENTER_LEFT);
         return buttonRow;
     }
@@ -162,7 +193,7 @@ public class HoleFinderWindow {
             coordinateCodeArea.clear();
         });
 
-        Button loadCoordinatesButton = new Button("Export as OBO");
+        Button loadCoordinatesButton = new Button("Load as OBO");
         loadCoordinatesButton.setOnAction(event -> {
             String coordinates = coordinateCodeArea.getText();
             this.viewer.loadHolesAsOBO(coordinates);
@@ -173,9 +204,21 @@ public class HoleFinderWindow {
             alert.showAndWait();
         });
 
-        HBox coordinatesHBox = new HBox(10, coordinateLabel, copyButton, clearCoordinatesButton, loadCoordinatesButton);
+        Label polygonLabel = new Label("Polygon: ");
+        Button polygonRefreshButton = new Button("Refresh");
+        polygonRefreshButton.setOnAction(event -> refreshPolygonBox());
+
+        HBox coordinatesHBox = new HBox(10, coordinateLabel, copyButton, clearCoordinatesButton, loadCoordinatesButton, polygonLabel, polygonBox, polygonRefreshButton);
         coordinatesHBox.setAlignment(Pos.CENTER_LEFT);
         return coordinatesHBox;
+    }
+
+    private void refreshPolygonBox() {
+        polygonBox.getItems().clear();
+        CoverableRegion coverPolygon = new CoverableRegion("Cover Polygon", CoverWindow.polygonString);
+        coverableRegions.add(coverPolygon);
+        viewer.patchWindow.getCoverableRegions().forEach(region -> coverableRegions.add(region));
+        polygonBox.getSelectionModel().selectFirst();
     }
 
     public void show() {

@@ -387,11 +387,10 @@ struct ZeroInfo final {
 struct Corner final {
 
     Sign corner_sign = Sign::NEG;
-    boost::optional<ZeroInfo> zero_info = boost::none; // if the sign is 0, we have extra information here
+    boost::optional<ZeroInfo> zero_info = boost::none;
 
     Corner() = default;
 
-    // For Sign::POS and Sign::NEG
     explicit Corner(const Sign corner_sign_)
         : corner_sign{corner_sign_} {}
 
@@ -519,9 +518,6 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
     // bounding box. If the curve is strictly positive or negative everywhere,
     // we can skip the expensive per-vertex corner evaluation and edge processing.
     {
-        // Use interval endpoints for a conservative bounding-box test. If the
-        // curve sign is decisive over this whole box, the curve cannot cross
-        // the polygon and the expensive per-corner pass is avoidable.
         Real x_low = boost::multiprecision::lower(polygon[0].point[0]);
         Real x_high = boost::multiprecision::upper(polygon[0].point[0]);
         Real y_low = boost::multiprecision::lower(polygon[0].point[1]);
@@ -540,9 +536,10 @@ boost::optional<IntervalPolygon> refine_polygon(const IntervalPolygon& polygon, 
             if (yh > y_high) y_high = yh;
         }
 
-        // If interval evaluation over the full bounding box is conclusive, the
-        // curve cannot cross the polygon and the expensive corner pass is avoidable.
-        const Vector2<Interval> bb_point{Interval{x_low, x_high}, Interval{y_low, y_high}};
+        const Interval x_interval{x_low, x_high};
+        const Interval y_interval{y_low, y_high};
+        const Vector2<Interval> bb_point{x_interval, y_interval};
+
         const auto bb_sign = curve_sign_at_point(curve, bb_point);
 
         if (bb_sign == Sign::POS) {
@@ -824,9 +821,6 @@ static boost::optional<IntervalPolygon> intersect_one_way(const IntervalPolygon&
         if (!maybe) {
             return boost::none;
         }
-        // refine_polygon returns a fresh polygon. Move it into the running
-        // clipping result so combining parallel batches does not copy every
-        // vertex after each clip equation.
         result = std::move(*maybe);
     }
     return result;

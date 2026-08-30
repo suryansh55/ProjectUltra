@@ -880,7 +880,7 @@ public class CycleVaryWindow {
                 final String cleanedTriples = cleanedTriplesPre._1;
                 final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 
-                String newCoordinates = Wrapper.getNotFilledCoordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * cycles);
+                String newCoordinates = Wrapper.get_not_filled_coordinates(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empties, true, viewer.pool.pointer, newVal >= Reps * cycles);
 
                 coordinateCodeArea.replaceText(newCoordinates);
 
