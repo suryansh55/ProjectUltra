@@ -194,7 +194,9 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 				++empty;
 				if (empty >= emptyMax) {
 					System.out.println("Finish Vary due to too many empty pixels");
-					break;
+					// Clear the partial results so that it's added to the relist, this is a hack, we should find a better way to do this
+					this.partialResults.get().clear(); 
+					break COORD_LOOP;
 				}
 				this.updateProgress(progress.incrementAndGet(), todo);
 				continue;
@@ -259,7 +261,7 @@ public final class PolyVaryTask extends Task<ObservableList<Storage>> {
 		}
 
         // Suryansh Ankur, 2026
-        logBenchmark(benchStartNanos);
+        //logBenchmark(benchStartNanos);
 		return this.partialResults.get();
 	}
 

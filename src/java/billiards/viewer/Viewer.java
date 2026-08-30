@@ -5874,7 +5874,6 @@ public final class Viewer {
 		for (int pixelX = 0; pixelX < SIDE; pixelX += 1) {
 			for (int pixelY = 0; pixelY < SIDE; pixelY += 1) {
 				final int color = reader.getArgb(pixelX, pixelY);
-
 				if (color == 0) {
 					final double rx = map.radianX(pixelX + 0.5);
 					final double ry = map.radianY(pixelY + 0.5);
@@ -8091,7 +8090,7 @@ public final class Viewer {
 			}
 		}
 
-		return points;
+		return pointsFiltered;
 	}
 
 	// Calculate 4^max vary locations which are distributed across the entire query
