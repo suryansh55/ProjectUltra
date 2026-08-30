@@ -24,7 +24,7 @@ CP="$(find "$G" \( \
       -name 'eclipse-collections-9.2.0.jar' -o -name 'eclipse-collections-api-9.2.0.jar' \
    -o -name 'guava-25.1-jre.jar' -o -name 'commons-lang3-3.7.jar' \
    -o -name 'commons-math3-3.6.1.jar' -o -name 'javaslang-2.0.5.jar' \
-   \) 2>/dev/null | tr '\n' ':')libs/jna-4.5.1.jar"
+   \) 2>/dev/null | tr '\n' ':')libs/jna-4.5.1.jar:libs/xz-1.9.jar"
 
 # 3) Compile the Java sources (into build-java8/classes).
 OUT="$HERE/build-java8/classes"

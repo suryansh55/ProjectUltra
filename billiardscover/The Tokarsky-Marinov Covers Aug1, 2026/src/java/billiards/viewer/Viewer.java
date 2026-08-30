@@ -274,7 +274,8 @@ public final class Viewer {
         // This gets passed in from the outside world
         mainWindow = primaryStage;
 
-        final String windowTitle = String.format("The Tokarsky-Marinov Covers Feb 22, 2026copy");//george dec 28,2020
+        //final String windowTitle = String.format("The Tokarsky-Marinov Covers Feb 22, 2026copy");//george dec 28,2020
+        final String windowTitle = String.format("The Tokarsky-Marinov Covers Aug 30, 2026");//george dec 28,2020
 
         Utils.setupCustomTooltipBehavior((int) (TipOpenDelay * 1000), (int) (TipCloseDelay * 1000), 200);
 
@@ -317,9 +318,12 @@ public final class Viewer {
 
         infoButton.setOnAction(event -> new InfoWindow(windowTitle).show());
 
-        coversBox.getItems().addAll("90-100", "100-105", "105-110", "110-112", "112-112.1", "112.1-112.2", "112.2-112.3", "112.3-112.4", "112.3-112.4A", "112.3-112.4B", "112.3-112.4C", "112.3-112.4D", "112.3-112.4E", "112.3-112.4F", "112.3-112.4G", "112.3-112.4H", "112.3-112.4I", "112.3-112.4J", "112.3-112.4K", "112.3-112.4L", "12-14", "14-15", "15-17", "17-22.4988", "22.4988-33.8", "A24-56.6", "A19-24", "A16.225-19", "A14-16.225", "A13.75-14", "A13.5-13.75", "A12-13.5", "A11-12", "B24-58", "B19.9-24", "B18.65-19.9", "B16.33-18.65", "B16.1-16.33", "B15.9-16.1", "B15.7-15.9", "B15.5-15.7", "B15.35-15.5","B14.5-15.35","B13.99-14.5","B13.7-13.99","B13.6-13.7","B13.5-13.6","B13.4-13.5","B13.35-13.4","B13.3-13.35", "B13.2-13.3", "B13.125-13.2", "B12.6-13.125", "B12.5-12.6","B12.48-12.5", "B12.12-12.48", "B12.05-12.12s", "B11.915-12.05s", "B11.815-11.915s", "B11.663-11.815s", "B11.565-11.663s", "B11.52-11.565s", "B11.47-11.52s", "B11.335-11.47s", "B11.31-11.335", "B11.3-11.31", "B11.28-11.3", "B11.26-11.28", "B10.7-11.26", "B10.65-10.7", "B10.6-10.65", "B10.5-10.6", "B10.3-10.5", "B10.2-10.3", "B10-10.2",  "6-10", "7-10", "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12","G13","G14","G15","G16","G17","G18","G19","G20","G21","G22","G23","G24","G25","G26","G27","G28","G29","G30","G31","G32","G33","G34","G35","G36","G37","G38","G39","G40","G41","G42","G43","G44","G45","G46","G47","G48","G49","G50","G51","G52","G53","G54","G55","G56","G57","G58","G59","G60","G61","G62","G63","G64","G65","G66","G67","G68","G69","G70","G71","G72","G73","G74","G75","G76","GT1","GT2","GT3","GT4","GT5","GT6","GT7","GT8","GT9","GT10","GT11","GT12","GT13","GT14","GT15","GT16","GT17","GT18","GT19","GT20","GT21","GT22","GT23","GT24","GT25","GT26","GT27","GT28","GT29","GT30","GT31","GT32","GT33","GT34","GT35","Geo1","Mai1","Mai2","Sur1","Sur2","Sur3","Tas1","Tas2") ;//george
+        coversBox.getItems().addAll("100-105","105-110","110-112","112-112.4","G","10-12","Tas3", "Tas4","Tas5","Tas6","Tas7","Tas8", "Tas9", "Tas10","Tas11", "Tas12","nick1", "nick2", "nick3", "nick4", "nick5", "nick6","Mish1","Mish2", "Mish3", "Mish4", "Max", "Huan", "Angad","Geo1","Mai1","Mai2","Sur1","Sur2","Sur3","Tas1","Tas2") ;//george
+       // coversBox.getItems().addAll( "G","10-12","Tas3", "Tas4","Tas5","Tas6","Tas7","Tas8", "Tas9", "Tas10","Tas11", "Tas12","nick1", "nick2", "nick3", "nick4", "nick5", "nick6","Mish1","Mish2", "Mish3", "Mish4", "Max", "Huan", "Angad", "G","90-100", "100-105", "105-110", "110-112", "112-112.1", "112.1-112.2", "112.2-112.3", "112.3-112.4", "112.3-112.4A", "112.3-112.4B", "112.3-112.4C", "112.3-112.4D", "112.3-112.4E", "112.3-112.4F", "112.3-112.4G", "112.3-112.4H", "112.3-112.4I", "112.3-112.4J", "112.3-112.4K", "112.3-112.4L", "12-14", "14-15", "15-17", "17-22.4988", "22.4988-33.8", "A24-56.6", "A19-24", "A16.225-19", "A14-16.225", "A13.75-14", "A13.5-13.75", "A12-13.5", "A11-12", "B24-58", "B19.9-24", "B18.65-19.9", "B16.33-18.65", "B16.1-16.33", "B15.9-16.1", "B15.7-15.9", "B15.5-15.7", "B15.35-15.5","B14.5-15.35","B13.99-14.5","B13.7-13.99","B13.6-13.7","B13.5-13.6","B13.4-13.5","B13.35-13.4","B13.3-13.35", "B13.2-13.3", "B13.125-13.2", "B12.6-13.125", "B12.5-12.6","B12.48-12.5", "B12.12-12.48", "B12.05-12.12s", "B11.915-12.05s", "B11.815-11.915s", "B11.663-11.815s", "B11.565-11.663s", "B11.52-11.565s", "B11.47-11.52s", "B11.335-11.47s", "B11.31-11.335", "B11.3-11.31", "B11.28-11.3", "B11.26-11.28", "B10.7-11.26", "B10.65-10.7", "B10.6-10.65", "B10.5-10.6", "B10.3-10.5", "B10.2-10.3", "B10-10.2",  "6-10", "7-10", "G1", "G2", "G3", "G4", "G5", "G6", "G7", "G8", "G9", "G10", "G11", "G12","G13","G14","G15","G16","G17","G18","G19","G20","G21","G22","G23","G24","G25","G26","G27","G28","G29","G30","G31","G32","G33","G34","G35","G36","G37","G38","G39","G40","G41","G42","G43","G44","G45","G46","G47","G48","G49","G50","G51","G52","G53","G54","G55","G56","G57","G58","G59","G60","G61","G62","G63","G64","G65","G66","G67","G68","G69","G70","G71","G72","G73","G74","G75","G76","GT1","GT2","GT3","GT4","GT5","GT6","GT7","GT8","GT9","GT10","GT11","GT12","GT13","GT14","GT15","GT16","GT17","GT18","GT19","GT20","GT21","GT22","GT23","GT24","GT25","GT26","GT27","GT28","GT29","GT30","GT31","GT32","GT33","GT34","GT35","Geo1","Mai1","Mai2","Sur1","Sur2","Sur3","Tas1","Tas2") ;//george
+
         coversBox.setTooltip(Utils.toolTip("Select which cover will be loaded."));
-        coversBox.setValue("100-105");
+        //coversBox.setValue("90-100");
+        coversBox.setValue("90-100");
         Utils.colorButton(coversBox, Color.SKYBLUE, clickColor);
 
         loadCoverBtn.setText("Load Cover");
@@ -710,6 +714,90 @@ public final class Viewer {
         File dir;
         if (cover.equals("100-105")){
             dir = new File("coversfolder/105cover/");
+            
+        } else if (cover.equals("90-100")) {
+            dir = new File("coversfolder/90-100cover/");
+            
+        } else if (cover.equals("G")) {
+            dir = new File("coversfolder/Gcover/");
+            
+        } else if (cover.equals("10-12")) {
+            dir = new File("coversfolder/10-12cover/");
+            
+        } else if (cover.equals("112-112.4")) {
+            dir = new File("coversfolder/112.4cover/");
+            
+        } else if (cover.equals("Tas3")) {
+            dir = new File("coversfolder/Tas3cover/");//62-62.6-5-6
+            
+        } else if (cover.equals("Tas4")) {
+            dir = new File("coversfolder/Tas4cover/");//25-25.5-8-9
+            
+        } else if (cover.equals("Tas5")) {
+            dir = new File("coversfolder/Tas5cover/");//24-24.5-7-8
+            
+        } else if (cover.equals("Tas6")) {
+            dir = new File("coversfolder/Tas6cover/");//27-27.5-7-8
+            
+        } else if (cover.equals("Tas7")) {
+            dir = new File("coversfolder/Tas7cover/");//28-28.5-5-6
+            
+        } else if (cover.equals("Tas8")) {
+            dir = new File("coversfolder/Tas8cover/");//28.5-29-5-6
+            
+        } else if (cover.equals("Tas9")) {
+            dir = new File("coversfolder/Tas9cover/");//29.5-30-5-6
+            
+        } else if (cover.equals("Tas10")) {
+            dir = new File("coversfolder/Tas10cover/");//56-57-5-6
+            
+        } else if (cover.equals("Tas11")) {
+            dir = new File("coversfolder/Tas11cover/");//61-62-5-6
+            
+        } else if (cover.equals("Tas12")) {
+            dir = new File("coversfolder/Tas12cover/");//62-62.6-5-6
+            
+            
+        } else if (cover.equals("nick1")) {
+            dir = new File("coversfolder/nick1cover/");//24.5-25.0-7-8
+            
+        } else if (cover.equals("nick2")) {
+            dir = new File("coversfolder/nick2cover/");//26.0-26.5-7-8
+            
+        } else if (cover.equals("nick3")) {
+            dir = new File("coversfolder/nick3cover/");//25.5-26-8-9
+            
+        } else if (cover.equals("nick4")) {
+            dir = new File("coversfolder/nick4cover/");//27-27.5-5-6
+            
+        } else if (cover.equals("nick5")) {
+            dir = new File("coversfolder/nick5cover/");//29-29.5-5-6
+            
+        } else if (cover.equals("nick6")) {
+            dir = new File("coversfolder/nick6cover/");//39-40-5-6
+            
+        } else if (cover.equals("Mish1")) {
+            dir = new File("coversfolder/Mish1cover/");//30-31-5-6
+            
+        } else if (cover.equals("Mish2")) {
+            dir = new File("coversfolder/Mish2cover/");//31-32-5-6
+            
+        } else if (cover.equals("Mish3")) {
+            dir = new File("coversfolder/Mish3cover/");//33-34-5-6
+            
+        } else if (cover.equals("Mish4")) {
+            dir = new File("coversfolder/Mish4cover/");//28-28.5-6-7
+  
+            
+        } else if (cover.equals("Max")) {
+            dir = new File("coversfolder/Maxcover/");//26.5-27-7-8
+            
+        } else if (cover.equals("Huan")) {
+            dir = new File("coversfolder/Huancover/");//27.5-28-7-8
+            
+        } else if (cover.equals("Angad")) {
+            dir = new File("coversfolder/Angadcover/");//23.5-24-8-9
+
 
         } else if (cover.equals("105-110")) {
             dir = new File("coversfolder/110cover/");
@@ -1335,8 +1423,7 @@ public final class Viewer {
                     if (cbin.exists()) {
                         coverData = CoverCodec.readBinaryFile(cbin.getPath(), stables, triples);
                     } else {
-                        String coverString = Utils.readFromFile(dir + "/cover.txt").trim();
-                        coverData = CoverCodec.parseText(coverString, stables, triples);
+                        coverData = loadFromText(new File(dir, "cover.txt"), stables, triples);
                     }
                 }
             } catch (IOException ex) {
@@ -1352,6 +1439,36 @@ public final class Viewer {
                 renderRegions(guideLinesImageView);
             }
 //        }
+    }
+
+    /**
+     * Loads a cover from plain {@code cover.txt}. Reading the file into a String costs about five
+     * times its size in heap and cannot work at all past 2 GB (Java arrays are int-indexed), so
+     * anything large is first streamed into a scratch cbin and loaded from that instead. Same
+     * CoverData either way; the scratch file is deleted before returning.
+     */
+    private static CoverData loadFromText(final File coverTxt, final List<CodePair> stables,
+                                          final List<TriplePair> triples) throws IOException {
+        if (coverTxt.length() <= (32L << 20)) {
+            return CoverCodec.parseText(
+                Utils.readFromFile(coverTxt.getPath()).trim(), stables, triples);
+        }
+        // Prefer the cover's own folder (same filesystem, guaranteed room for a file this size),
+        // but fall back to the system temp dir when that folder is not writable -- covers opened
+        // from a read-only location, e.g. inside an .app bundle.
+        final File coverDir = coverTxt.getAbsoluteFile().getParentFile();
+        File scratch;
+        try {
+            scratch = File.createTempFile("cover-load", ".cbin", coverDir);
+        } catch (final IOException notWritable) {
+            scratch = File.createTempFile("cover-load", ".cbin");
+        }
+        try {
+            CoverStream.packTextToCbin(coverTxt, scratch, stables.size(), triples.size());
+            return CoverCodec.readBinaryFile(scratch.getPath(), stables, triples);
+        } finally {
+            scratch.delete();
+        }
     }
 
     private void zoomAction() {

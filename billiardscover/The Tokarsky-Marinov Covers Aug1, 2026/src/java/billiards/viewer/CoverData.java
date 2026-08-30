@@ -36,15 +36,22 @@ public final class CoverData {
 
     /** Preorder node-type stream, one byte per node. */
     final byte[] nodeType;
-    /** Stable index for each {@code S} leaf, in preorder-of-stable-leaves. */
-    final char[] sCode;
+    /**
+     * Stable index for each {@code S} leaf, in preorder-of-stable-leaves.
+     *
+     * <p>{@code int}, not {@code char}: covers exist whose {@code stables.txt} holds more than
+     * 65536 entries, and the old {@code char} silently wrapped those indices. {@code int} is
+     * also the widest that can be used here &mdash; {@link #stableAt} resolves through
+     * {@code List.get(int)} &mdash; even though the file format can store 8-byte indices.
+     */
+    final int[] sCode;
     /** Triple index for each {@code T} leaf, in preorder-of-triple-leaves. */
-    final char[] tCode;
+    final int[] tCode;
 
     private final List<CodePair> stables;
     private final List<TriplePair> triples;
 
-    public CoverData(final byte[] nodeType, final char[] sCode, final char[] tCode,
+    public CoverData(final byte[] nodeType, final int[] sCode, final int[] tCode,
                      final List<CodePair> stables, final List<TriplePair> triples) {
         this.nodeType = nodeType;
         this.sCode = sCode;

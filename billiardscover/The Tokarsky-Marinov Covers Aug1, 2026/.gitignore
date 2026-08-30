@@ -1,6 +1,8 @@
 # Build outputs and caches
 build
 build-java8
+# .app staging dir for package-cover-mac.sh (holds a full copy of the bundled JRE)
+build-dmg
 bin
 .gradle
 

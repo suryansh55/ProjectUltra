@@ -19,6 +19,8 @@ dependencies {
     compile 'io.javaslang:javaslang:2.0.5'
     //compile 'net.java.dev.jna:jna:4.5.1'//july24,2026 changed to the next line
     implementation files('libs/jna-4.5.1.jar')
+    // LZMA2 for the cover format (public domain, Java 7+). See billiards.viewer.Lzma.
+    compile files('libs/xz-1.9.jar')
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.2.0'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.2.0'
 }
@@ -137,3 +139,5 @@ task createLibraryFolders {
         file('build/dists/x86-64-win32').mkdirs()
     }
 }
+
+

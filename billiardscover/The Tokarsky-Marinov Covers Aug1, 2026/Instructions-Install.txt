@@ -1,0 +1,46 @@
+Billiards Cover Viewer — Installation & Launch (macOS, Apple Silicon)
+
+1. Install
+   Open the .dmg file and drag BilliardsCover into your Applications folder.
+
+2. Clear the security warning (one time)
+   This app is signed ad-hoc, not by Apple, so macOS blocks it on first launch.
+   - In Finder, go to Applications.
+   - Right-click (or Control-click) BilliardsCover and choose "Open".
+   - In the dialog that appears, click "Open" again to confirm.
+   If you don't see an "Open" button, go to System Settings > Privacy & Security,
+   scroll down, and click "Open Anyway" next to the BilliardsCover message.
+
+3. Launch
+   Just double-click BilliardsCover. No Terminal needed.
+   The app sizes its own memory limit from how much RAM the machine has, so no
+   command-line options are needed for the larger covers.
+
+4. Where your files live
+   ~/BilliardsCover   (created automatically on first launch)
+   - coversfolder/  the covers that shipped with the app. These are links into
+     the app bundle, so they take up almost no extra disk space and they refresh
+     themselves whenever you install a newer version.
+   - build/         the cover checker and the native library the viewer uses.
+   To add a cover of your own, drop its folder into ~/BilliardsCover/coversfolder
+   and it will be left alone by future installs. It needs a matching entry in the
+   viewer's cover menu to be selectable.
+
+5. Loading a cover
+   Pick one from the cover drop-down and press Load. The larger covers need a lot
+   of memory: the 112.2-112.4 and "All" covers want a machine with at least 10 GB
+   of free RAM.
+   Cover data ships as a single compressed cover.pack per folder rather than the
+   loose .txt files. The viewer reads it directly, so nothing extra is needed.
+
+6. Checking a cover
+   "Check Cover" runs the external verifier and can take hours or days depending
+   on the cover — the 100-105 cover finishes in under five minutes, 105-110 takes
+   several hours, the rest take days or longer. The verifier reads plain text
+   files, so the app regenerates them from cover.pack into a temporary folder for
+   the duration of the run; you don't need to do anything.
+
+Using the viewer (panning, selecting squares, reading code sequences, colors):
+see Instructions.md in the project.
+
+Requirements: macOS 11 or later on Apple Silicon (arm64).

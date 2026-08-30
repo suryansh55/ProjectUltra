@@ -1,13 +1,8 @@
 package billiards.viewer;
 
-import billiards.codeseq.CodePair;
-import billiards.codeseq.TriplePair;
-
-import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Bundles a cover directory into a single {@code cover.pack} (and back).
@@ -58,11 +53,11 @@ public final class CoverConverter {
 
     private static void pack(final File dir) throws IOException {
         final File out = new File(dir, "cover.pack");
-        CoverPack.packDirectory(dir, out);
+        final CoverStream.Counts counts = CoverPack.packDirectory(dir, out);
 
-        // Verify: every bundled text file round-trips byte-for-byte, and the cover round-trips
-        // to the exact original token stream.
-        final CoverPack pack = CoverPack.readFile(out.getPath());
+        // Verify the small bundled text files round-trip byte-for-byte. The cover entry is
+        // skipped here so a huge cover is never pulled into the heap.
+        final CoverPack pack = CoverPack.readBlobs(out);
         long textTotal = 0;
         for (final String name : CoverPack.TEXT_FILES) {
             final File f = new File(dir, name);
@@ -75,21 +70,43 @@ public final class CoverConverter {
                 throw new IOException("round-trip mismatch for " + name);
             }
         }
+
+        // Verify the cover itself round-trips to the exact original token stream, streaming both
+        // sides out of the pack we just wrote.
         final File coverTxt = new File(dir, "cover.txt");
         textTotal += coverTxt.length();
-        final List<CodePair> stables = Cover.parseStables(pack.text("stables.txt").trim());
-        final List<TriplePair> triples = Cover.parseTriples(pack.text("triples.txt").trim());
-        final CoverData cover = CoverCodec.readBinary(
-            new ByteArrayInputStream(pack.coverCbin()), stables, triples);
-        final long tokens = TokenCheck.verify(new String(
-            CoverPack.readAllBytes(coverTxt), java.nio.charset.Charset.defaultCharset()).trim(), cover);
+        final File tmpCbin = File.createTempFile("cover-verify", ".cbin", dir);
+        final long tokens;
+        try {
+            CoverPack.extractCoverTo(out, tmpCbin);
+            tokens = CoverStream.verifyCbinAgainstText(tmpCbin, coverTxt);
+        } finally {
+            tmpCbin.delete();
+        }
+        if (tokens != counts.tokens) {
+            throw new IOException("token count disagreement: packer saw " + counts.tokens
+                + ", verifier saw " + tokens);
+        }
 
         final long packSize = out.length();
         System.out.printf(
             "%s: %,d cover tokens  |  all text %,d B -> cover.pack %,d B  (%.1fx smaller)%n",
             dir.getName(), tokens, textTotal, packSize, (double) textTotal / (double) packSize);
+        System.out.printf("  %,d nodes  |  %,d stable leaves  |  %,d triple leaves%n",
+            counts.nodes, counts.stables, counts.triples);
+        System.out.printf("  index width %d bytes  |  cbin v%d, %s%n", counts.indexWidth,
+            counts.cbinVersion, counts.isLzma2() ? "LZMA2" : "Deflate");
         System.out.println("  bundled: " + pack.names() + " + cover");
+        System.out.printf("  viewing this cover needs about %,d MB of heap for the cover arrays "
+            + "alone -- run the viewer with -Xmx%dg or more%n",
+            counts.viewerHeapBytes() / (1024 * 1024), suggestedViewerGigs(counts));
         System.out.println("  -> safe to delete the .txt files; run with --unpack to restore them");
+    }
+
+    /** Cover arrays plus room for the rest of the viewer, rounded up to whole gigabytes. */
+    private static long suggestedViewerGigs(final CoverStream.Counts counts) {
+        final long gib = 1024L * 1024L * 1024L;
+        return Math.max(2L, ((counts.viewerHeapBytes() * 3L / 2L) + gib - 1) / gib);
     }
 
     private static void unpack(final File dir) throws IOException {
