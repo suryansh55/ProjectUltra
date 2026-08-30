@@ -23,7 +23,10 @@ public final class ClassifiedCodeSequence implements Comparable<ClassifiedCodeSe
     public final boolean stable;
     public final String oddEvenPattern;
 
-    private ClassifiedCodeSequence(final CodeSequence codeSequence) {
+    // Jeff Khuu, May 6, 2026. Public for billiards.pattern, which classifies an already-validated
+    // CodeSequence it has just derived. A CodeSequence is only obtainable through CodeSequence.create,
+    // so it is canonical by construction and there is nothing left for create() to validate.
+    public ClassifiedCodeSequence(final CodeSequence codeSequence) {
         this.codeSequence = codeSequence;
         this.codeLength = codeSequence.codeNumbers.size();
         this.codeSum = calculateCodeSum(codeSequence.codeNumbers);

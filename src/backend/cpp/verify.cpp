@@ -311,11 +311,11 @@ static cover::Cover cover_square(const ClosedRectangleQ& square, const ClosedCon
         // Else if it is a subset or it intersects, then we can continue
     }
 
-    // Each thread must get its own evaluator, and we want to re-use the evaluator as much as possible,
-    // so let's create it here and then pass it along. In theory, it would be more efficient to have
-    // one thread-local evaluator for each thread, but I unfortunately don't have that kind of control here.
-
-    Evaluator eval{prec};
+    // Each thread must get its own evaluator, and we want to re-use the evaluator as much as possible.
+    // Evaluator holds mutable mpfr_t/mpq_t scratch registers, so it cannot be shared across threads;
+    // a thread_local instance gives each worker its own and avoids reallocating those registers for
+    // every square in the cover recursion.
+    Evaluator& eval = Evaluator::thread_local_instance(prec);
 
     const auto single_trimmed = trim_single_indices(square, single_infos, single_indices);
      /*std::cout<<square<< std::endl;
@@ -468,25 +468,25 @@ struct UpdateCover : public boost::static_visitor<cover::Cover> {
                 //const UpdateCover update{std::get<1>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
                 HalfTripleInfos temp{};
                 const UpdateCover update{std::get<1>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
-                cover0 = boost::apply_visitor(update, quarter_covers.get<0>());
+                cover1 = boost::apply_visitor(update, quarter_covers.get<1>());
 
         };
 
         const auto l2 = [&] {
 
-                //const UpdateCover update{std::get<0>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
+                //const UpdateCover update{std::get<2>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
                 HalfTripleInfos temp{};
                 const UpdateCover update{std::get<2>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
-                cover0 = boost::apply_visitor(update, quarter_covers.get<0>());
+                cover2 = boost::apply_visitor(update, quarter_covers.get<2>());
 
         };
 
         const auto l3 = [&] {
 
-                //const UpdateCover update{std::get<0>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
+                //const UpdateCover update{std::get<3>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
                 HalfTripleInfos temp{};
                 const UpdateCover update{std::get<3>(quarter_squares), polygon, single_infos, triple_infos, prec, mags_left - 1};
-                cover0 = boost::apply_visitor(update, quarter_covers.get<0>());
+                cover3 = boost::apply_visitor(update, quarter_covers.get<3>());
 
         };
 
@@ -540,7 +540,7 @@ const char* getEmpties(const std::string& polygon_str, const std::string& single
     const auto cover_info = cover_to_info(polygon, square, cover);
 
     const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empty);
-    static std::string new_coordinates;
+    thread_local std::string new_coordinates;
     new_coordinates.clear();
     if (num_to_print != 0) {
         const size_t inc = cover_info.not_filled.size() / num_to_print;
@@ -562,6 +562,7 @@ const char* getEmpties(const std::string& polygon_str, const std::string& single
 
         cover::save_cover(dir, cover, single_index_info, triple_index_info);
         cover::save_digits(dir, digits);
+        cover::save_holes(dir, cover_info.not_filled, empty);
     }
 
     return new_coordinates.c_str();
@@ -674,7 +675,7 @@ const char* cover_polygon(const cover::Cover& old_cover,
     std::cout << cover_info.not_filled.size() << " squares were not filled in" << std::endl;
     file << "// " << cover_info.not_filled.size() << " squares were not filled in" << '\n';
 
-    static std::string res;
+    thread_local std::string res;
     res.clear();
     const size_t num_to_print = falgo::min(cover_info.not_filled.size(), empties);
     if (num_to_print != 0) {
@@ -750,6 +751,7 @@ const char* cover_polygon(const cover::Cover& old_cover,
 
     cover::save_cover(dir, cover, single_index_info, triple_index_info);
     cover::save_digits(dir, digits);
+    cover::save_holes(dir, cover_info.not_filled, empties);
 
     const auto hours = std::chrono::duration_cast<std::chrono::hours>(end - begin).count();
     const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(end - begin).count() % 60;
@@ -885,7 +887,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
 
     Integer total_single_cost = 0;
 
-    static std::string res;
+    thread_local std::string res;
     res.clear();
 
     if (printInfo) std::cout << "The following stables colored squares:" << std::endl;
@@ -1004,6 +1006,7 @@ const char* cover_small_polygon(const cover::Cover& old_cover,
 
     cover::save_cover(dir, cover, single_index_info, triple_index_info);
     cover::save_digits(dir, digits);
+    cover::save_holes(dir, cover_info.not_filled, empties);
 
     const auto hours = std::chrono::duration_cast<std::chrono::hours>(end - begin).count();
     const auto minutes = std::chrono::duration_cast<std::chrono::minutes>(end - begin).count() % 60;

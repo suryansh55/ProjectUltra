@@ -69,6 +69,10 @@ public final class ProgressMultiTask {
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
             cancelled = true;
+            // See Progress: give the task a chance to keep finished work.
+            if (boundTask && this.task instanceof GracefullyCancelable) {
+                ((GracefullyCancelable) this.task).requestGracefulCancel();
+            }
             Wrapper.backend_cancel();
             if(boundTask) this.task.cancel();
             //stage.close();

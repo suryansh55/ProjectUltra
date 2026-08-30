@@ -8,6 +8,7 @@ import java.io.File;
 import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import javafx.application.Application;
 import javafx.stage.Stage;
@@ -54,8 +55,12 @@ public final class Main extends Application {
     private final ExecutorService executor = Executors.newFixedThreadPool(Utils.numThreads);
     private ConnectionPool pool = null;
 
+    // Held so stop() can shut down the background threads the Viewer's child windows own. Upstream adds
+    // Viewer.shutdown() but never calls it from anywhere.
+    private Viewer viewer = null;
+
     // Suryansh Ankur, 2026
-    private final String versionNumber = "10.0.17";
+    private final String versionNumber = "10.0.18";
 
     // Order is constructor, init, start, stop
     // It would be a lot simpler if these methods didn't exist, and I just did
@@ -91,8 +96,8 @@ public final class Main extends Application {
             // 2024-06-06 Austin experimenting with thread and connection pool sizes
             pool = Admin.getConnectionPool(dbName, Utils.numThreads);
             if (viewerSelected) {
-	            final Viewer viewer = new Viewer(mainWindow, versionNumber, executor, pool, dbName);
-	            viewer.start(executor);
+	            this.viewer = new Viewer(mainWindow, versionNumber, executor, pool, dbName);
+	            this.viewer.start(executor);
             } else {
             	final PatternFinder pFinder = new PatternFinder(mainWindow, versionNumber, pool, dbName);
                 pFinder.start();
@@ -103,10 +108,24 @@ public final class Main extends Application {
     @Override
     public void stop() {
 
-        if (pool != null) {
-            pool.destroy();
+        if (viewer != null) {
+            viewer.shutdown();
         }
 
-        executor.shutdown();
+        // Jeff Khuu, 2026.
+        // Stop Java work BEFORE releasing the native DB pool. Many background tasks borrow SQLite
+        // connections through this pool, so destroying it while a worker still holds one turns an
+        // ordinary quit into a native use-after-free. This used to destroy the pool first.
+        executor.shutdownNow();
+        final boolean executorStopped = Utils.safeShutdownExecutor(executor, 30, TimeUnit.SECONDS);
+
+        if (pool != null) {
+            if (executorStopped) {
+                pool.destroy();
+                pool = null;
+            } else {
+                System.err.println("Skipping native pool destroy because worker threads are still active");
+            }
+        }
     }
 }

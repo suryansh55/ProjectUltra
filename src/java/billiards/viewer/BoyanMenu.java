@@ -121,7 +121,7 @@ public class BoyanMenu {
 
 	public BoyanMenu(final Button cycleVaryButton, final Button middleVaryLButton, final Button polyAutoBtn, final Button varyLBtn,
                      final Button autoPolyVaryBtn, final TextField lineStartField, final TextField lineStepField, final TextField lineEndField,
-                     final Button superPolyVaryBtn, final CheckBox superAutoCb, final double TipOpenDelay, final double TipCloseDelay) {
+                     final Button superPolyVaryBtn, final CheckBox superAutoCb, final Button findHolesBtn, final double TipOpenDelay, final double TipCloseDelay) {
 
         Utils.setupCustomTooltipBehavior((int) (TipOpenDelay * 1000), (int) (TipCloseDelay * 1000), 200);
 
@@ -419,12 +419,14 @@ public class BoyanMenu {
 //            new HBox(10, minMovesText, maxMovesText, movesLbl, shotsText, sideSpacingLbl);
 //        varyInfoHBox.setPadding(new Insets(0, 10, 10, 0));
 //        varyInfoHBox.setAlignment(Pos.CENTER);
-        final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField);
+        //final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField);
+        final HBox autoPolyVaryHBox = new HBox(10, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, findHolesBtn);// JKFindHole sits next to the End field
         autoPolyVaryHBox.setPadding(new Insets(0, 10, 10, 0));
         autoPolyVaryHBox.setAlignment(Pos.CENTER);
 
         final HBox codeTypesHBox =
-            new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb, Triplescb);//george june 18,2019 replaced vary4Btn with vary3Btn
+            //new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb, Triplescb);//george june 18,2019 replaced vary4Btn with vary3Btn
+            new HBox(10, CNScb, CScb, ONScb, OSNOcb, OSOcb);// Triples checkbox hidden (still wired up above)
         codeTypesHBox.setPadding(new Insets(0, 10, 10, 0));
         codeTypesHBox.setAlignment(Pos.CENTER);
         
@@ -444,7 +446,8 @@ public class BoyanMenu {
         // Moved buildPolyCheckBox from to Viewr.java.
         // Added new MiddleVaryL button.
         final HBox vary3HBox =
-        		new HBox(10, cycleVaryButton, middleVaryLButton, varyLBtn, maxPrinting, polyAutoBtn,autoCycleText);
+        		//new HBox(10, cycleVaryButton, middleVaryLButton, varyLBtn, maxPrinting, polyAutoBtn,autoCycleText);
+        		new HBox(10, middleVaryLButton, varyLBtn, maxPrinting, polyAutoBtn,autoCycleText);// LiCycle moved to superHBox, next to SuperLiLuVary
            // new HBox(10, vary4Btn, varyLBtn, hitsLabel, autoVaryButton, autoCycleText, //george june 18,2019 replaced vary3Btn with vary4Btn
             		//maxPrinting); //, autoIterText, autoStepText
 
@@ -457,7 +460,8 @@ public class BoyanMenu {
         newHBox.setPadding(new Insets(0, 10, 10, 0));
         newHBox.setAlignment(Pos.CENTER);
 
-        final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText, superAutoCb);
+        //final HBox superHBox = new HBox(10, superPolyVaryBtn, cycleStepText, superAutoCb);
+        final HBox superHBox = new HBox(10, cycleVaryButton, superPolyVaryBtn, cycleStepText, superAutoCb);// LiCycle, then SuperLiLuVary with its step field
         superHBox.setPadding(new Insets(0, 10, 10, 0));
         superHBox.setAlignment(Pos.CENTER);
 

@@ -30,8 +30,62 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.concurrent.Semaphore;
 
 public final class Database {
+
+    // Limit concurrent C++ computations to prevent native memory exhaustion.
+    // GMP/MPFR multiprecision arithmetic allocates from the system heap, so it is
+    // not bounded by -Xmx: without a cap, a wide vary run can exhaust RAM on an
+    // 8 GB machine even though the JVM heap looks healthy.
+    //
+    // The default matches upstream (cores/4). That is a real throughput trade-off
+    // when memory is not the constraint, so BILLIARDS_MAX_COMPUTE overrides it
+    // (0 or negative disables the cap entirely).
+    private static final int COMPUTE_PERMITS = computePermits();
+
+    private static final Semaphore COMPUTE_SEMAPHORE =
+        COMPUTE_PERMITS > 0 ? new Semaphore(COMPUTE_PERMITS) : null;
+
+    private static int computePermits() {
+        final String override = System.getenv("BILLIARDS_MAX_COMPUTE");
+        if (override != null && !override.trim().isEmpty()) {
+            try {
+                final int n = Integer.parseInt(override.trim());
+                System.out.println("// storage compute cap: " + (n > 0 ? n + " (BILLIARDS_MAX_COMPUTE)"
+                        : "disabled (BILLIARDS_MAX_COMPUTE)"));
+                return n;
+            } catch (final NumberFormatException e) {
+                System.err.println("// ignoring bad BILLIARDS_MAX_COMPUTE=" + override);
+            }
+        }
+        return Math.max(1, Runtime.getRuntime().availableProcessors() / 4);
+    }
+
+    // In-memory LRU cache to avoid redundant C++ computes when the same code
+    // sequence appears at multiple coordinates within the same session (e.g. the
+    // same CS code at coord 6 and coord 14 of the same hole). Storage is
+    // immutable and ClassifiedCodeSequence hashes by its code numbers, so
+    // handing the same instance to several callers is safe.
+    private static final int CACHE_MAX_SIZE = 1000;
+    private static final Map<ClassifiedCodeSequence, Optional<Storage>> STORAGE_CACHE =
+        Collections.synchronizedMap(new LinkedHashMap<ClassifiedCodeSequence, Optional<Storage>>() {
+            private static final long serialVersionUID = 1L;
+            @Override
+            protected boolean removeEldestEntry(final Map.Entry<ClassifiedCodeSequence, Optional<Storage>> eldest) {
+                return size() > CACHE_MAX_SIZE;
+            }
+        });
+
+    /** Drops every cached Storage. Call when the underlying database changes. */
+    public static void clearStorageCache() {
+        synchronized (STORAGE_CACHE) {
+            STORAGE_CACHE.clear();
+        }
+    }
 
     // At some point this will be moved into the CodeSequence class (I think)
     // TODO merge this with the pi one below
@@ -312,17 +366,70 @@ public final class Database {
     // But right now we can't do that.
     public static Optional<Storage> loadStorage(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {
 
-        final Optional<Picture> opt = Wrapper.loadPicture(codeSeq, pool);
-
-        if (!opt.isPresent()) {
-            return Optional.empty();
+        // Check the cache first, outside the semaphore, so hits never queue.
+        final Optional<Storage> cached = cacheLookup(codeSeq);
+        if (cached != null) {
+            return cached;
         }
 
-        final Picture picture = opt.get();
+        acquireComputePermit();
+        try {
+            // Another thread may have computed this while we waited for a permit.
+            final Optional<Storage> raced = cacheLookup(codeSeq);
+            if (raced != null) {
+                return raced;
+            }
 
-        final Storage storage = convertToStorage(codeSeq, picture.initialAngles, picture.points, picture.equations);
+            final Tuple2<Integer, Optional<Picture>> result = Wrapper.loadPictureStatus(codeSeq, pool);
+            final int status = result._1;
+            final Optional<Picture> opt = result._2;
 
-        return Optional.of(storage);
+            if (!opt.isPresent()) {
+                // status 0 is a genuine empty set and is a permanent property of
+                // the code, so it is safe to remember. status -1 is a *failed*
+                // calculation; caching that would make one transient failure look
+                // permanent for the rest of the session.
+                if (status == 0) {
+                    cacheStore(codeSeq, Optional.empty());
+                }
+                return Optional.empty();
+            }
+
+            final Picture picture = opt.get();
+
+            final Storage storage = convertToStorage(codeSeq, picture.initialAngles, picture.points, picture.equations);
+
+            cacheStore(codeSeq, Optional.of(storage));
+
+            return Optional.of(storage);
+        } finally {
+            releaseComputePermit();
+        }
+    }
+
+    /** Returns the cached value, or null when the code has never been computed. */
+    private static Optional<Storage> cacheLookup(final ClassifiedCodeSequence codeSeq) {
+        synchronized (STORAGE_CACHE) {
+            return STORAGE_CACHE.get(codeSeq);
+        }
+    }
+
+    private static void cacheStore(final ClassifiedCodeSequence codeSeq, final Optional<Storage> value) {
+        synchronized (STORAGE_CACHE) {
+            STORAGE_CACHE.put(codeSeq, value);
+        }
+    }
+
+    private static void acquireComputePermit() {
+        if (COMPUTE_SEMAPHORE != null) {
+            COMPUTE_SEMAPHORE.acquireUninterruptibly();
+        }
+    }
+
+    private static void releaseComputePermit() {
+        if (COMPUTE_SEMAPHORE != null) {
+            COMPUTE_SEMAPHORE.release();
+        }
     }
 
     public static Optional<Tuple2<Storage, ImmutableList<LeftRight>>> loadStorageShowLR(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {

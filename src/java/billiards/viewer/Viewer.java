@@ -40,6 +40,7 @@ import billiards.geometry.Rectangle;
 
 import billiards.geometry.Vector2;
 import billiards.math.XYPi;
+import billiards.patch.CoverableRegion;
 import billiards.utils.BatchLoadStorage;
 import billiards.utils.PrintMid;
 import billiards.wrapper.ConnectionPool;
@@ -73,6 +74,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -103,6 +105,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.RadioButton;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TextInputDialog;
 import javafx.scene.control.ToggleGroup;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
@@ -156,7 +159,8 @@ public final class Viewer {
     private static final boolean splitUp = true;
 
     // the size of the square viewer window, should be 75% as tall as the screen?
-    private static final int SIDE = 600;
+    // Package-visible: PatchWindow sizes its cleared overlay from this.
+    static final int SIDE = 600;
 
     private static final int BTNPADBOTTOM = 4;
 
@@ -224,6 +228,13 @@ public final class Viewer {
     // The small cover (LiCover) can handle multiple empty squares at the same time. Therefore, we need to be able to
     // remember all of them and draw them.
     ArrayList<ConvexPolygon> smallCoverAreas = new ArrayList<>();
+
+    // Jeff Khuu, Aug 11, 2026.
+    // patchAreas are the patch outlines currently defined in the Patch Window;
+    // coveredPatchAreas are the subset that came back fully covered, and get a
+    // grey fill on patchImageView so finished ground is obvious at a glance.
+    ArrayList<ConvexPolygon> patchAreas = new ArrayList<>();
+    ArrayList<ConvexPolygon> coveredPatchAreas = new ArrayList<>();
 
     // the current storage and color from the OBO file
     Storage currentOBOStorage = null;
@@ -365,6 +376,11 @@ public final class Viewer {
 
     IterateToLimitWindow iterateToLimitWindow = null;
 
+    // Jeff Khuu, Aug 23, 2026.
+    // Kept for the lifetime of the Viewer so the coordinate list, the line-navigation position and the
+    // relist survive between LiBainT/B runs.
+    TetraBar tetraBar = null;
+
     // main window
     final Button iterateToLimitBtn = new Button();
     final GridPane codeSequencesGPane = new GridPane();
@@ -385,6 +401,9 @@ public final class Viewer {
     // the oboImageView is kept separate, because it allows us to redraw this
     // one without redrawing everything else
     final ImageView oboImageView = new ImageView();
+
+    // Grey overlay marking patch regions that came back fully covered.
+    final ImageView patchImageView = new ImageView();
 
     // This one is transparent, and goes on top to capture all the mouse events
     final ImageView topImageView = renderColor(Color.TRANSPARENT);
@@ -503,6 +522,12 @@ public final class Viewer {
     final CheckBox autoFillerCheckBox = new CheckBox();
     final TextField labelMainWindow = new TextField();
     final Button coverBtn = new Button();
+
+    // Jeff Khuu, Aug 11, 2026. Patch / hole-finding workflow.
+    final Button patchBtn = new Button();
+    final Button findHolesBtn = new Button();
+    final Button loadHolesBtn = new Button();
+
 //    final Button halfTripleBtn = new Button();
 //    final Button unstableBtn = new Button();
 //    final Button cornerBtn = new Button();
@@ -547,11 +572,17 @@ public final class Viewer {
     final Button superPolyVaryBtn = new Button();
     final CheckBox superAutoCb = new CheckBox();
 
-    final BoyanMenu boyanMenu = new BoyanMenu(cycleVaryButton, middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, TipOpenDelay, TipCloseDelay);
+    final BoyanMenu boyanMenu = new BoyanMenu(cycleVaryButton, middleVaryLBtn, polyVaryBtn, varyLBtn, autoPolyVaryBtn, lineStartField, lineStepField, lineEndField, superPolyVaryBtn, superAutoCb, findHolesBtn, TipOpenDelay, TipCloseDelay);
 
     final Button smallCoverButton = new Button("LiCover");
     final SmallCoverWindow smallCoverWindow;
     final CoverWindow coverWindow;
+
+    // Jeff Khuu, Aug 11, 2026.
+    final PatchWindow patchWindow;
+    // Built lazily: it reads the patch list on construction, so it must not be
+    // created before the user has had a chance to define patches.
+    HoleFinderWindow holeFinderWindow = null;
 
     VaryWindowL varyWindow =  null;
     VaryWindowL middleVaryWindow = null;
@@ -594,6 +625,10 @@ public final class Viewer {
         smallCoverWindow = new SmallCoverWindow(
                 String.format("Small Cover %s", version), pool,
                 () -> loadCover("small_cover", executor, true), coverWindow, smallCoverAreas);
+
+        patchWindow = new PatchWindow(pool,
+                () -> drawPatch(tmpDir, executor),
+                () -> loadPatch("cover", executor), this);
 
         final StablesWindow stablesWindow = new StablesWindow(coverWindow);
 
@@ -1256,13 +1291,13 @@ public final class Viewer {
                     }
                     // Label 6
                     renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
-                    Utils.safeShutdownExecutor(drawExecutor);
+                    Utils.shutdownExecutorAsync(drawExecutor);
                 });
                 task.setOnCancelled(e -> {
-                    Utils.safeShutdownExecutor(drawExecutor);
+                    Utils.shutdownExecutorAsync(drawExecutor);
                 });
                 task.setOnFailed(e -> {
-                    Utils.safeShutdownExecutor(drawExecutor);
+                    Utils.shutdownExecutorAsync(drawExecutor);
                     throw new RuntimeException(task.getException());
                 });
 
@@ -1768,12 +1803,38 @@ public final class Viewer {
         tetrabarButton.setTooltip(Utils.toolTip("Creates a tetrahedron (bar) out of each input coordinate, and finds the intersection of the result of Vary3 on all three (two) points."));
         Utils.colorButton(tetrabarButton, Color.LIGHTPINK, clickColor);
         tetrabarButton.setOnAction(event -> {
-            Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams = new TetraBar(mainWindow).getVaryParams();
+            if (tetraBar == null) tetraBar = new TetraBar(mainWindow, this);
+
+            // Jeff Khuu, Jun 9, 2026. Seed the coordinates from the loaded one-by-one file, if there is one.
+            if (!fileCodeSequences.isEmpty()) tetraBar.setCoordinatesText(coordinatesToString(fileCodeSequences));
+
+            if (tetraBar.isShowing()) {
+                tetraBar.toFront();
+                return;
+            }
+
+            final Tuple6<List<Tuple2<Double, Double>>, List<Tuple2<Double, Double>>, Integer, Integer, Boolean, Boolean> varyParams =
+                    tetraBar.getVaryParams();
 
             if (varyParams._3 == -1) return;
 
+            // Zhao Yu Li, Jun 27, 2025.
+            // Attempt to read start, step, and end from the user. These are in coordinate (line) units, while
+            // queuedVaryTask walks `points`, which holds `pointStep` entries per coordinate.
+            final Tuple3<Integer, Integer, Integer> startStepEnd = getStartStepEnd(varyParams._1.size());
+            if (startStepEnd._1 == null) return;
+
+            final int pointStep = varyParams._3;
+            final int firstIndex = (startStepEnd._1 - 1) * pointStep;
+            final int lastIndex = startStepEnd._3 * pointStep;
+
+            final boolean addToAllPositive = tetraBar.getAddToAllPositiveSelected();
+            final boolean addToPlusMinus = tetraBar.getAddToPlusMinusSelected();
+
             ExecutorService executorService = Executors.newFixedThreadPool(Utils.numThreads);
-            queuedVaryTask(varyParams._1, varyParams._2, 0, varyParams._2.size(), executorService, varyParams._3, varyParams._4, varyParams._5, varyParams._6);
+            queuedVaryTask(varyParams._1, varyParams._2, firstIndex, firstIndex, lastIndex, startStepEnd._2,
+                    executorService, pointStep, varyParams._4, varyParams._5, varyParams._6,
+                    addToAllPositive, addToPlusMinus);
         });
 
         lineNumberTxt.setPromptText("Line");
@@ -1959,6 +2020,7 @@ public final class Viewer {
 
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
+                    varyWindow.clearRelist();
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor, shotExecutor, false, false);
                 }
             }
@@ -2032,6 +2094,7 @@ public final class Viewer {
                     final ExecutorService storageExecutor = new PriorityExecutor(Utils.numThreads);
                     final ExecutorService shotExecutor = Executors.newFixedThreadPool(Utils.numThreads); // This can be a default executor
                     final boolean firstLastSelected = middleVaryWindow.getFirstLastSelected();
+                    middleVaryWindow.clearRelist();
                     drawVaryL(pointList, maximums, draw, overrideSS, autoCover, autoSmallCover, maxPrint, executor, storageExecutor, shotExecutor, true, firstLastSelected);
                 }
             }
@@ -2108,6 +2171,7 @@ public final class Viewer {
             }
             final Tuple7<ConvexPolygon, Integer, Integer, Integer, Integer, Integer, Integer> polyVals = polyOpt.get();
 
+            autoPolyVaryWindow.clearRelist();
             autoPolyVaryFunction(polyVals, Optional.empty(), Optional.empty(), AutoPolyVaryLoad.Override, AutoPolyVaryLoad.AutoCover, autoPolyVaryWindow.getAutoSmallCover(), executor);
             // Finally, put the new polygons behind the existing cover, in the case that the final PolyVary
             // invocation found some new covers.
@@ -2172,6 +2236,7 @@ public final class Viewer {
 //        		alert.showAndWait();
                 return;
             }
+            superPolyVaryWindow.clearRelist();
             superPolyVaryFunction(polyOpt.get(), executor);
         });
 
@@ -2517,6 +2582,31 @@ public final class Viewer {
         Utils.colorButton(coverBtn, Color.LIGHTPINK, clickColor);
         coverBtn.setOnAction(e -> coverWindow.show());
 
+        // Jeff Khuu, Aug 11, 2026.
+        patchBtn.setText("JKPatch");
+        patchBtn.setTooltip(Utils.toolTip("Split the cover region into patches and cover them one at a time."
+                + " Patches that come back covered are shaded grey."));
+        Utils.colorButton(patchBtn, Color.LIGHTPINK, clickColor);
+        patchBtn.setOnAction(e -> patchWindow.show());
+
+        findHolesBtn.setText("JKFindHole");
+        findHolesBtn.setTooltip(Utils.toolTip("List the squares of the cover polygon (or of a patch) that are"
+                + " still uncovered, and load them as one-by-one probes."));
+        Utils.colorButton(findHolesBtn, Color.LIGHTPINK, clickColor);
+        findHolesBtn.setOnAction(event -> {
+            // Built on first use so it picks up whatever patches exist by then.
+            if (holeFinderWindow == null) {
+                holeFinderWindow = new HoleFinderWindow(this);
+            }
+            holeFinderWindow.show();
+        });
+
+        loadHolesBtn.setText("Load Holes");
+        loadHolesBtn.setTooltip(Utils.toolTip("Load the holes recorded by the last cover run (tmp/holes.txt)"
+                + " as a one-by-one list."));
+        Utils.colorButton(loadHolesBtn, Color.LIGHTPINK, clickColor);
+        loadHolesBtn.setOnAction(e -> loadHolesFromFile());
+
 //        halfTripleBtn.setText("Half Triple");
 //        halfTripleBtn.setTooltip(Utils.toolTip("Brings up a window that allows you to check if some code"
 //                + " sequences cover a specified polygon. See instructions for details"));
@@ -2644,7 +2734,7 @@ public final class Viewer {
         labelCodeWindow.textProperty().bindBidirectional(labelMainWindow.textProperty());
 
         imageStack.getChildren().addAll(backgroundImageView, regionsImageView, guideLinesImageView,
-                boundsImageView, oboImageView, topImageView);
+                boundsImageView, oboImageView, patchImageView, topImageView);
 
         reflectCheckBox.setText("Reflect");
         reflectCheckBox.setTooltip(Utils.toolTip("Reflects the map into usual cartesian coordinates"));
@@ -2771,6 +2861,12 @@ public final class Viewer {
             currentOBOStorage = null;
             lineNumberTxt.setText("");
             oboImageView.setImage(new WritableImage(SIDE, SIDE));
+
+            // Jeff Khuu, Aug 11, 2026. Clear the patch overlay too, otherwise the
+            // grey shading survives a Clear and misreports covered ground.
+            patchAreas.clear();
+            coveredPatchAreas.clear();
+            patchImageView.setImage(new WritableImage(SIDE, SIDE));
         });
 
         saveRegionsCheckBox.setText("Save Regions");
@@ -3562,6 +3658,11 @@ public final class Viewer {
         backForOBOHBox.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
         backForOBOHBox.setAlignment(Pos.CENTER);
 
+        // JKPatch now rides on the Zoom row (boyanZoomHBox); standalone row kept commented out
+        //final HBox patchHBox = new HBox(10, patchBtn);
+        //patchHBox.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
+        //patchHBox.setAlignment(Pos.CENTER);
+
         final HBox hbox1 = new HBox();
         hbox1.setSpacing(10);
         hbox1.setPadding(new Insets(0, 10, BTNPADBOTTOM, 0));
@@ -3660,7 +3761,8 @@ public final class Viewer {
         // backForOBOHBox, zoomHBox, clickActionHBox, backForthHBox);
         //final VBox leftVBox = new VBox(10, whatMenuHBox, twoHBox, colorsHBox1, varyMenuPane, oboHBox,
         //      backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
-        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, polyLoadDBButton, parallelogramButton);
+        //hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, polyLoadButton, polyLoadDBButton, parallelogramButton);
+        hbox2.getChildren().addAll(reflectCheckBox, allCheckBox, infoButton, patternCalculatorBtn, iterateToLimitBtn);// Polygon / PolygonDB / Para hidden (still wired up above); LiPattern Calc. + LiPattern moved here, next to Info
 
         final VBox leftVBox = new VBox(10, twoHBox,hbox2, colorsHBox1, varyMenuPane, oboHBox,
                 backForOBOHBox,zoomHBox, clickActionHBox, backForthHBox);
@@ -3749,7 +3851,8 @@ public final class Viewer {
             boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
             //boyanMenuExtra.getChildren().addAll(coverBtn, btnLoadFile, loadLRCheckBox);
 
-            boyanMenuExtra.getChildren().addAll(keepPolys, covRectsColorBox, coverColorCycle,coverBtn, btnLoadFile);
+            boyanMenuExtra.getChildren().addAll(keepPolys, covRectsColorBox, coverColorCycle,coverBtn,
+                    patchBtn, findHolesBtn, loadHolesBtn, btnLoadFile);
             zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
 
             zoomHBox.getChildren().clear();
@@ -3801,16 +3904,28 @@ public final class Viewer {
                 mergeButton,loadCoverButton,calculateChooser);//george july15th hide the trimmer button and red button
         backForOBOHBox.getChildren().addAll(stablesButton, btnOBOBackward, fieldOBOStep, btnOBOForward);
         clickActionHBox.getChildren().addAll(selectRdoBtn, magnifyRdoBtn, demagnifyRdoBtn, centerBtn);
-        twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton, iterateToLimitBtn);
-        boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
-        boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+        //twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton, iterateToLimitBtn);
+        twoHBox.getChildren().addAll(txtCodeSequence, btnCalculate, zoomRegionButton);// LiPattern moved to hbox2, next to Info
+        //boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField);
+        boyanZoomHBox.getChildren().addAll(zoomButton, xMinTextField, yMinTextField, patchBtn);// JKPatch on the Zoom row
+        //boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn,
+        //        patchBtn, findHolesBtn, loadHolesBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+        // JKFindHole moved to autoPolyVaryHBox, next to the End field
+        //boyanMenuExtra.getChildren().addAll(loadDirectoryButton, coverBtn,
+        //        loadHolesBtn, btnLoadFile, compareCheckBox, saveV3Btn);
+        // Load Directory hidden (still wired up above); LiCover takes its place
+        boyanMenuExtra.getChildren().addAll(smallCoverButton, coverBtn,
+                btnLoadFile, compareCheckBox, saveV3Btn, loadHolesBtn);// LoadHoles next to SaveV3
         //coverExtraHBox.getChildren().addAll(halfTripleBtn, cornerBtn, unstableBtn);
         zoomFeildsVBox.getChildren().addAll(boyanZoomHBox, boyanMenuExtra);
         backForthHBox.getChildren().addAll(
                 zoomScaleLabel, zoomScaleText, backwardSquareButton, forwardSquareButton);
-        oboHBox.getChildren().addAll(smallCoverButton, patternCalculatorBtn, btnLoadOBOFile, lineNumberTxt, btnGo, updateButton);
+        //oboHBox.getChildren().addAll(smallCoverButton, patternCalculatorBtn, btnLoadOBOFile, lineNumberTxt, btnGo, updateButton);
+        //oboHBox.getChildren().addAll(smallCoverButton, btnLoadOBOFile, lineNumberTxt, btnGo, updateButton);// LiPattern Calc. moved to hbox2, next to Info
+        oboHBox.getChildren().addAll(btnLoadOBOFile, lineNumberTxt, btnGo, updateButton);// LiCover moved to boyanMenuExtra
         //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, cboxRegionColor2, clearBtn, resetBtn);//george may 2,2019
-        colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
+        //colorsHBox1.getChildren().addAll(cboxRegionColor0, cboxRegionColor1, clearBtn, resetBtn);//george july15th remove the third color option
+        colorsHBox1.getChildren().addAll(clearBtn, resetBtn, cboxRegionColor0, cboxRegionColor1);// Clear/Reset before the two color pickers
 
         zoomHBox.getChildren().addAll( hbox1, zoomRegionHBox,oboHBox,backForOBOHBox,zoomFeildsVBox,clickActionHBox,backForthHBox);
 
@@ -4185,17 +4300,17 @@ public final class Viewer {
             } catch (final NullPointerException exception) {
                 // this is when were iterating from a file, and the iteration window isn't open
             }
-            Utils.safeShutdownExecutor(drawExecutor);
+            Utils.shutdownExecutorAsync(drawExecutor);
         });
         task.setOnCancelled(e -> {
-            Utils.safeShutdownExecutor(drawExecutor);
+            Utils.shutdownExecutorAsync(drawExecutor);
         });
 
         // If the task throws an exception during the call phase,
         // simply close the window and throw the exception
         task.setOnFailed(e -> {
             //progress.close();
-            Utils.safeShutdownExecutor(drawExecutor);
+            Utils.shutdownExecutorAsync(drawExecutor);
             throw new RuntimeException(task.getException());
         });
 
@@ -4283,14 +4398,14 @@ public final class Viewer {
             renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
         });
         task.setOnCancelled(e -> {
-            Utils.safeShutdownExecutor(drawExecutor);
+            Utils.shutdownExecutorAsync(drawExecutor);
         });
 
         // If the task throws an exception during the call phase,
         // simply close the window and throw the exception
         task.setOnFailed(e -> {
             //progress.close();
-            Utils.safeShutdownExecutor(drawExecutor);
+            Utils.shutdownExecutorAsync(drawExecutor);
             throw new RuntimeException(task.getException());
         });
 
@@ -4493,6 +4608,16 @@ public final class Viewer {
                 if (autoCover && storage.classCodeSeq.stable) coverWindow.appendStablesInfo(getCoverCodeString(storage));
                 if (autoSmallCover && storage.classCodeSeq.stable) smallCoverWindow.appendStablesInfo(getCoverCodeString(storage));
             });
+
+            // Jeff Khuu, Aug 11, 2026.
+            // This coordinate produced nothing, so remember it for the relist.
+            if (storages.isEmpty()) {
+                if (printMid) {
+                    middleVaryWindow.appendToRelist(point);
+                } else {
+                    varyWindow.appendToRelist(point);
+                }
+            }
 
             overallProgress.increment(Math.abs(step));
 
@@ -4814,7 +4939,7 @@ public final class Viewer {
                     }
                 });
 
-                Utils.safeShutdownExecutor(drawExecutor);
+                Utils.shutdownExecutorAsync(drawExecutor);
                 progress.close();
 
                 if (tup._1.isPresent()) {
@@ -4842,12 +4967,12 @@ public final class Viewer {
             });
 
             task.setOnCancelled(e -> {
-                Utils.safeShutdownExecutor(drawExecutor);
+                Utils.shutdownExecutorAsync(drawExecutor);
                 progress.close();
             });
 
             task.setOnFailed(e -> {
-                Utils.safeShutdownExecutor(drawExecutor);
+                Utils.shutdownExecutorAsync(drawExecutor);
                 progress.close();
                 throw new RuntimeException(task.getException());
             });
@@ -4924,7 +5049,7 @@ public final class Viewer {
                         }
                     });
 
-                    Utils.safeShutdownExecutor(drawExecutor);
+                    Utils.shutdownExecutorAsync(drawExecutor);
                     progressTriples.close();
 
                     if (tup._1.isPresent()) {
@@ -4952,12 +5077,12 @@ public final class Viewer {
                 });
 
                 taskTriples.setOnCancelled(e -> {
-                    Utils.safeShutdownExecutor(drawExecutor);
+                    Utils.shutdownExecutorAsync(drawExecutor);
                     progressTriples.close();
                 });
 
                 taskTriples.setOnFailed(e -> {
-                    Utils.safeShutdownExecutor(drawExecutor);
+                    Utils.shutdownExecutorAsync(drawExecutor);
                     progressTriples.close();
                     throw new RuntimeException(taskTriples.getException());
                 });
@@ -5821,6 +5946,10 @@ public final class Viewer {
         for (final ConvexPolygon poly : outerPolyBounds) {
             renderPolygon(poly, boundsImage, polyBoundColor);
         }
+        // Jeff Khuu, Aug 11, 2026. Patch outlines, same treatment as the cover area.
+        for (final ConvexPolygon poly : patchAreas) {
+            renderPolygon(poly, boundsImage, coverAreaColor);
+        }
         coverArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
         smallCoverAreas.forEach(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
         autoVaryArea.ifPresent(convexPolygon -> renderPolygon(convexPolygon, boundsImage, coverAreaColor));
@@ -5840,11 +5969,37 @@ public final class Viewer {
             renderRegion(currentOBOStorage, oboImage, currentOBOColor);
         }
 
+        // Image 5: Jeff Khuu, Aug 11, 2026. Grey fill over fully covered patches.
+        final WritableImage patchImage = new WritableImage(SIDE, SIDE);
+        if (!coveredPatchAreas.isEmpty()) {
+            final PixelWriter patchWriter = patchImage.getPixelWriter();
+            for (final ConvexPolygon poly : coveredPatchAreas) {
+                // Only scan the polygon's own bounding box; a patch is a small part
+                // of the region, so scanning the whole 600x600 canvas per patch is
+                // wasted work on every render.
+                final int xStart = Math.max(0, (int) Math.floor(map.pixelX(poly.projectX().min)));
+                final int xEnd = Math.min(SIDE - 1, (int) Math.ceil(map.pixelX(poly.projectX().max)));
+                final int yStart = Math.max(0, (int) Math.floor(map.pixelY(poly.projectY().max)));
+                final int yEnd = Math.min(SIDE - 1, (int) Math.ceil(map.pixelY(poly.projectY().min)));
+
+                for (int pixelX = xStart; pixelX <= xEnd; pixelX += 1) {
+                    for (int pixelY = yStart; pixelY <= yEnd; pixelY += 1) {
+                        final double rx = map.radianX(pixelX + 0.5);
+                        final double ry = map.radianY(pixelY + 0.5);
+                        if (poly.location(rx, ry).equals(Location.INSIDE)) {
+                            patchWriter.setColor(pixelX, pixelY, Color.GRAY);
+                        }
+                    }
+                }
+            }
+        }
+
         // Update all the images at once to avoid jarring rendering.
         guideLinesImageView.setImage(guideLinesImage);
         regionsImageView.setImage(regionImage);
         boundsImageView.setImage(boundsImage);
         oboImageView.setImage(oboImage);
+        patchImageView.setImage(patchImage);
     }
 
 
@@ -6678,6 +6833,89 @@ public final class Viewer {
         }
     }
 
+    /**
+     * Jeff Khuu, Aug 11, 2026.
+     * Loads the uncovered-square centers that the last cover run wrote to
+     * tmp/holes.txt, asking first how many to take.
+     */
+    public void loadHolesFromFile() {
+        final Path path = Paths.get(tmpDir + "holes.txt");
+        if (!Files.exists(path)) {
+            final Alert alert = new Alert(AlertType.ERROR);
+            alert.setTitle("Load Holes");
+            alert.setHeaderText("File Not Found");
+            alert.setContentText(path + " does not exist. Run a cover calculation first.");
+            alert.showAndWait();
+            return;
+        }
+
+        final ArrayList<String> lines;
+        try {
+            lines = new ArrayList<>(Files.readAllLines(path));
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        lines.removeIf(line -> line == null || line.trim().isEmpty());
+
+        if (lines.isEmpty()) {
+            final Alert alert = new Alert(AlertType.INFORMATION);
+            alert.setTitle("Load Holes");
+            alert.setHeaderText(null);
+            alert.setContentText("No holes were recorded - the last cover run had nothing uncovered.");
+            alert.showAndWait();
+            return;
+        }
+
+        final int maxLines = lines.size();
+        final TextInputDialog dialog = new TextInputDialog(String.valueOf(maxLines));
+        dialog.setTitle("Load Holes");
+        dialog.setHeaderText("How many holes to load?");
+        dialog.setContentText("How many holes to load? (max " + maxLines + "):");
+
+        final Optional<String> result = dialog.showAndWait();
+        result.ifPresent(input -> {
+            try {
+                final int requested = Integer.parseInt(input.trim());
+                if (requested < 1) {
+                    throw new NumberFormatException("must be at least 1");
+                }
+                final int n = Math.min(requested, maxLines);
+                final StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < n; i++) {
+                    sb.append(lines.get(i)).append('\n');
+                }
+                loadHolesAsOBO(sb.toString());
+            } catch (final NumberFormatException e) {
+                final Alert alert = new Alert(AlertType.ERROR);
+                alert.setTitle("Load Holes");
+                alert.setHeaderText("Invalid Number");
+                alert.setContentText("Please enter a whole number of 1 or more.");
+                alert.showAndWait();
+            }
+        });
+    }
+
+    /**
+     * Jeff Khuu, Aug 11, 2026.
+     * Writes the given coordinate block out as a one-by-one file and starts
+     * stepping through it, so holes can be probed the same way as any OBO list.
+     */
+    public void loadHolesAsOBO(final String coords) {
+        final Path path = Paths.get(tmpDir + "holes_obo.txt");
+        try {
+            Files.write(path, coords.getBytes(StandardCharsets.UTF_8));
+        } catch (final IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        fileCodeSequences = parseOBOFile(path);
+        if (!fileCodeSequences.isEmpty()) {
+            lineNumberTxt.setText("1");
+            setOBO(0, pool, executorService);
+        }
+    }
+
     public static ArrayList<String> parseOBOFile(final Path path) {
         final ArrayList<String> list = new ArrayList<>();
 
@@ -7453,6 +7691,20 @@ public final class Viewer {
                 throw new RuntimeException(exception);
             }
 
+            // Jeff Khuu, Aug 11, 2026.
+            // This coordinate had white pixels to try but produced no codes, so
+            // remember it for the relist. `step` is present only for SuperLiLuVary,
+            // where we only want the coordinates still empty on the final rep.
+            if (storages.isEmpty() && !pointsFiltered.isEmpty()) {
+                if (step.isPresent()) {
+                    if (step.get().getValue() == SuperPolyVaryLoad.Reps - 1) {
+                        superPolyVaryWindow.appendToRelist(coords[0], coords[1]);
+                    }
+                } else {
+                    autoPolyVaryWindow.appendToRelist(coords[0], coords[1]);
+                }
+            }
+
             // This takes care of the very last codes completed, in case the listChangeListener doesn't catch them in time
             storages.forEach(storage -> {
                 if(!onScreenSequences.containsKey(storage)) {
@@ -7574,8 +7826,8 @@ public final class Viewer {
 
         task.setOnFailed(e -> {
             //progress.close();
-            Utils.safeShutdownExecutor(storageExecutor);
-            Utils.safeShutdownExecutor(shotExecutor);
+            Utils.shutdownExecutorAsync(storageExecutor);
+            Utils.shutdownExecutorAsync(shotExecutor);
             overallProgress.close();
             // Propagate cancellation for Super
             step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));
@@ -8013,6 +8265,41 @@ public final class Viewer {
         loadCover(dir, executor, false);
     }
 
+    /**
+     * Jeff Khuu, Aug 11, 2026.
+     * Re-reads the patch outlines written by the Patch Window and redraws them.
+     */
+    public void drawPatch(final String dir, final ExecutorService executor) {
+        final String patchString = readFromFile(dir + "patches.txt").trim();
+        patchAreas = CoverableRegion.parsePatchPolygons(patchString);
+        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+    }
+
+    /**
+     * Jeff Khuu, Aug 11, 2026.
+     * Loads the cover a patch calculation just produced. Same as loadCover, minus
+     * the polygon: a patch covers only part of the region, so it must not replace
+     * the overall coverArea outline.
+     */
+    public void loadPatch(final String dir, final ExecutorService executor) {
+        final String squareString = readFromFile(dir + "/square.txt").trim();
+        final String stablesString = readFromFile(dir + "/stables.txt").trim();
+        final String triplesString = readFromFile(dir + "/triples.txt").trim();
+        final String coverString = readFromFile(dir + "/cover.txt").trim();
+
+        final Rectangle square = CoverStuff.parseRectangle(squareString);
+        final List<ClassifiedCodeSequence> stables = CoverStuff.parseStables(stablesString);
+        final List<Triple> triples = CoverStuff.parseTriples(triplesString);
+
+        final Tuple2<MutableMap<Rectangle, ClassifiedCodeSequence>, MutableMap<Rectangle, Triple>> cover =
+                CoverStuff.parseCover(coverString, square, stables, triples);
+
+        mrrBounds.clear();
+        coverRects.addStables(cover._1, Color.BLACK);
+        coverRects.addTriples(cover._2, Color.BLACK);
+        renderRegions(onScreenSequences, guideLinesImageView, regionsImageView, executor);
+    }
+
     public void loadCover(final String dir, final ExecutorService executor, final boolean small) {
 
         final String polygonString = readFromFile(dir + "/polygon.txt").trim();
@@ -8065,12 +8352,16 @@ public final class Viewer {
     public void queuedVaryTask(final List<Tuple2<Double, Double>> originalPoints,
                                final List<Tuple2<Double, Double>> points,
                                final int index,
+                               final int start,
                                final int max,
+                               final int codeStep,
                                ExecutorService executor,
                                final int step,
                                final int numToPrint,
                                final boolean draw,
-                               final boolean addToCover)
+                               final boolean addToCover,
+                               final boolean addToAllPositive,
+                               final boolean addToPlusMinus)
     {
         int next = index + 1;
 
@@ -8084,9 +8375,16 @@ public final class Viewer {
             return;
         }
 
-        if (index == 0) {
+        if (index == start) {
             System.out.println("// Start " + mode + ".");
             if (addToCover) coverWindow.appendStablesInfo("// Start " + mode + ".");
+
+            // Jeff Khuu, Aug 23, 2026.
+            // Follow the coordinate list on screen and start a fresh relist.
+            final Tuple2<Double, Double> firstPoint = originalPoints.get(index / step);
+            moveScreen(firstPoint._1, firstPoint._2);
+            tetraBar.setLineNumber(index / step + 1);
+            tetraBar.clearRelist();
         }
 
         final Task<MutableSortedSet<ClassifiedCodeSequence>> varyTask
@@ -8128,7 +8426,19 @@ public final class Viewer {
             if (next % step == 0) {
                 assert step == tetrahedronCodes.size();
 
-                System.out.println("// " + finalMode +  " results for (" + originalPoints.get(index / step)._1 + ", " + originalPoints.get(index / step)._2 + ")");
+                final Tuple2<Double, Double> point = originalPoints.get(index / step);
+
+                System.out.println("// " + finalMode + " results for " + (index / step + 1)
+                        + " - (" + point._1 + ", " + point._2 + ")");
+
+                // Jeff Khuu, Aug 23, 2026.
+                // Move to the coordinate this run will visit next -- which is `codeStep` lines on, not one.
+                final int nextIndex = next + (codeStep - 1) * step;
+                if (nextIndex < max && nextIndex / step < originalPoints.size()) {
+                    final Tuple2<Double, Double> nextPoint = originalPoints.get(nextIndex / step);
+                    moveScreen(nextPoint._1, nextPoint._2);
+                    tetraBar.setLineNumber(nextIndex / step + 1);
+                }
 
                 ArrayList<Collection<ClassifiedCodeSequence>> cList = new ArrayList<>();
 
@@ -8144,6 +8454,7 @@ public final class Viewer {
 
                 if (cList.get(0).isEmpty()) {
                     System.out.println("// None matching...");
+                    tetraBar.appendToRelist(point);
                 } else {
                     System.out.println("// Found " + cList.get(0).size() + " matching codes.");
 
@@ -8155,22 +8466,39 @@ public final class Viewer {
 
                     // Zhao Yu Li, Jun 3, 2025.
                     // Add codes to cover.
-                    if (addToCover) {
-                        for (ClassifiedCodeSequence code : codesPrinted) {
-                            if (ClassifiedCodeSequence.isStableCodeType(code.codeType)) {
-                                coverWindow.appendStablesInfo(getCoverCodeString(code));
+                    //
+                    // Zhao Yu Li, Dec 17, 2025.
+                    // Go through the loaded storages rather than codesPrinted, so a code whose storage could
+                    // not be built is not written to the cover as an empty entry.
+                    if (draw || addToCover) {
+                        ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
+
+                        if (addToCover) {
+                            for (Storage storage : storages) {
+                                if (storage.classCodeSeq.stable) {
+                                    coverWindow.appendStablesInfo(getCoverCodeString(storage));
+                                }
+                            }
+                        }
+
+                        if (draw) {
+                            final int colorIndex = cycle.get();
+                            Color color = comboBoxColors.get(colorIndex);
+
+                            for (Storage storage : storages) {
+                                addToOnScreenSequences(storage, color);
                             }
                         }
                     }
 
-                    if (draw) {
-                        final int colorIndex = cycle.get();
-                        Color color = comboBoxColors.get(colorIndex);
+                    // Zhao Yu Li, Jun 25, 2025.
+                    // Add the code sequence - iteration pattern pair to the IterateToLimitWindow Cover
+                    if (addToAllPositive || addToPlusMinus) {
+                        if (iterateToLimitWindow == null) this.iterateToLimitWindow = new IterateToLimitWindow(pool);
 
-                        ArrayList<Storage> storages = BatchLoadStorage.batchLoadStorage(codesPrinted, pool);
-
-                        for (Storage storage : storages) {
-                            addToOnScreenSequences(storage, color);
+                        for (ClassifiedCodeSequence code : codesPrinted) {
+                            addToIterToLimitCover(code.toString(), addToAllPositive, addToPlusMinus,
+                                    iterateToLimitWindow);
                         }
                     }
                 }
@@ -8182,7 +8510,13 @@ public final class Viewer {
                 }
             }
 
-            queuedVaryTask(originalPoints, points, next, max, executor, step, numToPrint, draw, addToCover);
+            if (next % step == 0) {
+                queuedVaryTask(originalPoints, points, next + (codeStep - 1) * step, start, max, codeStep, executor,
+                        step, numToPrint, draw, addToCover, addToAllPositive, addToPlusMinus);
+            } else {
+                queuedVaryTask(originalPoints, points, next, start, max, codeStep, executor, step, numToPrint, draw,
+                        addToCover, addToAllPositive, addToPlusMinus);
+            }
         });
 
         varyTask.setOnCancelled(cancelled -> {
@@ -8251,6 +8585,20 @@ public final class Viewer {
                         + " to the IterateToLimitWindow Cover (+/-) because we cannot find a valid iteration pattern");
             } else iterateToLimitWindow.addToContent(classCodeSeq, iterationPattern, false);
         }
+    }
+
+    /**
+     * <b>Jeff Khuu</b><br>
+     * <b>May 9, 2026</b>
+     * <p>
+     *     Joins a list of "x y" coordinate strings into one newline-separated block, suitable for dropping
+     *     straight into a coordinates text area. The "x y" shape is expected but not enforced.
+     * </p>
+     * @param coords Coordinates, each expected to be of the form "x y" with x and y real numbers.
+     * @return The coordinates, one per line.
+     */
+    private String coordinatesToString(final ArrayList<String> coords) {
+        return String.join(System.lineSeparator(), coords);
     }
 
     private Tuple3<Integer, Integer, Integer> getStartStepEnd() {
@@ -8327,5 +8675,15 @@ public final class Viewer {
         final double xRad = Math.toRadians(x);
         final double yRad = Math.toRadians(y);
         zoom(xRad, xRad, yRad, yRad, executorService);
+    }
+
+    /**
+     * Zhao Yu Li, Sept 20, 2025.
+     * Stops the background threads owned by child windows. Called from Main.stop() on app shutdown.
+     */
+    public void shutdown() {
+        if (iterateToLimitWindow != null) {
+            iterateToLimitWindow.shutdown();
+        }
     }
 }

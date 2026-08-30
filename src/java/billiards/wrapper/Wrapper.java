@@ -7,6 +7,9 @@ import billiards.database.InfoAll;
 import billiards.database.Picture;
 import billiards.viewer.Utils;
 
+import javaslang.Tuple;
+import javaslang.Tuple2;
+
 import com.sun.jna.Native;
 import com.sun.jna.Pointer;
 
@@ -196,30 +199,33 @@ public final class Wrapper {
         final CInfoAll cinfoAll = new CInfoAll();
         final int rval = load_all_equations(codeNumbersArray, codeNumbersLen, cinfoAll, pool.pointer);
 
-        if (rval == 1) {
-            try{
-                final InfoAll info = new InfoAll(cinfoAll);
+        // The nine strings in cinfoAll are native new[] allocations that Java owns
+        // once this call returns. InfoAll copies each one into a Java String, so the
+        // native blocks must be released on every path out of here or they leak for
+        // the life of the process. Unpopulated fields are null and free as no-ops.
+        try {
+            if (rval == 1) {
+                try{
+                    final InfoAll info = new InfoAll(cinfoAll);
 
-                // Only release the resources after we have converted the
-                // cinfo to a info
-                // TODO double check that this doesn't leak memory
-                //cleanup_cinfo(info);
+                    return Optional.of(info);
+                }
+                catch (NullPointerException e) {
+                    return  Optional.empty();
+                }
 
-                return Optional.of(info);
+            } else if (rval == 0) {
+                // empty set
+                return Optional.empty();
+            } else if (rval == -1) {
+                System.err.println("Load all equation failed for " + codeSeq);
+                // Empty normally means empty set, but in this case means calculation error
+                return Optional.empty();
+            } else {
+                throw new RuntimeException("unknown return value " + rval);
             }
-            catch (NullPointerException e) {
-                return  Optional.empty();
-            }
-
-        } else if (rval == 0) {
-            // empty set
-            return Optional.empty();
-        } else if (rval == -1) {
-            System.err.println("Load all equation failed for " + codeSeq);
-            // Empty normally means empty set, but in this case means calculation error
-            return Optional.empty();
-        } else {
-            throw new RuntimeException("unknown return value " + rval);
+        } finally {
+            cleanup_cinfoAll(cinfoAll);
         }
     }
 
@@ -232,30 +238,30 @@ public final class Wrapper {
         final CInfoAll cinfoAll = new CInfoAll();
         final int rval = load_info_all(codeNumbersArray, codeNumbersLen, cinfoAll, pool.pointer);
 
-        if (rval == 1) {
-            try{
-                final InfoAll info = new InfoAll(cinfoAll);
+        // See loadAllEquations: Java owns the nine native strings from here on.
+        try {
+            if (rval == 1) {
+                try{
+                    final InfoAll info = new InfoAll(cinfoAll);
 
-                // Only release the resources after we have converted the
-                // cinfo to a info
-                // TODO double check that this doesn't leak memory
-                //cleanup_cinfo(info);
+                    return Optional.of(info);
+                }
+                catch (NullPointerException e) {
+                    return  Optional.empty();
+                }
 
-                return Optional.of(info);
+            } else if (rval == 0) {
+                // empty set
+                return Optional.empty();
+            } else if (rval == -1) {
+                System.err.println("Load all failed for " + codeSeq);
+                // Empty normally means empty set, but in this case means calculation error
+                return Optional.empty();
+            } else {
+                throw new RuntimeException("unknown return value " + rval);
             }
-            catch (NullPointerException e) {
-                return  Optional.empty();
-            }
-
-        } else if (rval == 0) {
-            // empty set
-            return Optional.empty();
-        } else if (rval == -1) {
-            System.err.println("Load all failed for " + codeSeq);
-            // Empty normally means empty set, but in this case means calculation error
-            return Optional.empty();
-        } else {
-            throw new RuntimeException("unknown return value " + rval);
+        } finally {
+            cleanup_cinfoAll(cinfoAll);
         }
     }
 
@@ -328,6 +334,15 @@ public final class Wrapper {
     private static native void cleanup_cpicture(CPicture cpicture);
 
     public static Optional<Picture> loadPicture(final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {
+        return loadPictureStatus(codeSeq, pool)._2;
+    }
+
+    // Same as loadPicture, but also hands back the raw backend status so callers
+    // can tell a genuine empty set (0) from a failed calculation (-1). Both come
+    // back as Optional.empty(), and a caller that caches results must not treat a
+    // failure as a permanent answer.
+    public static Tuple2<Integer, Optional<Picture>> loadPictureStatus(
+            final ClassifiedCodeSequence codeSeq, final ConnectionPool pool) {
 
         final int[] codeNumbersArray = codeSeq.codeSequence.codeNumbers.toArray();
 
@@ -341,16 +356,15 @@ public final class Wrapper {
 
             // Only release the resources after we have converted the
             // cpicture to a picture
-            // TODO double check that this doesn't leak memory
             cleanup_cpicture(cpicture);
 
-            return Optional.of(picture);
+            return Tuple.of(rval, Optional.of(picture));
         } else if (rval == 0) {
             // empty set
-            return Optional.empty();
+            return Tuple.of(rval, Optional.empty());
         } else if (rval == -1) {
             System.err.println("warning: MRR failed for " + codeSeq);
-            return Optional.empty();
+            return Tuple.of(rval, Optional.empty());
         } else {
             throw new RuntimeException("unknown return value " + rval);
         }
@@ -465,6 +479,10 @@ public final class Wrapper {
 
     private static native void cleanup_string(CString cstring);
 
+    // Frees the nine native strings populated into a CInfoAll. Safe to call when
+    // the load failed and the fields are still null.
+    private static native void cleanup_cinfoAll(CInfoAll cinfo);
+
     public static String search(final CodeType type, final int length, final ConnectionPool pool) {
 
         final CString cstring = new CString();
@@ -555,24 +573,29 @@ public final class Wrapper {
         CInfoAll cInfoAll = new CInfoAll();
 
         int rval = load_slope_info(codeNumberArray, codeNumberLength, cInfoAll, pool.pointer);
-        if (rval == 1) {
-            try {
-                InfoAll infoAll = new InfoAll(cInfoAll);
-                return  Optional.of(infoAll);
+        // See loadAllEquations: Java owns the nine native strings from here on.
+        try {
+            if (rval == 1) {
+                try {
+                    InfoAll infoAll = new InfoAll(cInfoAll);
+                    return  Optional.of(infoAll);
+                }
+                catch (NullPointerException e) {
+                    return Optional.empty();
+                }
             }
-            catch (NullPointerException e) {
+            else if (rval == 0) {
+                // empty set
                 return Optional.empty();
+            } else if (rval == -1) {
+                System.err.println("Load vector failed for " + codeSequence);
+                // Empty normally means empty set, but in this case means calculation error
+                return Optional.empty();
+            } else {
+                throw new RuntimeException("unknown return value " + rval);
             }
-        }
-        else if (rval == 0) {
-            // empty set
-            return Optional.empty();
-        } else if (rval == -1) {
-            System.err.println("Load vector failed for " + codeSequence);
-            // Empty normally means empty set, but in this case means calculation error
-            return Optional.empty();
-        } else {
-            throw new RuntimeException("unknown return value " + rval);
+        } finally {
+            cleanup_cinfoAll(cInfoAll);
         }
     }
 
@@ -587,12 +610,15 @@ public final class Wrapper {
         if (rval != -1) {
             final String str = cstring.string.getString(0);
             cleanup_string(cstring);
+            // calculate_gradient allocates both out-strings on success, so the
+            // unread one has to be released here too.
+            cleanup_string(cstring2);
             return str;
         } else {
             throw new RuntimeException("calculating gradient failed");
         }
     }
-    
+
     public static String calculateGradient2(String euqation_str, String x_str, String y_str, boolean from_database) {
         final CString cstring = new CString();
         final CString cstring2 = new CString();
@@ -603,6 +629,7 @@ public final class Wrapper {
         if (rval != -1) {
             final String str = cstring2.string.getString(0);
             cleanup_string(cstring);
+            cleanup_string(cstring2);
             return str;
         } else {
             throw new RuntimeException("unknown return value for calculateGradient: " + rval);

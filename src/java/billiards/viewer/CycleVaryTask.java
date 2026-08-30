@@ -27,6 +27,7 @@ import org.eclipse.collections.impl.set.sorted.mutable.TreeSortedSet;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
@@ -41,7 +42,15 @@ Both these processes are multithreaded. Because of this, the task does not perfo
 
 If only the final result is required, you can just call get() on this task after it finishes.
  * */
-public final class CycleVaryTask extends Task<ObservableList<Storage>> {
+public final class CycleVaryTask extends Task<ObservableList<Storage>> implements GracefullyCancelable {
+    // Set by the Cancel button before task.cancel(). Read from worker threads.
+    private volatile boolean gracefulCancelRequested = false;
+
+    @Override
+    public void requestGracefulCancel() {
+        this.gracefulCancelRequested = true;
+    }
+
     // Expose task property representing partial results
     private ReadOnlyObjectWrapper<ObservableList<Storage>> partialResults =
             new ReadOnlyObjectWrapper<>(
@@ -193,8 +202,19 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
         // If one of the futures throws an exception (like a failed to
         // calculate exception), we need to save it, cancel the rest of
         // the futures, and then throw that exception to bubble up the stack
+        boolean queuedWorkCancelled = false;
         for (final Future<Either<String, Storage>> future : futures) {
-            except = checkStatus(future);
+            if (except.isPresent()) {
+                future.cancel(true);
+            } else {
+                if (this.gracefulCancelRequested && !queuedWorkCancelled) {
+                    // Cancel queued storage loads, but let already-running loads
+                    // finish so their partialResults are preserved.
+                    Utils.cancelQueuedFutures(futures);
+                    queuedWorkCancelled = true;
+                }
+                except = checkStatus(future);
+            }
         }
 
         if (except.isPresent()) {
@@ -222,6 +242,8 @@ public final class CycleVaryTask extends Task<ObservableList<Storage>> {
                 // One of the futures threw an exception during its calculation,
                 // so we need to cancel the rest of the futures
                 except = Optional.of(e);
+            } catch (final CancellationException e) {
+                // Expected for queued futures suppressed by graceful cancel.
             } catch (final InterruptedException e) {
                 if (!this.isCancelled()) {
                     throw new RuntimeException(e);

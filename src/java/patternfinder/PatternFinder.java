@@ -345,6 +345,11 @@ public class PatternFinder {
     					if (!correctType(codeSeq.get().codeType)) {
     						valid = false;
     					}
+    				} else {
+    					// An unparseable code part used to leave `valid` true and let the triple through,
+    					// unlike the single branch above. Spattern now derives a CodeSequence from the code
+    					// it is given, so such a triple takes the whole run down.
+    					valid = false;
     				}
 				}
 				if (valid) {
@@ -684,7 +689,7 @@ public class PatternFinder {
     	final LinkedHashMap<Spattern, MutableSet<Single>> map = new LinkedHashMap<>();
     	for (int i = 0; i < lines.size() - 1; i++) {
     		for (int j = i+1; j < lines.size(); j++) {
-    			if (lines.get(i).isEmpty() || lines.get(i).isEmpty()) {
+    			if (lines.get(i).isEmpty() || lines.get(j).isEmpty()) {
     				continue;
     			}
         		final Optional<Spattern> optPat = subtCodes(lines.get(i).getCode(), lines.get(j).getCode());
@@ -894,37 +899,20 @@ public class PatternFinder {
 			return Optional.empty();
 		}
 
-		ThreeState negative = ThreeState.UNSET;
+		// Jeff Khuu, 2026. Patterns are now signed, so a code may move up at one index and down at
+		// another. This used to require every non-zero step to share a sign and rejected the pair
+		// otherwise, and it recorded magnitudes only. The difference is taken line2 - line1 so the
+		// pattern reads "from line1 towards line2", matching billiards.pattern.SinglePattern.
 		final int[] result = new int[line1.size()];
 		for (int i = 0; i < line1.size(); i++) {
-			int value = line1.get(i) - line2.get(i);
-			if (value != (value / 2) * 2) {
+			final int diff = line2.get(i) - line1.get(i);
+			// An odd step is not a legal pattern. The drop dropped this check and let integer division
+			// silently truncate it into a wrong pattern.
+			if (diff % 2 != 0) {
 				return Optional.empty();
 			}
-			if (value == 0) {
-				result[i] = value;
-			}
-			if (value < 0) {
-				if (negative == ThreeState.FALSE) {
-					return Optional.empty();
-				}
-				negative = ThreeState.TRUE;
-
-				for (int j=0; j < -value/2; j++) {
-					result[i] = -value / 2;
-				}
-
-			} else if (value > 0) {
-				if (negative == ThreeState.TRUE) {
-					return Optional.empty();
-				}
-				negative = ThreeState.FALSE;
-
-				for (int j=0; j < value/2; j++) {
-					result[i] = value / 2;
-				}
-			}
+			result[i] = diff / 2;
 		}
-		return Optional.of(new Spattern(PatUtils.listGCD(result), line1));
+		return Optional.of(new Spattern(PatUtils.reduce(result), line1));
     }
 }

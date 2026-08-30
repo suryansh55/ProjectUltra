@@ -18,7 +18,9 @@ import org.eclipse.collections.api.list.primitive.IntList;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List; // added jul31,2025 marco
+import java.util.Map;
 import java.util.Optional;//added oct 15,2017 george
 import java.util.concurrent.ForkJoinPool;
 
@@ -38,17 +40,21 @@ import static billiards.utils.Polygon.cleanPolygon;
 public final class CoverWindow {
 
     // ------------------------------------------------------------
-    private static String polygonString = Utils.readFromFile(Viewer.tmpDir + "/cover_polygon.txt");
-    static String stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
-    static String triplesString = Utils.readFromFile(Viewer.tmpDir + "/cover_triples.txt");
-    static String digitsString = Utils.readFromFile(Viewer.tmpDir + "/cover_digits.txt");
-    private static String emptyString = Utils.readFromFile(Viewer.tmpDir + "/cover_empty.txt");
-    static String magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
+    // Package-visible so PatchWindow/HoleFinderWindow can seed themselves from the
+    // current cover polygon, like stablesString and triplesString below.
+    // Jeff Khuu, 2026. Read in loadFromFile() from the constructor rather than here, so the files are
+    // read after Viewer has created tmp/ and a reopened window picks up edits made on disk.
+    static String polygonString;
+    static String stablesString;
+    static String triplesString;
+    static String digitsString;
+    private static String emptyString;
+    static String magnificationsString;
     //private static String halfTripleString = Utils.readFromFile(Viewer.tmpDir + "/cover_half_triples.txt");
  
     // WARNING: Global mutable state
     // Other classes which need to synchronize their polygon with the cover should listen to this property
-    public static SimpleObjectProperty<String> polyStringProperty = new SimpleObjectProperty<>(polygonString);
+    public static SimpleObjectProperty<String> polyStringProperty = new SimpleObjectProperty<>("");
 
     // ------------------------------------------------------------
 
@@ -89,6 +95,8 @@ public final class CoverWindow {
         stage.setOnCloseRequest(event -> saveToFile());
 
         base.setOnMouseExited(event -> saveToFile());
+
+        loadFromFile();
 
         topText.setText(polygonString);
         bottomText.setText(stablesString);
@@ -172,6 +180,16 @@ public final class CoverWindow {
             if (mrr) {
 
                 final String cleanedPolygon = cleanPolygon(polygonString);
+                final boolean addToSmallCover = viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected();
+
+                calcBtn.setDisable(true);
+
+                // Jeff Khuu, 2026. Cover can spend minutes in native GMP/MPFR work, and cleanStables /
+                // cleanTriples hit the database. Run all of it off the JavaFX application thread so the
+                // window keeps repainting and macOS does not mark the app unresponsive.
+                final javafx.concurrent.Task<String> task = new javafx.concurrent.Task<String>() {
+                    @Override
+                    protected String call() {
                 final String cleanedStablesPre = cleanStables(stablesString, pool);
                 final Tuple2<String, String> cleanedTriplesPre = cleanTriples(triplesString, pool);
                 //final Tuple2<String , String> cleanedHalfTriplePre = cleanHalfTriples(halfTripleString, pool);
@@ -200,8 +218,26 @@ public final class CoverWindow {
                 final String cleanedStables = (cleanedStablesPre + '\n' + cleanedTriplesPre._2).trim();
 //                System.out.println(cleanedStables);
 
-                String res = Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples, digits, magnifications, empty, mrr, pool);
-                if (viewer.smallCoverWindow != null && addToSmallCoverCB.isSelected()) viewer.smallCoverWindow.addPolygons(res);
+                        return Wrapper.coverWrapper(cleanedPolygon, cleanedStables, cleanedTriples,
+                                digits, magnifications, empty, mrr, pool);
+                    }
+                };
+
+                task.setOnSucceeded(e -> {
+                    calcBtn.setDisable(false);
+
+                    if (addToSmallCover) viewer.smallCoverWindow.addPolygons(task.getValue());
+
+                    loadCover.run();
+                    System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
+                    saveToFile();
+                    redoInfo();
+                    stage.close();
+                });
+
+                task.setOnFailed(e -> showCoverFailure(task.getException()));
+
+                startCoverTask(task, "cover-calculation");
                 //}
             } else {
 
@@ -215,17 +251,33 @@ public final class CoverWindow {
                     return;
                 }
 
-                Wrapper.coverWrapperAll(dir.getPath(), pool, magnifications);
+                final String dirPath = dir.getPath();
+
+                calcBtn.setDisable(true);
+
+                // The all-cover path is just as native-heavy, so it gets the same treatment.
+                final javafx.concurrent.Task<Void> task = new javafx.concurrent.Task<Void>() {
+                    @Override
+                    protected Void call() {
+                        Wrapper.coverWrapperAll(dirPath, pool, magnifications);
+                        return null;
+                    }
+                };
+
+                task.setOnSucceeded(e -> {
+                    calcBtn.setDisable(false);
+
+                    loadCover.run();
+                    System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
+                    saveToFile();
+                    redoInfo();
+                    stage.close();
+                });
+
+                task.setOnFailed(e -> showCoverFailure(task.getException()));
+
+                startCoverTask(task, "cover-all-calculation");
             }
-
-            loadCover.run();
-
-            System.out.println(windowTitle.replace("Cover", "BilliardViewer"));
-
-            saveToFile();
-            redoInfo();
-
-            stage.close();
         });
 
         autoVaryBtn.setText("AutoVary");
@@ -778,6 +830,20 @@ public final class CoverWindow {
                                Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
         final StringBuilder postInfo = new StringBuilder();
 
+        // Jeff Khuu, 2026. Index preInfo once rather than rescanning all of it for every cover line;
+        // on a large cover the old nested scan is the slow part of this method. A null value records
+        // "this code was listed with no '#'", and the first occurrence wins, exactly as the `break` did.
+        final Map<String, String> preInfoMap = new HashMap<>();
+        for (final String preLine : preInfo.split("\\r?\\n")) {
+            final String[] parts = preLine.split("#");
+            final String key = Utils.tripleTrimmer(parts[0].trim());
+            if (preInfoMap.containsKey(key)) continue;
+            // split() drops trailing empty fields, so a line ending in a bare '#' has no parts[1]. The
+            // scan this replaces indexed it blind and threw ArrayIndexOutOfBoundsException whenever such
+            // a line matched a cover code; treat it as "listed, no pattern" instead.
+            preInfoMap.put(key, parts.length > 1 ? parts[1].trim() : null);
+        }
+
         for (final String line : info.split("\\r?\\n")) {
             postInfo.append(line.trim());
             if (line.startsWith("//") || line.trim().isEmpty()) {
@@ -792,18 +858,72 @@ public final class CoverWindow {
                 else code = code.split(" - ")[1];
             }
 
-            for (String preLine : preInfo.split("\\r?\\n")) {
-                if (Utils.tripleTrimmer(preLine.split("#")[0].trim()).equals(code)) {
+            final String suffix = preInfoMap.get(code);
+            if (suffix != null) postInfo.append(" # ").append(suffix);
 
-                    if (preLine.contains("#")) postInfo.append(" # " + preLine.split("#")[1].trim());
-
-                    break;
-                }
-            }
             postInfo.append("\n");
         }
 
         Utils.writeToFile("cover/info.txt", postInfo.toString());
+    }
+
+    /**
+     * Runs a cover task on a daemon thread, so a cover still grinding away in native code can never keep
+     * the JVM alive after the main window closes.
+     */
+    private static void startCoverTask(final javafx.concurrent.Task<?> task, final String threadName) {
+        final Thread thread = new Thread(task, threadName);
+        thread.setDaemon(true);
+        thread.start();
+    }
+
+    private void showCoverFailure(final Throwable failure) {
+        calcBtn.setDisable(false);
+
+        final Alert alert = new Alert(AlertType.ERROR);
+        alert.setTitle("Cover Failed");
+        alert.setHeaderText("Cover calculation failed");
+        alert.setContentText(failure == null ? "Unknown cover error" : failure.getMessage());
+        alert.show();
+
+        if (failure != null) failure.printStackTrace();
+    }
+
+    /**
+     * Jeff Khuu, 2026.
+     * Reads the cover inputs back off disk. Called from the constructor rather than from a static
+     * initializer, so it runs after Viewer has created tmp/.
+     */
+    private void loadFromFile() {
+        polygonString = Utils.readFromFile(Viewer.tmpDir + "/cover_polygon.txt");
+        stablesString = Utils.readFromFile(Viewer.tmpDir + "/cover_stables.txt");
+        triplesString = Utils.readFromFile(Viewer.tmpDir + "/cover_triples.txt");
+        digitsString = Utils.readFromFile(Viewer.tmpDir + "/cover_digits.txt");
+        emptyString = Utils.readFromFile(Viewer.tmpDir + "/cover_empty.txt");
+        magnificationsString = Utils.readFromFile(Viewer.tmpDir + "/cover_magnifications.txt");
+
+        polyStringProperty.setValue(polygonString);
+    }
+
+    String getStablesString() {
+        return stablesString;
+    }
+
+    String getTriplesString() {
+        return triplesString;
+    }
+
+    String getDigitsString() {
+        return digitsString;
+    }
+
+    String getMagnificationsString() {
+        return magnificationsString;
+    }
+
+    void close() {
+        saveToFile();
+        this.stage.close();
     }
 
     void show() {

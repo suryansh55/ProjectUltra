@@ -1,7 +1,14 @@
 #include "utils.hpp"
 #include "conversion.hpp"
 
-
+// Single definition for the `extern` declaration in utils.hpp.
+std::unordered_map<std::string, CodeType> stringToCodeType = {
+    {"oso", CodeType::OSO},
+    {"osno", CodeType::OSNO},
+    {"ons", CodeType::ONS},
+    {"cs", CodeType::CS},
+    {"cns", CodeType::CNS}
+};
 
 /*
 Jul 31 2025 Marco Mai
@@ -63,7 +70,35 @@ boost::optional<ClassifiedCodeSequence> convert(const std::vector<int>& codeList
 Jul 31 2025 Marco Mai
 checking if such code type valid sequence, return code type
 */
-boost::optional<CodeType> getCodeType(std::vector<int32_t>& codeList) {
+// Mirrors the branches in Java's Utils.standard: OSNO is already the widest name, CS is two
+// characters short, and every other name is one short. Upstream's port writes a single space for CS
+// too, which misaligns every closed-stable row by one.
+std::string code_type_padding(const CodeType type) {
+    if (type == CodeType::CS) return "  ";
+    if (type == CodeType::OSNO) return "";
+    return " ";
+}
+
+/*
+Jun 23 2026 Jeff Khuu
+Gives a neat string of the code with information about it. Ported from Utils.standard in Utils.java;
+the format must stay byte-identical to the Java, since both print into the same cover/log files.
+*/
+std::string standard(const ClassifiedCodeSequence& code, const int count) {
+    std::ostringstream oss;
+    const CodeType type = code.codeType;
+
+    oss << count;
+    if (count < 10) oss << " ";
+
+    oss << " - " << type << code_type_padding(type);
+
+    oss << " (" << code.codeLength << ", " << code.codeSum << ") " << code.toString();
+
+    return oss.str();
+}
+
+boost::optional<CodeType> getCodeType(const std::vector<int32_t>& codeList) {
     std::vector<int32_t> newCode = codeList;
     int32_t len = static_cast<int32_t>(newCode.size());
     int32_t count = 0;

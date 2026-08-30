@@ -21,7 +21,15 @@ import javafx.concurrent.Task;
 // of dealing with that?
 //
 // Who wrote this stupid code?
-public final class DrawPictureTaskUseLR extends Task<Array<Storage>> {
+public final class DrawPictureTaskUseLR extends Task<Array<Storage>> implements GracefullyCancelable {
+    // Set by the Cancel button before task.cancel(). Read from worker threads.
+    private volatile boolean gracefulCancelRequested = false;
+
+    @Override
+    public void requestGracefulCancel() {
+        this.gracefulCancelRequested = true;
+    }
+
     private final Array<Callable<Either<String, Storage>>> tasks;
     //public CopyOnWriteArrayList<ClassifiedCodeSequence> baseCodeSeq = new CopyOnWriteArrayList<>();
     //public ArrayList<ClassifiedCodeSequence> baseCodeSeq = new ArrayList<>();
@@ -69,13 +77,21 @@ public final class DrawPictureTaskUseLR extends Task<Array<Storage>> {
         final ArrayList<Storage> storages = new ArrayList<>();
 
         Optional<ExecutionException> except = Optional.empty();
+        boolean queuedWorkCancelled = false;
 
         // This is where we do checking to see if we were cancelled
         for (final Future<Either<String, Storage>> future : futures) {
             if (this.isCancelled() || except.isPresent()) {
                 // There is no point in interrupting the thread, since we can't
                 // cancel the future while it is running
-                future.cancel(false);
+                if (this.gracefulCancelRequested && !queuedWorkCancelled) {
+                    // Bulk-cancel the remaining queue without interrupting, so the
+                    // executor stops starting fresh native work while we drain.
+                    Utils.cancelQueuedFutures(futures);
+                    queuedWorkCancelled = true;
+                }
+
+                future.cancel(true);
             } else {
                 try {
                     final Either<String, Storage> either = future.get();

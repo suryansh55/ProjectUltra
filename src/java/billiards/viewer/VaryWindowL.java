@@ -86,6 +86,10 @@ public final class VaryWindowL {
     private final String windowTitle;
     private Integer lineNumber = null;
 
+    // Jeff Khuu, Aug 11, 2026. Coordinates from the last run that yielded no codes.
+    private final Button relistButton = new Button("Relist");
+    private String relist = "";
+
     private final CheckBox autoSmallCoverBox = new CheckBox();
 
     private Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> result;
@@ -356,9 +360,43 @@ public final class VaryWindowL {
             moveScreenToLine(userLineNumber - 1);
         });
 
-        final HBox lineNavigateHBox = new HBox(10, backwardButton, lineNumTextField, goToLineButton, forwardButton);
+        relistButton.setTooltip(Utils.toolTip("Print the coordinates from the last run that produced no codes,"
+                + " so they can be pasted back in and retried"));
+        relistButton.setOnAction(event -> printRelist());
+
+        final HBox lineNavigateHBox = new HBox(10, backwardButton, lineNumTextField, goToLineButton, forwardButton,
+                relistButton);
 
         return new VBox(10, bottomHBox, controlHBox, lineNavigateHBox);
+    }
+
+    /**
+     * Jeff Khuu, Aug 11, 2026.
+     * The "relist" is the set of coordinates from the most recent run that came
+     * back with no codes. Printing it gives the user a ready-made input list to
+     * retry, instead of hunting for which points came up empty.
+     */
+    void appendToRelist(final Vector2 point) {
+        if (relist.isEmpty()) {
+            relist = point.x + " " + point.y;
+        } else {
+            relist = relist + "\n" + point.x + " " + point.y;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
+    }
+
+    void printRelist() {
+        final String mode = "varyL".equals(windowTitle) ? "VaryL" : "LiMVL";
+
+        if (!relist.isEmpty()) {
+            System.out.println("// " + mode + " relist:");
+            System.out.println(relist);
+        } else {
+            System.out.println("// " + mode + " relist: (empty)");
+        }
     }
 
     public Optional<Tuple7<MutableList<Vector2>, Integer, Integer, Integer, Integer, Integer, Integer>> 

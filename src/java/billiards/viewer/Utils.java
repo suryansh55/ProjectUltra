@@ -2,6 +2,8 @@ package billiards.viewer;
 
 import billiards.codeseq.*;
 import billiards.database.InfoAll;
+import billiards.pattern.InvalidTriple;
+import billiards.pattern.Triple;
 import billiards.database.Database;
 import billiards.geometry.Vector2;
 import billiards.math.Equation;
@@ -75,13 +77,22 @@ public final class Utils {
 
     // Initialize orderly shutdown of an executorService and block the calling thread until complete. Returns true if successful
     public static boolean safeShutdownExecutor(ExecutorService executor) {
+        return safeShutdownExecutor(executor, 600, TimeUnit.SECONDS);
+    }
+
+    /**
+     * Jeff Khuu, 2026.
+     * As above, but with the wait bounded by the caller. The generous default suits a native GMP/MPFR
+     * drain; a shutdown on a UI path wants something it can actually wait out.
+     */
+    public static boolean safeShutdownExecutor(ExecutorService executor, long timeout, TimeUnit unit) {
         executor.shutdown(); // Prevent further submissions
         try {
-            if(!executor.awaitTermination(600, TimeUnit.SECONDS)) {
+            if(!executor.awaitTermination(timeout, unit)) {
                 // Attempt cancellation again, if necessary
                 executor.shutdownNow();
-                if(!executor.awaitTermination(600, TimeUnit.SECONDS)) {
-                    System.err.println("Warning: Executor not terminated after 20 minutes");
+                if(!executor.awaitTermination(timeout, unit)) {
+                    System.err.println("Warning: Executor not terminated after 2 x " + timeout + " " + unit);
                     return false;
                 }
             }
@@ -93,7 +104,84 @@ public final class Utils {
         }
     }
 
+    /**
+     * Jeff Khuu, 2026.
+     * Drains an executor on a background daemon thread. JavaFX task handlers run on the application
+     * thread, and safeShutdownExecutor blocks there for as long as the drain takes -- up to 20 minutes
+     * with the default timeout, during which the UI is frozen and macOS may mark the app unresponsive.
+     * Use this wherever nothing after the call depends on the executor having actually terminated.
+     */
+    public static void shutdownExecutorAsync(final ExecutorService executor) {
+        if (executor == null) {
+            return;
+        }
+
+        final Thread shutdownThread = new Thread(
+                () -> safeShutdownExecutor(executor, 600, TimeUnit.SECONDS),
+                "executor-shutdown");
+        shutdownThread.setDaemon(true);
+        shutdownThread.start();
+    }
+
     // converts a side sequence to a code sequence
+    /**
+     * <b>Jeff Khuu</b><br>
+     * <b>May 12, 2026</b>
+     * <p>
+     *     Attempts to parse a valid code sequence from a given string. Returns empty if a code sequence could
+     *     not be generated.
+     * </p>
+     * @param s A potentially valid code sequence string: a whitespace separated string of numbers. Leading
+     *          and trailing whitespace is ignored.
+     * @return The CodeSequence if s is valid, empty otherwise.
+     */
+    public static Optional<CodeSequence> strToCodeSequence(final String s) {
+        final String trimmed = s.trim();
+        if (trimmed.isEmpty()) return Optional.empty();
+
+        final MutableIntList dirtyCodeNumbers = new IntArrayList();
+        for (final String elem : trimmed.split("\\s+")) {
+            try {
+                dirtyCodeNumbers.add(Integer.parseInt(elem));
+            } catch (final NumberFormatException e) {
+                return Optional.empty();
+            }
+        }
+
+        final Either<InvalidCodeSequence, CodeSequence> result = CodeSequence.create(dirtyCodeNumbers);
+        if (result.isLeft()) return Optional.empty();
+
+        return Optional.of(result.get());
+    }
+
+    /**
+     * <b>Jeff Khuu</b><br>
+     * <b>May 12, 2026</b>
+     * <p>
+     *     Attempts to parse a triple from a given array of strings. Returns empty if a triple could not be
+     *     created.
+     * </p>
+     * @param s A potentially valid array of three whitespace separated strings of numbers, in the order
+     *          stable, unstable, stable.
+     * @return The Triple if s is valid, empty otherwise.
+     */
+    public static Optional<Triple> strToTriple(final String[] s) {
+        if (s.length != 3) return Optional.empty();
+
+        final ClassifiedCodeSequence[] codes = new ClassifiedCodeSequence[3];
+
+        for (int i = 0; i < 3; ++i) {
+            final Optional<CodeSequence> codeSequence = strToCodeSequence(s[i]);
+            if (!codeSequence.isPresent()) return Optional.empty();
+            codes[i] = new ClassifiedCodeSequence(codeSequence.get());
+        }
+
+        final Either<InvalidTriple, Triple> triple = Triple.create(codes);
+        if (triple.isLeft()) return Optional.empty();
+
+        return Optional.of(triple.get());
+    }
+
     public static Optional<ClassifiedCodeSequence> convert(final IntList codeList) {
 
         final MutableIntList newCode = IntArrayList.newList(codeList);
@@ -366,6 +454,31 @@ public final class Utils {
         final String hex = String.format("%02x%02x%02x", rd, gr, bl);
 
         return "-fx-base: #" + hex;
+    }
+
+    // Hard cancel: interrupt running work as well as queued work. Used when a
+    // future threw and the remaining results are worthless anyway.
+    public static void cancelFutures(final Iterable<? extends java.util.concurrent.Future<?>> futures) {
+        for (final java.util.concurrent.Future<?> future : futures) {
+            future.cancel(true);
+        }
+    }
+
+    // User-facing Cancel is supposed to save progress. This variant prevents
+    // not-yet-started futures from beginning, but lets already-running
+    // database/native work finish and return its Storage if it can.
+    public static void cancelQueuedFutures(final Iterable<? extends java.util.concurrent.Future<?>> futures) {
+        for (final java.util.concurrent.Future<?> future : futures) {
+            future.cancel(false);
+        }
+    }
+
+    // Puts text on the system clipboard. Must be called on the FX thread.
+    public static void copyToClipboard(final String text) {
+        final javafx.scene.input.Clipboard clipboard = javafx.scene.input.Clipboard.getSystemClipboard();
+        final javafx.scene.input.ClipboardContent content = new javafx.scene.input.ClipboardContent();
+        content.putString(text);
+        clipboard.setContent(content);
     }
 
     public static void colorButton(final Button button, final Color color, final Color clicked) {

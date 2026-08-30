@@ -1,3 +1,5 @@
+#include <cstdlib>
+#include <string>
 #include "vary3.hpp"
 
 const float64_t OFFSET = 0.000005;
@@ -45,7 +47,10 @@ void iterateFireAway3(
 	std::atomic<int> inflight{0};
 
 	// Suryansh Ankur, 2026
-	unsigned int cores = std::thread::hardware_concurrency();
+	// SLURM-aware core count: hardware_concurrency() reports the whole node,
+	// not this job's allocation, which over-subscribes on a shared cluster node.
+	const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
+	unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
 	// Each queued task captures a code vector copy (max * 4 bytes).
 	// Cap at cores*8 to prevent OOM from thousands of queued lambda closures.
 	const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;

@@ -384,12 +384,16 @@ struct ZeroInfo final {
 
 struct Corner final {
 
-    Sign corner_sign;
-    boost::optional<ZeroInfo> zero_info; // if the sign is 0, we have extra information here
+    Sign corner_sign = Sign::NEG;
+    boost::optional<ZeroInfo> zero_info = boost::none; // if the sign is 0, we have extra information here
+
+    // Needed so calculate_corners can pre-size the vector and fill it by index,
+    // which is what lets the sign computation run in parallel.
+    Corner() = default;
 
     // For Sign::POS and Sign::NEG
     explicit Corner(const Sign corner_sign_)
-        : corner_sign{corner_sign_}, zero_info{boost::none} {}
+        : corner_sign{corner_sign_} {}
 
     explicit Corner(const Sign corner_sign_, const ZeroInfo& zero_info_)
         : corner_sign{corner_sign_}, zero_info{zero_info_} {}
@@ -455,15 +459,22 @@ std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& c
 
     auto size = polygon.size();
 
-    std::vector<Corner> corners;
-    for (size_t i = 0; i < size; ++i) {
+    // Each iteration only reads polygon/curve and writes its own slot, so the
+    // sign computation parallelises directly. The work per corner is a handful
+    // of MPFI gradient evaluations, which is heavy enough to be worth splitting
+    // even though polygons carry relatively few vertices. Exceptions thrown in
+    // the body are captured by TBB and rethrown on this thread.
+    std::vector<Corner> corners(size);
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, size), [&](const tbb::blocked_range<size_t>& r) {
+    for (size_t i = r.begin(); i != r.end(); ++i) {
         auto& int_pair = polygon.at(i);
         auto curve_sign = curve_sign_at_point(curve, int_pair.point);
 
         //std::cout << curve << ", " << int_pair.point.coord0.str() << ", " << int_pair.point.coord1.str() << ", ";
 
         if (curve_sign == Sign::NEG) {
-            corners.emplace_back(Sign::NEG);
+            corners[i] = Corner(Sign::NEG);
         } else if (curve_sign == Sign::ZERO) {
             // (i - 1) % size won't work!
             auto& prev_int_pair = i == 0 ? polygon.at(size - 1) : polygon.at(i - 1);
@@ -499,14 +510,15 @@ std::vector<Corner> calculate_corners(const IntervalPolygon& polygon, const T& c
             auto prev_sign = sign(prev_dot);
             auto next_sign = sign(next_dot);
 
-            corners.emplace_back(Sign::ZERO, ZeroInfo{prev_sign, next_sign});
+            corners[i] = Corner(Sign::ZERO, ZeroInfo{prev_sign, next_sign});
 
         } else if (curve_sign == Sign::POS) {
-            corners.emplace_back(Sign::POS);
+            corners[i] = Corner(Sign::POS);
         } else {
             throw std::runtime_error(invalid_enum_value("Sign", curve_sign));
         }
     }
+    });
 
     correct_zeros(corners);
 

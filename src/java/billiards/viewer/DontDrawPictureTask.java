@@ -15,7 +15,15 @@ import java.util.concurrent.Future;
 
 import javafx.concurrent.Task;
 
-public final class DontDrawPictureTask extends Task<Void> {
+public final class DontDrawPictureTask extends Task<Void> implements GracefullyCancelable {
+    // Set by the Cancel button before task.cancel(). Read from worker threads.
+    private volatile boolean gracefulCancelRequested = false;
+
+    @Override
+    public void requestGracefulCancel() {
+        this.gracefulCancelRequested = true;
+    }
+
     private final Array<Callable<String>> tasks;
 
     public DontDrawPictureTask(final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool) {
@@ -50,6 +58,7 @@ public final class DontDrawPictureTask extends Task<Void> {
         final Array<Future<String>> futures = this.tasks.map(task -> executor.submit(task));
 
         Optional<ExecutionException> except = Optional.empty();
+        boolean queuedWorkCancelled = false;
 
         int progress = 0;
         final int todo = futures.size();
@@ -60,7 +69,14 @@ public final class DontDrawPictureTask extends Task<Void> {
             if (this.isCancelled() || except.isPresent()) {
                 // No point in interrupting the thread, because we can't
                 // cancel the future if it has already begun
-                future.cancel(false);
+                if (this.gracefulCancelRequested && !queuedWorkCancelled) {
+                    // Bulk-cancel the remaining queue without interrupting, so the
+                    // executor stops starting fresh native work while we drain.
+                    Utils.cancelQueuedFutures(futures);
+                    queuedWorkCancelled = true;
+                }
+
+                future.cancel(true);
             } else {
                 try {
                     // When running the futures on multiple threads, it seems

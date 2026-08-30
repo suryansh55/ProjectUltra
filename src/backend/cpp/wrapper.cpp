@@ -35,6 +35,7 @@ Note: If you want to print the following stuffs, search for the labels to locate
 #include <unistd.h>   // pipe, dup2, read, close — in-app console capture
 #include <fcntl.h>    // fcntl, open — in-app console capture
 #include <cerrno>     // errno
+#include <memory>
 #include <cstdio>     // setvbuf
 
 // Java <-> C++
@@ -463,9 +464,16 @@ static bool save_to_database(const std::vector<LeftRight>& left_rights, const Co
 
 static void copy_to_cpicture(const Picture& picture, CPicture* const cpicture) {
 
-    cpicture->initial_angles = to_cstr(picture.initial_angles);
-    cpicture->points = to_cstr(picture.points);
-    cpicture->equations = to_cstr(picture.equations);
+    // Stage every allocation before publishing any of it. Java only takes
+    // ownership once the whole struct is populated, so if a later to_cstr
+    // throws, the earlier blocks must be released rather than leaked.
+    std::unique_ptr<char[]> initial_angles_p{to_cstr(picture.initial_angles)};
+    std::unique_ptr<char[]> points_p{to_cstr(picture.points)};
+    std::unique_ptr<char[]> equations_p{to_cstr(picture.equations)};
+
+    cpicture->initial_angles = initial_angles_p.release();
+    cpicture->points = points_p.release();
+    cpicture->equations = equations_p.release();
 }
 
 // -1 means error doing calculation
@@ -646,16 +654,29 @@ int32_t load_picture_lr(const int32_t* const base_code_numbers_ptr, const int32_
 // Works for Stable and Unstable
 static void copy_to_cinfoAll(const CodeInfo& info, CInfoAll* const cinfoAll) {
     //cinfo->points = to_cstr(info.points);
-    cinfoAll->sinEquations = to_cstr(database::serialize(info.sin_equations));
-    cinfoAll->cosEquations = to_cstr(database::serialize(info.cos_equations));
-    cinfoAll->initial_angles = to_cstr("");
-    cinfoAll->points = to_cstr("");
-    cinfoAll->equations = to_cstr("");
-    cinfoAll->left_rights = to_cstr("");
-    cinfoAll->code_seq_lr = to_cstr("");
-    cinfoAll->vectorX=to_cstr("");
-    cinfoAll->vectorY=to_cstr("");
 
+    // Stage every allocation before publishing any of it. Java only takes
+    // ownership once the whole struct is populated, so if a later to_cstr
+    // throws, the earlier blocks must be released rather than leaked.
+    std::unique_ptr<char[]> sinEquations_p{to_cstr(database::serialize(info.sin_equations))};
+    std::unique_ptr<char[]> cosEquations_p{to_cstr(database::serialize(info.cos_equations))};
+    std::unique_ptr<char[]> initial_angles_p{to_cstr("")};
+    std::unique_ptr<char[]> points_p{to_cstr("")};
+    std::unique_ptr<char[]> equations_p{to_cstr("")};
+    std::unique_ptr<char[]> left_rights_p{to_cstr("")};
+    std::unique_ptr<char[]> code_seq_lr_p{to_cstr("")};
+    std::unique_ptr<char[]> vectorX_p{to_cstr("")};
+    std::unique_ptr<char[]> vectorY_p{to_cstr("")};
+
+    cinfoAll->sinEquations = sinEquations_p.release();
+    cinfoAll->cosEquations = cosEquations_p.release();
+    cinfoAll->initial_angles = initial_angles_p.release();
+    cinfoAll->points = points_p.release();
+    cinfoAll->equations = equations_p.release();
+    cinfoAll->left_rights = left_rights_p.release();
+    cinfoAll->code_seq_lr = code_seq_lr_p.release();
+    cinfoAll->vectorX = vectorX_p.release();
+    cinfoAll->vectorY = vectorY_p.release();
 }
 
 int32_t load_all_equations(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool){
@@ -717,11 +738,20 @@ int32_t load_info_all(const int32_t* const code_numbers_ptr, const int32_t code_
 // Works for Stable and Unstable
 static void copy_to_cinfo(const Info& info, CInfo* const cinfo) {
 
-    cinfo->initial_angles = to_cstr(info.initial_angles);
-    cinfo->points = to_cstr(info.points);
-    cinfo->equations = to_cstr(info.equations);
-    cinfo->left_rights = to_cstr(info.left_rights);
-    cinfo->code_seq_lr = to_cstr(info.code_seq_lr);
+    // Stage every allocation before publishing any of it. Java only takes
+    // ownership once the whole struct is populated, so if a later to_cstr
+    // throws, the earlier blocks must be released rather than leaked.
+    std::unique_ptr<char[]> initial_angles_p{to_cstr(info.initial_angles)};
+    std::unique_ptr<char[]> points_p{to_cstr(info.points)};
+    std::unique_ptr<char[]> equations_p{to_cstr(info.equations)};
+    std::unique_ptr<char[]> left_rights_p{to_cstr(info.left_rights)};
+    std::unique_ptr<char[]> code_seq_lr_p{to_cstr(info.code_seq_lr)};
+
+    cinfo->initial_angles = initial_angles_p.release();
+    cinfo->points = points_p.release();
+    cinfo->equations = equations_p.release();
+    cinfo->left_rights = left_rights_p.release();
+    cinfo->code_seq_lr = code_seq_lr_p.release();
 }
 
 
@@ -763,16 +793,29 @@ int32_t load_info(const int32_t* const code_numbers_ptr, const int32_t code_numb
 }
 
 static void copy_to_cinfoAll_2(const CodeInfo& info, CInfoAll* const cinfoAll) {
-    cinfoAll->sinEquations = to_cstr("");
-    cinfoAll->cosEquations = to_cstr("");
-    cinfoAll->initial_angles = to_cstr("");
-    cinfoAll->points = to_cstr("");
-    cinfoAll->equations = to_cstr("");
-    cinfoAll->left_rights = to_cstr("");
-    cinfoAll->code_seq_lr =to_cstr("");
-    cinfoAll->vectorX = to_cstr(database::serialize(info.sin_equations));
-    cinfoAll->vectorY = to_cstr(database::serialize(info.cos_equations));
 
+    // Stage every allocation before publishing any of it. Java only takes
+    // ownership once the whole struct is populated, so if a later to_cstr
+    // throws, the earlier blocks must be released rather than leaked.
+    std::unique_ptr<char[]> sinEquations_p{to_cstr("")};
+    std::unique_ptr<char[]> cosEquations_p{to_cstr("")};
+    std::unique_ptr<char[]> initial_angles_p{to_cstr("")};
+    std::unique_ptr<char[]> points_p{to_cstr("")};
+    std::unique_ptr<char[]> equations_p{to_cstr("")};
+    std::unique_ptr<char[]> left_rights_p{to_cstr("")};
+    std::unique_ptr<char[]> code_seq_lr_p{to_cstr("")};
+    std::unique_ptr<char[]> vectorX_p{to_cstr(database::serialize(info.sin_equations))};
+    std::unique_ptr<char[]> vectorY_p{to_cstr(database::serialize(info.cos_equations))};
+
+    cinfoAll->sinEquations = sinEquations_p.release();
+    cinfoAll->cosEquations = cosEquations_p.release();
+    cinfoAll->initial_angles = initial_angles_p.release();
+    cinfoAll->points = points_p.release();
+    cinfoAll->equations = equations_p.release();
+    cinfoAll->left_rights = left_rights_p.release();
+    cinfoAll->code_seq_lr = code_seq_lr_p.release();
+    cinfoAll->vectorX = vectorX_p.release();
+    cinfoAll->vectorY = vectorY_p.release();
 }
 
 int32_t load_slope_info(const int32_t* const code_numbers_ptr, const int32_t code_numbers_len, CInfoAll* const cinfoAll, sqlite::ConnectionPool* const pool) {
@@ -804,6 +847,21 @@ void cleanup_cinfo(const CInfo* const cinfo) {
     delete[] cinfo->equations;
     delete[] cinfo->left_rights;
     delete[] cinfo->code_seq_lr;
+}
+
+// Frees the nine strings that copy_to_cinfoAll/copy_to_cinfoAll_2 allocate.
+// Java owns them once load_*_info returns, so Java must call this on every
+// return path or the strings leak for the life of the process.
+void cleanup_cinfoAll(const CInfoAll* const cinfoAll) {
+    delete[] cinfoAll->initial_angles;
+    delete[] cinfoAll->points;
+    delete[] cinfoAll->equations;
+    delete[] cinfoAll->sinEquations;
+    delete[] cinfoAll->cosEquations;
+    delete[] cinfoAll->left_rights;
+    delete[] cinfoAll->code_seq_lr;
+    delete[] cinfoAll->vectorX;
+    delete[] cinfoAll->vectorY;
 }
 
 // 0 is failure,

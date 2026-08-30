@@ -23,7 +23,15 @@ import org.eclipse.collections.api.list.ImmutableList;
 
 import javafx.concurrent.Task;
 
-public final class DrawPictureTaskShowLR extends Task<Array<Storage>> {
+public final class DrawPictureTaskShowLR extends Task<Array<Storage>> implements GracefullyCancelable {
+    // Set by the Cancel button before task.cancel(). Read from worker threads.
+    private volatile boolean gracefulCancelRequested = false;
+
+    @Override
+    public void requestGracefulCancel() {
+        this.gracefulCancelRequested = true;
+    }
+
     private final Array<Callable<Either<String, Tuple2<Storage, ImmutableList<LeftRight>>>>> tasks;
 
     public DrawPictureTaskShowLR(final Array<ClassifiedCodeSequence> classCodeSeqs, final ConnectionPool pool) {
@@ -60,6 +68,7 @@ public final class DrawPictureTaskShowLR extends Task<Array<Storage>> {
         final ArrayList<Storage> storages = new ArrayList<>();
 
         Optional<ExecutionException> except = Optional.empty();
+        boolean queuedWorkCancelled = false;
 
         ImmutableList<LeftRight> leftRights = null;
 
@@ -68,7 +77,14 @@ public final class DrawPictureTaskShowLR extends Task<Array<Storage>> {
             if (this.isCancelled() || except.isPresent()) {
                 // There is no point in interrupting the thread, since we can't
                 // cancel the future while it is running
-                future.cancel(false);
+                if (this.gracefulCancelRequested && !queuedWorkCancelled) {
+                    // Bulk-cancel the remaining queue without interrupting, so the
+                    // executor stops starting fresh native work while we drain.
+                    Utils.cancelQueuedFutures(futures);
+                    queuedWorkCancelled = true;
+                }
+
+                future.cancel(true);
             } else {
                 try {
                     final Either<String, Tuple2<Storage, ImmutableList<LeftRight>>> either = future.get();

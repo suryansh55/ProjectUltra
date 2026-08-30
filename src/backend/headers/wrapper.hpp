@@ -100,6 +100,8 @@ int32_t load_info_slope(const int32_t* const code_numbers_ptr, const int32_t cod
 
 void cleanup_cinfo(const CInfo* const cinfo);
 
+void cleanup_cinfoAll(const CInfoAll* const cinfoAll);
+
 int32_t merge_covers(const char* const merge_dir_ptr, const char* const cover_dirs_ptr, sqlite::ConnectionPool* const pool);
 
 int32_t trim_cover(const char* const poly_str, const char* const in_dir, const char* const out_dir);

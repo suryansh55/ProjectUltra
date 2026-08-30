@@ -1,5 +1,15 @@
 package billiards.viewer;
 
+import java.util.Optional;
+
+import billiards.codeseq.CodeSequence;
+import billiards.pattern.InvalidSinglePattern;
+import billiards.pattern.InvalidTriplePattern;
+import billiards.pattern.SinglePattern;
+import billiards.pattern.Triple;
+import billiards.pattern.TriplePattern;
+import javaslang.control.Either;
+
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
@@ -90,8 +100,6 @@ public class PatternCalculator {
             return;
         }
 
-        StringBuilder codePattern = new StringBuilder();
-
         final String[] subSequence1 = string1.split(",");
         final String[] subSequence2 = string2.split(",");
 
@@ -100,56 +108,53 @@ public class PatternCalculator {
             return;
         }
 
+        // Jeff Khuu, May 12, 2026.
+        // The pattern is now computed by billiards.pattern rather than by differencing the code numbers
+        // here, so the result comes back reduced to lowest terms with a base attached.
         if (subSequence1.length != 1 && subSequence1.length != 3) {
             System.out.println("Unorthodox number of subsequences. i.e. The code sequences are neither a single nor a triple.");
+            return;
         }
 
-        for (int i = 0; i < subSequence1.length; i++) {
-            final String subPattern = calcSequencePattern(subSequence1[i].trim(), subSequence2[i].trim());
-            codePattern.append(subPattern).append(", ");
+        if (subSequence1.length == 1) { // The pattern is a single
+            final Optional<CodeSequence> code1 = Utils.strToCodeSequence(subSequence1[0]);
+            final Optional<CodeSequence> code2 = Utils.strToCodeSequence(subSequence2[0]);
+
+            if (!code1.isPresent() || !code2.isPresent()) {
+                showAlert("Failed to parse a code sequence from the given patterns.");
+                return;
+            }
+
+            final Either<InvalidSinglePattern, SinglePattern> singlePattern =
+                    SinglePattern.create(code1.get(), code2.get());
+
+            if (singlePattern.isLeft()) {
+                showAlert("Error creating pattern: " + singlePattern.getLeft().getErrorMessage());
+                return;
+            }
+
+            System.out.printf("The full pattern is:%n%s%n", singlePattern.get().toStringFull());
+            System.out.printf("The reduced pattern is:%n%s%n", singlePattern.get());
+        } else { // The pattern is a triple
+            final Optional<Triple> triple1 = Utils.strToTriple(subSequence1);
+            final Optional<Triple> triple2 = Utils.strToTriple(subSequence2);
+
+            if (!triple1.isPresent() || !triple2.isPresent()) {
+                showAlert("Failed to parse a triple from the given patterns.");
+                return;
+            }
+
+            final Either<InvalidTriplePattern, TriplePattern> triplePattern =
+                    TriplePattern.create(triple1.get(), triple2.get());
+
+            if (triplePattern.isLeft()) {
+                showAlert("Error creating pattern: " + triplePattern.getLeft().getErrorMessage());
+                return;
+            }
+
+            System.out.printf("The full pattern is:%n%s%n", triplePattern.get().toStringFull());
+            System.out.printf("The reduced pattern is:%n%s%n", triplePattern.get());
         }
-
-        System.out.println(codePattern.toString().trim().substring(0, codePattern.length() - 2));
-    }
-
-    private static String calcSequencePattern(String string1, String string2) {
-        final String[] code1 = string1.split(" ");
-        final String[] code2 = string2.split(" ");
-
-        if (code1.length != code2.length) showAlert("The length of the code sequences do not match.");
-
-        StringBuilder codePattern = new StringBuilder();
-
-        for (int i = 0; i < code1.length; i++) {
-            int code1Val;
-            int code2Val;
-            try {
-                code1Val = Integer.parseInt(code1[i]);
-                code2Val = Integer.parseInt(code2[i]);
-            } catch (Exception e) {
-                showAlert("An exception occurred while converting code sequence at index " + (i + 1) + " into integers: " + e);
-                return "";
-            }
-
-            final int difference = code2Val - code1Val;
-
-            if (difference % 2 != 0) {
-                showAlert("Difference between the code value at index " + (i + 1) + " is not a multiple of 2.");
-                return "";
-            }
-
-            if (difference > 0) {
-                for (int k = 0; k < difference / 2; k++) {
-                    codePattern.append((i + 1)).append(" ");
-                }
-            } else if (difference < 0) {
-                for (int k = 0; k < -difference / 2; k++) {
-                    codePattern.append(-(i + 1)).append(" ");
-                }
-            }
-        }
-
-        return codePattern.toString().trim();
     }
 
     private static void showAlert(String content) {

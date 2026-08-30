@@ -1186,8 +1186,8 @@ public class CycleVaryWindow {
 
         task.setOnFailed(e -> {
             //progress.close();
-            Utils.safeShutdownExecutor(storageExecutor);
-            Utils.safeShutdownExecutor(shotExecutor);
+            Utils.shutdownExecutorAsync(storageExecutor);
+            Utils.shutdownExecutorAsync(shotExecutor);
             overallProgress.close();
             // Propagate cancellation for Super
             step.ifPresent(integerSimpleObjectProperty -> integerSimpleObjectProperty.setValue(-1));

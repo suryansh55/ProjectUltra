@@ -38,3 +38,8 @@ vary3.txt
 middleVary3.txt
 tmp/VaryLBounds.txt
 tmp/VaryPoints4.txt
+# Written by cover::save_holes and the Patch Window
+tmp/holes.txt
+tmp/holes_obo.txt
+tmp/patches.txt
+tmp/patch_parameters.txt

@@ -17,3 +17,4 @@
 #include "parse_test.hpp"
 #include "shooting_angles_test.hpp"
 #include "trig_identities_test.hpp"
+#include "utils_test.hpp"

@@ -15,13 +15,13 @@ import java.util.List;
 
 public final class CodeSequenceTest {
     @Test
-    public static void testEmptyCodeSequence() {
+    public void testEmptyCodeSequence() {
         final InvalidCodeSequence errorCode = CodeSequence.create(IntArrayList.newListWith()).getLeft();
         Assertions.assertEquals(errorCode, InvalidCodeSequence.EMPTY);
     }
 
     @Test
-    public static void testNegativeCodeNumbers() {
+    public void testNegativeCodeNumbers() {
         final Array<IntList> invalidCodeNumbers = Array.of(
             IntArrayList.newListWith(0),
             IntArrayList.newListWith(-1),
@@ -35,7 +35,7 @@ public final class CodeSequenceTest {
     }
 
     @Test
-    public static void testIllegalCodeSequences() {
+    public void testIllegalCodeSequences() {
         final List<IntList> illegalCodeSequences = new ArrayList<>();
         illegalCodeSequences.add(IntArrayList.newListWith(1)); // O
         illegalCodeSequences.add(IntArrayList.newListWith(2)); // E
@@ -67,7 +67,7 @@ public final class CodeSequenceTest {
     }
 
     @Test
-    public static void testRepeaters() {
+    public void testRepeaters() {
         final Array<Tuple2<IntList, IntList>> repeaters =
             Array.of(Tuple.of(IntArrayList.newListWith(1, 1, 1, 1, 1, 1),
                               IntArrayList.newListWith(1, 1, 1)),
@@ -83,7 +83,7 @@ public final class CodeSequenceTest {
     }
 
     @Test
-    public static void testOrder() {
+    public void testOrder() {
         final Array<Tuple2<IntList, IntList>> codes = Array.of(
             Tuple.of(IntArrayList.newListWith(1, 1, 3), IntArrayList.newListWith(1, 1, 3)),
             Tuple.of(IntArrayList.newListWith(3, 1, 1), IntArrayList.newListWith(1, 1, 3)),

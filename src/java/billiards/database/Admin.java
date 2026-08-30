@@ -135,5 +135,9 @@ public final class Admin {
         final String dbPath = getDatabasePath(dbName);
 
         Wrapper.clearDatabase(dbPath);
+
+        // The in-memory Storage cache is keyed only by code sequence, so drop it
+        // when the backing database is wiped.
+        Database.clearStorageCache();
     }
 }

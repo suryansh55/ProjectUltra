@@ -27,7 +27,15 @@ import java.util.concurrent.Future;
  * the grouping of the components in a triple, whereas DrawPictureTask separates a triple into its components, and
  * perform computations (e.g. check for intersection) on the components individually.
  */
-public final class DrawPictureTaskTriples extends Task<Array<Storage[]>> {
+public final class DrawPictureTaskTriples extends Task<Array<Storage[]>> implements GracefullyCancelable {
+    // Set by the Cancel button before task.cancel(). Read from worker threads.
+    private volatile boolean gracefulCancelRequested = false;
+
+    @Override
+    public void requestGracefulCancel() {
+        this.gracefulCancelRequested = true;
+    }
+
     protected final Array<Callable<ArrayList<Either<String, Storage>>>> tasks;
     protected final boolean print;
     protected final boolean detailed;
@@ -95,6 +103,7 @@ public final class DrawPictureTaskTriples extends Task<Array<Storage[]>> {
         final ArrayList<Storage[]> storages = new ArrayList<>();
 
         Optional<ExecutionException> except = Optional.empty();
+        boolean queuedWorkCancelled = false;
 
         // If one of the futures throws an exception (like a failed to
         // calculate exception), we need to save it, cancel the rest of
@@ -108,7 +117,14 @@ public final class DrawPictureTaskTriples extends Task<Array<Storage[]>> {
 
                 // There is no point in interrupting the thread, since we can't
                 // cancel the future while it is running
-                future.cancel(false);
+                if (this.gracefulCancelRequested && !queuedWorkCancelled) {
+                    // Bulk-cancel the remaining queue without interrupting, so the
+                    // executor stops starting fresh native work while we drain.
+                    Utils.cancelQueuedFutures(futures);
+                    queuedWorkCancelled = true;
+                }
+
+                future.cancel(true);
             } else {
                 try {
                     final ArrayList<Either<String, Storage>> res = future.get();

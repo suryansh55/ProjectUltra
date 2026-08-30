@@ -87,6 +87,7 @@ public class SuperPolyVaryLoad {
     private final HBox maxOptHBox = new HBox(10);
     private final HBox maxStepHBox = new HBox(10);
     private final HBox loadHBox = new HBox(10);
+    private final Button relistButton = new Button("Relist");
     public final Stage stage = new Stage();
     private final Scene scene = new Scene(root);
     private final Label instruct = new Label();
@@ -225,7 +226,10 @@ public class SuperPolyVaryLoad {
 
         maxVBox.getChildren().addAll(maxHBox, maxOptHBox, maxStepHBox);
         repVBox.getChildren().addAll(repl, repBox);
-        loadHBox.getChildren().addAll(loadButton, repVBox);
+        loadHBox.getChildren().addAll(loadButton, repVBox, relistButton);
+        relistButton.setTooltip(Utils.toolTip("Print the coordinates from the last run that produced no codes,"
+                + " so they can be pasted back in and retried"));
+        relistButton.setOnAction(event -> printRelist());
         loadHBox.setAlignment(Pos.CENTER);
 
 		// Zhao Yu Li, Jul 8, 2025.
@@ -328,4 +332,29 @@ public class SuperPolyVaryLoad {
 	public boolean getAutoSmallCover() {
 		return autoSmallCoverBox.isSelected();
 	}
+    // Jeff Khuu, Aug 11, 2026.
+    // Coordinates from the last run that produced no codes, so the user has a
+    // ready-made list to retry instead of hunting for which points came up empty.
+    private String relist = "";
+
+    void appendToRelist(final String x, final String y) {
+        if (relist.isEmpty()) {
+            relist = x + " " + y;
+        } else {
+            relist = relist + "\n" + x + " " + y;
+        }
+    }
+
+    void clearRelist() {
+        relist = "";
+    }
+
+    void printRelist() {
+        if (!relist.isEmpty()) {
+            System.out.println("// SuperLiLuVary relist:");
+            System.out.println(relist);
+        } else {
+            System.out.println("// SuperLiLuVary relist: (empty)");
+        }
+    }
 }

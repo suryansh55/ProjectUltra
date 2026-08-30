@@ -12,23 +12,37 @@ public class Tpattern implements Comparable<Tpattern> {
 
 	}
 	
+	/**
+	 * <i>makeBase</i> takes a pattern and code sequences in standard form and returns the calculated base
+	 * in standard form. A base is defined as the lexicographically least code sequence that is a part of
+	 * the pattern.
+	 *
+	 * @precondition Code must be in standard form
+	 * @param ex Code sequences in standard form
+	 * @return The base in standard form
+	 */
 	private ImmutableIntList[] makeBase(ImmutableIntList[] ex) {
-		
+
 		final MutableIntList coefs = new IntArrayList();
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < pat[i].size(); j++) {
-				if (pat[i].get(j) != 0) {
-					int coef = ex[i].get(j)/(2 * pat[i].get(j));
-					if (ex[i].get(j) - coef * 2 * pat[i].get(j) == 0) {
-						coef -= 1;
-					}
-					coefs.add(coef);
+				if (pat[i].get(j) == 0) continue;
+
+				int coef = ex[i].get(j)/(2 * pat[i].get(j));
+				if (ex[i].get(j) - coef * 2 * pat[i].get(j) == 0) {
+					// Jeff Khuu, 2026. Step away from the code, whichever side of zero it sits on.
+					// `coef -= 1` walked the wrong way for a negative coefficient.
+					coef = coef < 0 ? coef + 1 : coef - 1;
 				}
+				coefs.add(coef);
 			}
 		}
 
-		int min = coefs.min();
-		
+		// Jeff Khuu, 2026. Was coefs.min(). With signs in play the base is reached by the coefficient
+		// nearest zero, not the most negative one. (The drop also has a `coefs.forEach(i ->
+		// Math.abs(i))` line here, which discards its result and so does nothing -- not carried over.)
+		int min = PatUtils.absMin(coefs);
+
 		final MutableIntList[] muteBase = {new IntArrayList(), new IntArrayList(), new IntArrayList()};
 		for (int i = 0; i < 3; i++) {
 			for (int j = 0; j < pat[i].size(); j++) {

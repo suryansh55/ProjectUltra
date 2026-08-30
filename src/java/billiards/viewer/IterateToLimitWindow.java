@@ -9,6 +9,7 @@ import billiards.utils.BatchLoadStorage;
 import billiards.utils.Polygon;
 import billiards.wrapper.ConnectionPool;
 import javafx.animation.PauseTransition;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleBooleanProperty;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
@@ -31,7 +32,10 @@ import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Zhao Yu Li, Jun 06, 2025.
@@ -58,6 +62,26 @@ public class IterateToLimitWindow {
     private final TextArea triplesTextArea = new TextArea();
 
     private final HashMap<String, TextArea> textAreaMap = new HashMap<>();
+
+    // Zhao Yu Li, Sept 20, 2025.
+    // Codes arrive faster than the FX thread can repaint a TextArea, so each area gets an appender that
+    // batches writes and flushes them on the FX thread 20 times a second.
+    //
+    // One shared daemon thread drives all five, rather than upstream's one scheduler each. Daemon
+    // matters: upstream's threads are not, and its Viewer.shutdown() is never called by anything, so a
+    // single opened window would keep the JVM alive after the main window closed.
+    private final ScheduledExecutorService appendScheduler =
+            Executors.newSingleThreadScheduledExecutor(runnable -> {
+                final Thread thread = new Thread(runnable, "iter-to-limit-appender");
+                thread.setDaemon(true);
+                return thread;
+            });
+
+    private final TextAreaAppender stablesTextAreaAppender = new TextAreaAppender(stablesTextArea, appendScheduler);
+    private final TextAreaAppender pmStablesTextAreaAppender = new TextAreaAppender(pmStablesTextArea, appendScheduler);
+    private final TextAreaAppender unstablesTextAreaAppender = new TextAreaAppender(unstablesTextArea, appendScheduler);
+    private final TextAreaAppender pmUnstablesTextAreaAppender = new TextAreaAppender(pmUnstablesTextArea, appendScheduler);
+    private final TextAreaAppender triplesTextAreaAppender = new TextAreaAppender(triplesTextArea, appendScheduler);
 
     private final TextField limitTextField = new TextField();
 
@@ -108,14 +132,7 @@ public class IterateToLimitWindow {
         stage.setScene(scene);
         stage.setTitle("Iterate To Limit Window");
         stage.setHeight(800);
-        stage.setOnCloseRequest(event -> {
-            this.results = null;
-            this.finish.set(true);
-
-            saveContentsToFile();
-
-            stage.close();
-        });
+        stage.setOnCloseRequest(event -> close());
         stage.setOnHiding(event -> saveContentsToFile());
 
         root.setPadding(new Insets(10));
@@ -574,7 +591,7 @@ public class IterateToLimitWindow {
         // We are done. Set the results, and notify the observer.
         running = false;
         this.results = results;
-        this.finish.set(true);
+        markFinishedIfPresent(this.finish);
 
         return true;
     }
@@ -630,6 +647,32 @@ public class IterateToLimitWindow {
         this.stage.toFront();
     }
 
+    public void close() {
+        this.results = null;
+        markFinishedIfPresent(this.finish);
+        saveContentsToFile();
+        this.stage.close();
+    }
+
+    /**
+     * This window is also built as a plain result sink for AutoVary (see Viewer's addToIterToLimitCover
+     * callers), which never calls <code>execute()</code>, so there is not necessarily a finish observer to
+     * notify. Closing such a window used to NPE.
+     */
+    static void markFinishedIfPresent(final SimpleBooleanProperty finish) {
+        if (finish != null) {
+            finish.set(true);
+        }
+    }
+
+    /**
+     * Zhao Yu Li, Sept 20, 2025.
+     * Stops the thread that flushes the text areas.
+     */
+    public void shutdown() {
+        appendScheduler.shutdownNow();
+    }
+
     private Alert getInfoAlertDialogue(String header, String content) {
         Text alertText = new Text(content);
         alertText.setWrappingWidth(350);
@@ -672,10 +715,7 @@ public class IterateToLimitWindow {
         String[] codeComponents = code.trim().split(",");
 
         if (codeComponents.length == 3) {
-            triplesTextArea.setText(
-                    triplesTextArea.getText().trim() + "\n" +
-                            code.trim() + " & " + pattern.trim()
-            );
+            triplesTextAreaAppender.append(code.trim() + " & " + pattern.trim() + "\n");
         }
 
         if (codeComponents.length == 1) {
@@ -687,16 +727,14 @@ public class IterateToLimitWindow {
                 if (either.isRight()) {
                     ClassifiedCodeSequence codeSequence = either.get();
                     String coverCodeString = Utils.getCoverCodeString(codeSequence);
-                    String stringToAdd = coverCodeString + " & " + pattern.trim();
+                    final String stringToAdd = coverCodeString + " & " + pattern.trim() + "\n";
 
-                    final TextArea textArea;
+                    final TextAreaAppender textAreaAppender;
 
-                    if (codeSequence.stable) textArea = allPositive ? stablesTextArea : pmStablesTextArea;
-                    else textArea = allPositive ? unstablesTextArea : pmUnstablesTextArea;
+                    if (codeSequence.stable) textAreaAppender = allPositive ? stablesTextAreaAppender : pmStablesTextAreaAppender;
+                    else textAreaAppender = allPositive ? unstablesTextAreaAppender : pmUnstablesTextAreaAppender;
 
-                    if (!textArea.getText().trim().isEmpty())
-                        stringToAdd = textArea.getText().trim() + "\n" + stringToAdd;
-                    textArea.setText(stringToAdd);
+                    textAreaAppender.append(stringToAdd);
                 }
             }
         }
@@ -848,6 +886,13 @@ public class IterateToLimitWindow {
             for (String line : content.split("\n")) {
                 if (line.trim().isEmpty()) continue;
 
+                // Zhao Yu Li, 2025. A commented-out entry has no code to look up; keep it verbatim
+                // instead of warning that no iteration pattern could be found for it.
+                if (line.startsWith("//")) {
+                    newContent.append(line).append("\n");
+                    continue;
+                }
+
                 String[] codeAndPattern = line.split("&");
 
                 if (codeAndPattern.length > 1) {
@@ -884,5 +929,53 @@ public class IterateToLimitWindow {
         int abs = Math.abs(number);
         int magnitude = (int) Math.pow(10, (int) Math.log10(abs));
         return Math.round(number / (float) magnitude) * magnitude;
+    }
+}
+
+/*
+Zhao Yu Li, Sept 20, 2025.
+Appends text to a TextArea at high frequency without flooding the JavaFX application thread: writers
+queue strings from any thread, and a single scheduled flush drains the queue onto the FX thread.
+ */
+class TextAreaAppender {
+    private final TextArea textArea;
+    private final ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
+
+    TextAreaAppender(final TextArea textArea, final ScheduledExecutorService scheduler) {
+        this.textArea = textArea;
+
+        // Flush ~20 times per second (every 50 ms)
+        scheduler.scheduleAtFixedRate(this::flush, 0, 50, TimeUnit.MILLISECONDS);
+    }
+
+    void append(final String text) {
+        queue.add(text);
+    }
+
+    private void flush() {
+        // scheduleAtFixedRate drops a task for good once it throws, which would silently stop this text
+        // area updating for the rest of the run.
+        try {
+            if (queue.isEmpty()) return;
+
+            final StringBuilder builder = new StringBuilder();
+            String queued;
+            while ((queued = queue.poll()) != null) {
+                builder.append(queued);
+            }
+            final String batch = builder.toString();
+
+            Platform.runLater(() -> {
+                // Content restored from iterToLimit.txt is trimmed, so without this the first appended
+                // entry lands on the end of the last loaded line instead of on its own.
+                final String current = textArea.getText();
+                if (!current.isEmpty() && !current.endsWith("\n")) {
+                    textArea.appendText("\n");
+                }
+                textArea.appendText(batch);
+            });
+        } catch (final RuntimeException e) {
+            System.out.println("TextAreaAppender flush failed: " + e);
+        }
     }
 }

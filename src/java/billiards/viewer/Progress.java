@@ -40,6 +40,11 @@ public final class Progress {
 
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
+            // Ask the task to stop starting new work before we cancel it, so any
+            // in-flight database/native call can still publish what it finished.
+            if (task instanceof GracefullyCancelable) {
+                ((GracefullyCancelable) task).requestGracefulCancel();
+            }
             Wrapper.backend_cancel();
             task.cancel();
             stage.close();

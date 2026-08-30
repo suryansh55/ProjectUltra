@@ -109,7 +109,9 @@ public final class CodeSequence implements Comparable<CodeSequence> {
      * Note that there are two possible sources of ambiguity in the ordering of a code sequence.
      * First, every
      */
-    private static Optional<InvalidCodeSequence> validate(final IntList dirtyCodeNumbers) {
+    // Jeff Khuu, May 3, 2026. Public so Spattern can ask "would this be a legal code?" while
+    // hunting for a base, without paying for a full create() it would throw away.
+    public static Optional<InvalidCodeSequence> validate(final IntList dirtyCodeNumbers) {
         // Must be nonempty
         if (dirtyCodeNumbers.isEmpty()) {
             return Optional.of(InvalidCodeSequence.EMPTY);

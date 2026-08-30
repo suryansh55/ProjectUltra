@@ -65,6 +65,10 @@ public final class ProgressWithStatus {
         
         cancelButton.setText("Cancel");
         cancelButton.setOnAction(event -> {
+            // See Progress: give the task a chance to keep finished work.
+            if (task instanceof GracefullyCancelable) {
+                ((GracefullyCancelable) task).requestGracefulCancel();
+            }
             Wrapper.backend_cancel();
             task.cancel();
             stage.close();

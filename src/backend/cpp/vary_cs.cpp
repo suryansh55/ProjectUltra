@@ -1,3 +1,5 @@
+#include <cstdlib>
+#include <string>
 #include "vary_cs.hpp"
 
 size_t get_total_physical_memory() {
@@ -78,7 +80,10 @@ void iterateFireAwayCS2(
     // parallel code verify
     std::atomic<int> inflight{0};
     // Suryansh Ankur, 2026
-    unsigned int cores = std::thread::hardware_concurrency();
+    // SLURM-aware core count: hardware_concurrency() reports the whole node,
+    // not this job's allocation, which over-subscribes on a shared cluster node.
+    const char* cpu_env = std::getenv("SLURM_CPUS_PER_TASK");
+    unsigned int cores = cpu_env ? static_cast<unsigned int>(std::stoi(cpu_env)) : std::thread::hardware_concurrency();
     // code2 is 2*depth ints; cap at cores*8 to prevent OOM from queued lambda closures.
     const int MAX_INFLIGHT = std::max(4, (int)cores) * 8;
     std::mutex codesFoundMutex;

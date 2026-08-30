@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Assertions;
 
 public final class ClassifiedCodeSequenceTest {
     @Test
-    public static void testCodeType() {
+    public void testCodeType() {
         final Array<Tuple2<IntList, CodeType>> classifications = Array.of(
             Tuple.of(IntArrayList.newListWith(1, 1, 1), CodeType.OSO),
             Tuple.of(IntArrayList.newListWith(2, 2), CodeType.CNS),

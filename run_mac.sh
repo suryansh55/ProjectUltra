@@ -15,3 +15,4 @@ java \
   -Xss4m -Xmx4G \
   -cp "build/libs/billiard-viewer.jar" \
   billiards.viewer.Main
+
